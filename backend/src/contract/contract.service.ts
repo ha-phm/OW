@@ -72,6 +72,15 @@ export class ContractService {
     return data as CreateContractResult;
   }
 
+  // --- HELPER: Ép về string an toàn (WAY4/SOAP đôi khi trả về number) ---
+  private toStringOrUndefined(value: unknown): string | undefined {
+    return value !== null && value !== undefined ? String(value) : undefined;
+  }
+
+  private toStringOrNull(value: unknown): string | null {
+    return value !== null && value !== undefined ? String(value) : null;
+  }
+
   // --- QUERY METHODS ---
   async getContractsByClientId(clientId: string): Promise<unknown[]> {
     const clientResult = await this.clientService.getByParams(clientId);
@@ -118,8 +127,8 @@ export class ContractService {
 
     return {
       success: true,
-      contractNumber: result.ContractNumber,
-      applicationNumber: result.ApplicationNumber,
+      contractNumber: this.toStringOrUndefined(result.ContractNumber),
+      applicationNumber: this.toStringOrUndefined(result.ApplicationNumber),
     };
   }
 
@@ -140,8 +149,8 @@ export class ContractService {
 
     return {
       success: true,
-      contractNumber: result.ContractNumber,
-      applicationNumber: result.ApplicationNumber,
+      contractNumber: this.toStringOrUndefined(result.ContractNumber),
+      applicationNumber: this.toStringOrUndefined(result.ApplicationNumber),
     };
   }
 
@@ -178,6 +187,7 @@ export class ContractService {
       `Đang tạo Liability Contract cho KH ${dto.clientNumber}...`,
     );
     const liabResult = await this.createContract(liabDto);
+    this.logger.log(`✅ Liability OK: ${liabResult.contractNumber}`);
 
     // Lưu Liability Contract vào Postgres
     const liabRecord = await this.prisma.contract.create({
@@ -185,7 +195,7 @@ export class ContractService {
         userId: user.id,
         clientNumber: dto.clientNumber,
         contractNumber: liabResult.contractNumber!,
-        applicationNumber: liabResult.applicationNumber,
+        applicationNumber: this.toStringOrNull(liabResult.applicationNumber),
         type: 'LIABILITY',
         productCode: dto.liabProductCode,
         contractName: 'Liability Contract',
@@ -212,6 +222,7 @@ export class ContractService {
       `Đang tạo Issuing Contract liên kết với Liability: ${liabResult.contractNumber}...`,
     );
     const issuingResult = await this.createIssuingContract(issuingDto);
+    this.logger.log(`✅ Issuing OK: ${issuingResult.contractNumber}`);
 
     // Lưu Issuing Contract vào Postgres, trỏ về Liability vừa tạo
     const issuingRecord = await this.prisma.contract.create({
@@ -219,7 +230,9 @@ export class ContractService {
         userId: user.id,
         clientNumber: dto.clientNumber,
         contractNumber: issuingResult.contractNumber!,
-        applicationNumber: issuingResult.applicationNumber,
+        applicationNumber: this.toStringOrNull(
+          issuingResult.applicationNumber,
+        ),
         type: 'ISSUING',
         productCode: dto.issuingProductCode,
         contractName: dto.contractName,
@@ -231,8 +244,6 @@ export class ContractService {
     const cardDto: CreateCardDto = {
       issuingContractNumber: issuingResult.contractNumber!,
       productCode: dto.cardProductCode,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      cardName: dto.cardName,
       embossedFirstName: dto.embossedFirstName,
       embossedLastName: dto.embossedLastName,
       embossedCompanyName: dto.embossedCompanyName,
@@ -243,15 +254,15 @@ export class ContractService {
     );
     const cardResult: CardContractResponse =
       await this.cardService.createCardContract(cardDto);
+    this.logger.log(`✅ Card OK: ${cardResult.cardNumber}`);
 
     // Lưu Card vào Postgres, trỏ về Issuing Contract vừa tạo
     await this.prisma.card.create({
       data: {
         issuingContractId: issuingRecord.id,
-        cardNumber: cardResult.cardNumber,
-        expiryDate: cardResult.expiryDate,
-        sequenceNumber: cardResult.sequenceNumber,
-        cardName: dto.cardName,
+        cardNumber: String(cardResult.cardNumber),
+        expiryDate: this.toStringOrNull(cardResult.expiryDate),
+        sequenceNumber: this.toStringOrNull(cardResult.sequenceNumber),
         embossedFirstName: dto.embossedFirstName,
         embossedLastName: dto.embossedLastName,
       },

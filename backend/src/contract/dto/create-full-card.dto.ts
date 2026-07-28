@@ -65,5 +65,4 @@ export class CreateFullCardDto {
   @IsOptional()
   @IsString()
   embossedCompanyName?: string;
-  cardName: string | undefined;
 }
