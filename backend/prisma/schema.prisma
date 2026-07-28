@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  password     String
+  clientId     String?
+  clientNumber String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Một user có thể có nhiều hợp đồng (Liability và/hoặc Issuing)
+  contracts Contract[]
+}
+
+enum ContractType {
+  LIABILITY
+  ISSUING
+}
+
+model Contract {
+  id                Int          @id @default(autoincrement())
+  userId            Int
+  clientNumber      String       // Số client Way4 (VD: 93830)
+  contractNumber    String       @unique
+  applicationNumber String?
+  type              ContractType // LIABILITY hoặc ISSUING
+  productCode       String?
+  contractName      String?
+  status            String       @default("ACTIVE")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  user              User         @relation(fields: [userId], references: [id])
+
+  // Tự liên kết: Issuing Contract trỏ về Liability Contract cha của nó
+  parentContractId  Int?
+  parentContract    Contract?    @relation("ContractHierarchy", fields: [parentContractId], references: [id])
+  childContracts    Contract[]   @relation("ContractHierarchy")
+
+  // Một Issuing Contract có thể sinh ra nhiều thẻ (thẻ chính, thẻ phụ...)
+  cards             Card[]
+}
+
+model Card {
+  id                Int      @id @default(autoincrement())
+  issuingContractId Int
+  cardNumber        String   @unique
+  expiryDate        String?
+  sequenceNumber    String?
+  cardName          String?
+  embossedFirstName String?
+  embossedLastName  String?
+  status            String   @default("ACTIVE")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  issuingContract   Contract @relation(fields: [issuingContractId], references: [id])
+}

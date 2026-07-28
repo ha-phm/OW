@@ -1,0 +1,31 @@
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { PassportStrategy } from '@nestjs/passport';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(private readonly prisma: PrismaService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: process.env.JWT_SECRET as string,
+    });
+  }
+
+  async validate(payload: any) {
+    // Luôn lấy clientId mới nhất từ DB thay vì tin vào token cũ,
+    // vì token được phát hành lúc login có thể chưa có clientId
+    // nếu lúc đó user chưa tạo hồ sơ WAY4.
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+
+    return {
+      userId: payload.sub,
+      email: payload.email,
+      clientId: user?.clientId ?? null,
+      clientNumber: user?.clientNumber ?? null,
+    };
+  }
+}
