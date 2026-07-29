@@ -1,4 +1,3 @@
-// hooks/useLogin.ts
 import { useMutation } from '@tanstack/react-query';
 import { apiPost } from '../lib/api';
 
@@ -8,7 +7,8 @@ interface LoginPayload {
 }
 
 interface LoginResponse {
-  access_token: string; // Trùng với key API NestJS trả về
+  access_token: string;
+  refresh_token: string;
 }
 
 export function useLogin() {
@@ -16,9 +16,9 @@ export function useLogin() {
     mutationFn: (payload: LoginPayload) =>
       apiPost<LoginResponse, LoginPayload>('/auth/login', payload),
     onSuccess: (data) => {
-      // Tự động lưu token khi thành công
-      // Tự động lưu token khi thành công
+      // Tự động lưu CẢ 2 token khi thành công
       localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
     },
   });
 }

@@ -1,7 +1,13 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Public } from './decorators/public.decorator';
-import { AuthDto } from './dto/auth.dto'; // Import file DTO vừa tạo
+import { Public } from './decorators/public.decorator'; // Đảm bảo import đúng đường dẫn decorator của bạn
 
 @Controller('auth')
 export class AuthController {
@@ -9,14 +15,36 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  async register(@Body() dto: AuthDto) {
-    // Tạm thời truyền clientId là undefined/null ở bước đăng ký nội bộ
-    return this.authService.register(dto.email, dto.password);
+  async register(@Body('email') email: string, @Body('password') pass: string) {
+    if (!email || !pass) {
+      throw new BadRequestException(
+        'Vui lòng cung cấp đầy đủ email và password',
+      );
+    }
+    return this.authService.register(email, pass);
   }
 
   @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('login')
-  async login(@Body() dto: AuthDto) {
-    return this.authService.login(dto.email, dto.password);
+  async login(@Body('email') email: string, @Body('password') pass: string) {
+    if (!email || !pass) {
+      throw new BadRequestException(
+        'Vui lòng cung cấp đầy đủ email và password',
+      );
+    }
+    return this.authService.login(email, pass);
+  }
+
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Post('refresh')
+  async refreshTokens(@Body('refresh_token') refreshToken: string) {
+    if (!refreshToken) {
+      throw new BadRequestException(
+        'Không tìm thấy refresh_token trong body request',
+      );
+    }
+    return this.authService.refreshTokens(refreshToken);
   }
 }

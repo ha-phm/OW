@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/\/+$/, '');
 
@@ -8,7 +8,6 @@ export class ApiError extends Error {
   }
 }
 
-// Tạo một instance Axios dùng chung cho toàn bộ ứng dụng
 const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
@@ -16,7 +15,6 @@ const apiClient = axios.create({
   },
 });
 
-// 1. Interceptor cho Request: Tự động đính kèm Bearer Token nếu có
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
@@ -27,39 +25,109 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error: unknown) => Promise.reject(error)
 );
 
-// 2. Interceptor cho Response: Xử lý lỗi 401 và chuẩn hóa thông báo lỗi
+// --- ĐỊNH NGHĨA TYPE THAY CHO ANY ---
+interface PromiseCallback {
+  resolve: (value: string | null) => void;
+  reject: (reason?: unknown) => void;
+}
+
+let isRefreshing = false;
+let failedQueue: PromiseCallback[] = []; // Thay vì any[]
+
+// Thay vì (error: any), ta dùng unknown để đúng chuẩn strict mode
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+// ----------------------------------------
+
 apiClient.interceptors.response.use(
-  (response) => response.data, // Trả thẳng về dữ liệu data cho gọn
-  (error: AxiosError<{ message?: string | string[] }>) => {
+  (response) => response.data,
+  async (error: AxiosError<{ message?: string | string[] }>) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
     if (error.response) {
       const status = error.response.status;
       const data = error.response.data;
 
-      if (status === 401) {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('access_token');
-          window.location.href = '/login';
+      if (status === 401 && originalRequest && !originalRequest._retry) {
+        if (isRefreshing) {
+          // Định nghĩa kiểu rõ ràng cho Promise là trả về chuỗi <string | null>
+          return new Promise<string | null>((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          })
+            .then((token) => {
+              originalRequest.headers.Authorization = 'Bearer ' + token;
+              return axios(originalRequest).then((res) => res.data);
+            })
+            .catch((err: unknown) => Promise.reject(err));
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
+
+        if (!refreshToken) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login';
+          }
+          return Promise.reject(error);
+        }
+
+        try {
+          const res = await axios.post(`${API_URL}/auth/refresh`, {
+            refresh_token: refreshToken,
+          });
+
+          const { access_token, refresh_token: new_refresh_token } = res.data;
+
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('access_token', access_token);
+            localStorage.setItem('refresh_token', new_refresh_token);
+          }
+
+          processQueue(null, access_token);
+
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+          const retryResponse = await axios(originalRequest);
+
+          return retryResponse.data;
+        } catch (refreshError: unknown) {
+          processQueue(refreshError, null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login';
+          }
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
         }
       }
 
-      // Xử lý thông báo lỗi từ NestJS (có thể là string hoặc mảng string[])
       let message = 'Có lỗi xảy ra';
       if (data?.message) {
         message = Array.isArray(data.message) ? data.message.join(', ') : data.message;
       }
-
       throw new ApiError(message, status);
     }
 
-    // Lỗi không kết nối được server hoặc lỗi mạng
     throw new ApiError(error.message || 'Không thể kết nối đến máy chủ', 500);
   }
 );
 
-// Các hàm helper gọi API gọn gàng
 export async function apiPost<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
   const response = await apiClient.post<TResponse>(path, body);
   return response as unknown as TResponse;
@@ -74,4 +142,3 @@ export async function apiPatch<TResponse, TBody>(path: string, body: TBody): Pro
   const response = await apiClient.patch<TResponse>(path, body);
   return response as unknown as TResponse;
 }
-

@@ -3,6 +3,13 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
+export type JwtPayload = {
+  sub: number;
+  email: string;
+  clientId: string | null;
+  clientNumber: string | null;
+};
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly prisma: PrismaService) {
@@ -13,7 +20,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: JwtPayload) {
     // Luôn lấy clientId mới nhất từ DB thay vì tin vào token cũ,
     // vì token được phát hành lúc login có thể chưa có clientId
     // nếu lúc đó user chưa tạo hồ sơ WAY4.
