@@ -8,6 +8,17 @@ import {
 } from 'class-validator';
 
 export class CreateClientDto {
+  @IsOptional()
+  @IsString()
+  branch?: string;
+
+  @IsString()
+  socialSecurityNumber!: string;
+
+  @IsOptional()
+  @IsString()
+  individualTaxpayerNumber?: string;
+
   @IsString()
   @MinLength(1)
   firstName!: string;
@@ -44,9 +55,6 @@ export class CreateClientDto {
   @IsOptional()
   @IsString()
   identityCardDetails?: string;
-
-  @IsString()
-  socialSecurityNumber!: string;
 
   @IsString()
   addressLine1!: string;

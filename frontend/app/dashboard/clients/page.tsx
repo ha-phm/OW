@@ -82,7 +82,16 @@ export function CustomerProfilePage() {
   const onSubmit: SubmitHandler<EditFormData> = async (formData) => {
     setSubmitError(null);
     try {
-      await apiPatch(`/clients/${clientId}`, formData);
+      // 1. Lọc bỏ các trường rỗng và ép kiểu tất cả về chuỗi (string)
+      const cleanData = Object.fromEntries(
+        Object.entries(formData)
+          .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      );
+
+      // 2. Gửi dữ liệu đã được "làm sạch" xuống Backend
+      await apiPatch(`/clients/${clientId}`, cleanData);
+      
       await refetch();
       await queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       setIsEditing(false);

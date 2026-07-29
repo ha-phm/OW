@@ -10,12 +10,23 @@ function escapeXml(value: string): string {
     .replace(/'/g, '&apos;');
 }
 
+// Hàm helper chỉ sinh thẻ XML nếu có dữ liệu truyền vào
+function buildOptionalTag(tag: string, value: string | undefined): string {
+  if (value === undefined || value === null || value === '') return '';
+  return `<wsin:${tag}>${escapeXml(value)}</wsin:${tag}>`;
+}
+
+// ==========================================
+// 1. TEMPLATE TẠO MỚI KHÁCH HÀNG
+// ==========================================
 export function buildCreateClientXml(
   dto: CreateClientDto,
   officer: string,
 ): string {
   const shortName =
     `${dto.lastName} ${dto.middleName ?? ''} ${dto.firstName}`.trim();
+
+  const branchCode = dto.branch ?? '0101';
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
@@ -29,7 +40,7 @@ export function buildCreateClientXml(
          <wsin:Reason>Create client</wsin:Reason>
          <wsin:CreateClient_InObject>
             <wsin:InstitutionCode>0001</wsin:InstitutionCode>
-            <wsin:Branch>0101</wsin:Branch>
+            <wsin:Branch>${branchCode}</wsin:Branch>
             <wsin:ClientTypeCode>PR</wsin:ClientTypeCode>
             <wsin:ClientCategory></wsin:ClientCategory>
             <wsin:ServiceGroup></wsin:ServiceGroup>
@@ -49,7 +60,7 @@ export function buildCreateClientXml(
             <wsin:BirthName></wsin:BirthName>
             <wsin:Citizenship>VNM</wsin:Citizenship>
             <wsin:TaxBracket></wsin:TaxBracket>
-            <wsin:IndividualTaxpayerNumber>${dto.socialSecurityNumber}</wsin:IndividualTaxpayerNumber>
+            <wsin:IndividualTaxpayerNumber>${dto.individualTaxpayerNumber ?? ''}</wsin:IndividualTaxpayerNumber>
             <wsin:SecretPhrase></wsin:SecretPhrase>
             <wsin:CompanyName>${escapeXml(dto.companyName ?? '')}</wsin:CompanyName>
             <wsin:Trademark></wsin:Trademark>
@@ -73,28 +84,54 @@ export function buildCreateClientXml(
             <wsin:MobilePhone>${dto.mobilePhone}</wsin:MobilePhone>
             <wsin:BusinessPhone></wsin:BusinessPhone>
          </wsin:CreateClient_InObject>
-         <wsin:SetCustomData_InObject></wsin:SetCustomData_InObject>
+         <wsin:SetCustomData_InObject>
+            <wsin:AddInfoType>AddInfo01</wsin:AddInfoType>
+            <wsin:TagName>PrevID_01</wsin:TagName>
+            <wsin:TagValue>A1</wsin:TagValue>
+         </wsin:SetCustomData_InObject>
+         <wsin:SetCustomData_InObject>
+            <wsin:AddInfoType>AddInfo01</wsin:AddInfoType>
+            <wsin:TagName>PrevID_02</wsin:TagName>
+            <wsin:TagValue>A2</wsin:TagValue>
+         </wsin:SetCustomData_InObject>
       </wsin:CreateClientV4>
    </soapenv:Body>
 </soapenv:Envelope>`;
 }
 
 // ==========================================
-// 2. TEMPLATE DÀNH CHO API EDIT CLIENT
+// 2. TEMPLATE LẤY THÔNG TIN KHÁCH HÀNG (MỚI)
 // ==========================================
-
-// Hàm helper chỉ sinh thẻ XML nếu có dữ liệu truyền vào
-function buildOptionalTag(tag: string, value: string | undefined): string {
-  if (value === undefined || value === null) return '';
-  return `<wsin:${tag}>${escapeXml(value)}</wsin:${tag}>`;
+export function buildGetClientXml(
+  searchMethod: string,
+  identifier: string,
+  officer: string,
+): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
+   <soapenv:Header>
+      <wsin:SessionContextStr>?</wsin:SessionContextStr>
+      <wsin:UserInfo>officer="${officer}"</wsin:UserInfo>
+      <wsin:CorrelationId>?</wsin:CorrelationId>
+   </soapenv:Header>
+   <soapenv:Body>
+      <wsin:GetClientByParmsV2>
+         <wsin:ClientSearchMethod>${searchMethod}</wsin:ClientSearchMethod>
+         <wsin:ClientIdentifier>${escapeXml(identifier)}</wsin:ClientIdentifier>
+      </wsin:GetClientByParmsV2>
+   </soapenv:Body>
+</soapenv:Envelope>`;
 }
 
+// ==========================================
+// 3. TEMPLATE CẬP NHẬT KHÁCH HÀNG
+// ==========================================
 export function buildEditClientXml(
+  searchMethod: string,
   clientIdentifier: string,
   dto: UpdateClientDto,
   officer: string,
 ): string {
-  // Chỉ cập nhật ShortName nếu gửi lên đủ cả First và Last name
   let shortNameTag = '';
   if (dto.firstName && dto.lastName) {
     const shortName =
@@ -111,7 +148,7 @@ export function buildEditClientXml(
    </soapenv:Header>
    <soapenv:Body>
       <wsin:EditClientV6>
-         <wsin:ClientSearchMethod>CLIENT_ID</wsin:ClientSearchMethod>
+         <wsin:ClientSearchMethod>${searchMethod}</wsin:ClientSearchMethod>
          <wsin:ClientIdentifier>${escapeXml(clientIdentifier)}</wsin:ClientIdentifier>
          <wsin:Reason>Update Client Information</wsin:Reason>
          <wsin:EditClient_InObject>
@@ -127,7 +164,7 @@ export function buildEditClientXml(
             ${buildOptionalTag('EMail', dto.email)}
             ${buildOptionalTag('IdentityCardNumber', dto.identityCardNumber)}
             ${buildOptionalTag('IdentityCardDetails', dto.identityCardDetails)}
-            ${buildOptionalTag('IndividualTaxpayerNumber', dto.socialSecurityNumber)}
+            ${buildOptionalTag('IndividualTaxpayerNumber', dto.individualTaxpayerNumber)}
             ${buildOptionalTag('SocialSecurityNumber', dto.socialSecurityNumber)}
             ${buildOptionalTag('AddressLine1', dto.addressLine1)}
             ${buildOptionalTag('City', dto.city)}

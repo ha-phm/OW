@@ -2,18 +2,24 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SoapService } from '../soap/soap.service';
 import { CreateClientDto } from './dto/create-client.dto';
-import { buildCreateClientXml, buildEditClientXml } from './client.templates';
 import { UpdateClientDto } from './dto/update-client.dto';
-// Import PrismaService của bạn (điều chỉnh lại đường dẫn relative cho đúng với thư mục thực tế)
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  buildCreateClientXml,
+  buildEditClientXml,
+  buildGetClientXml,
+} from './client.templates';
 
 interface CreateClientResult {
   NewClient: string;
   ApplicationNumber: string;
+  RetCode: string | number;
+  RetMsg: string;
+  ResultInfo: string;
 }
 
 interface EditClientResult {
-  RetCode: number;
+  RetCode: string | number;
   RetMsg: string;
   ResultInfo: string;
 }
@@ -23,15 +29,26 @@ export class ClientService {
   constructor(
     private readonly soap: SoapService,
     private readonly config: ConfigService,
-    // Inject PrismaService vào đây thay vì TypeORM Repository
     private readonly prisma: PrismaService,
   ) {}
 
-  getByParams(clientId: string) {
+  async getByParams(clientId: string) {
+    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
+
+    // Sử dụng template getClient mới tạo để đồng bộ luồng sendRaw
+    const xml = buildGetClientXml('CLIENT_ID', clientId, officer);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return this.soap.sendRaw<any>('GetClientByParmsV2', xml);
+
+    /* 
+    Lưu ý: Nếu bạn vẫn muốn dùng hàm call() cấu hình sẵn trước đó thay vì sendRaw, 
+    bạn có thể xóa 2 dòng trên và giữ nguyên code cũ như dưới đây:
     return this.soap.call('GetClientByParmsV2', {
       ClientSearchMethod: 'CLIENT_ID',
       ClientIdentifier: clientId,
     });
+    */
   }
 
   async createClient(userId: number, dto: CreateClientDto) {
@@ -46,6 +63,14 @@ export class ClientService {
       'CreateClientV4',
       xml,
     );
+
+    // Kiểm tra mã lỗi từ hệ thống (0 là thành công)
+    if (String(way4Response.RetCode) !== '0') {
+      throw new InternalServerErrorException(
+        `Lỗi từ WAY4: ${way4Response.RetMsg}`,
+      );
+    }
+
     const newClientId = String(way4Response.NewClient ?? '');
 
     if (!newClientId) {
@@ -77,9 +102,27 @@ export class ClientService {
     return `${timestamp}${random}`; // 16 chữ số
   }
 
-  updateClient(clientId: string, dto: UpdateClientDto) {
+  async updateClient(clientId: string, dto: UpdateClientDto) {
     const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
-    const xml = buildEditClientXml(clientId, dto, officer);
-    return this.soap.sendRaw<EditClientResult>('EditClientV6', xml);
+
+    // Thêm tham số searchMethod (CLIENT_ID) khớp với hàm buildEditClientXml
+    const xml = buildEditClientXml('CLIENT_ID', clientId, dto, officer);
+
+    const response = await this.soap.sendRaw<EditClientResult>(
+      'EditClientV6',
+      xml,
+    );
+
+    // Kiểm tra lỗi đồng bộ như ở createClient
+    if (String(response.RetCode) !== '0') {
+      throw new InternalServerErrorException(
+        `Lỗi từ WAY4: ${response.RetMsg || 'Không thể cập nhật hồ sơ'}`,
+      );
+    }
+
+    return {
+      success: true,
+      message: 'Cập nhật thành công',
+    };
   }
 }
