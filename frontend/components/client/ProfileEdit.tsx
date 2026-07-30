@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { X } from 'lucide-react';
 import { apiPatch, ApiError } from '../../lib/api';
-import { extractCode } from './utils';
+import { extractCode } from './client.utils';
+import { IssClientDetailsV2APIRecord } from '../../hooks/useCurrentUser'
 
 interface ProfileEditProps {
-  profile: any;
+  profile: IssClientDetailsV2APIRecord;
   clientId: string;
   onCancel: () => void;
   onSuccess: () => Promise<void>;
@@ -69,7 +70,7 @@ export default function ProfileEdit({ profile, clientId, onCancel, onSuccess }: 
     try {
       const cleanData = Object.fromEntries(
         Object.entries(formData)
-          .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+          .filter(([, value]) => value !== '' && value !== null && value !== undefined)
           .map(([key, value]) => [key, String(value)])
       );
 

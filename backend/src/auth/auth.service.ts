@@ -64,12 +64,16 @@ export class AuthService {
 
   async refreshTokens(refreshToken: string) {
     try {
-      const decoded = await this.jwtService.verifyAsync(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'secret_du_phong_cho_refresh',
-      });
+      const decoded = await this.jwtService.verifyAsync<{ sub: string }>(
+        refreshToken,
+        {
+          secret:
+            process.env.JWT_REFRESH_SECRET || 'secret_du_phong_cho_refresh',
+        },
+      );
 
       const user = await this.prisma.user.findUnique({
-        where: { id: decoded.sub },
+        where: { id: Number(decoded.sub) },
       });
 
       if (!user || !user.refreshToken) {
@@ -80,7 +84,7 @@ export class AuthService {
 
       const isRefreshTokenMatches = await bcrypt.compare(
         refreshToken,
-        user.refreshToken,
+        user.refreshToken as string,
       );
       if (!isRefreshTokenMatches) {
         throw new UnauthorizedException('Refresh token không hợp lệ.');
@@ -97,7 +101,7 @@ export class AuthService {
       await this.updateRefreshToken(user.id, tokens.refresh_token);
 
       return tokens;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException(
         'Refresh token đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.',
       );

@@ -1,7 +1,7 @@
 'use client';
 
 import { Pencil } from 'lucide-react';
-import { extractText } from './utils';
+import { extractText } from './client.utils';
 import { IssClientDetailsV2APIRecord } from '../../hooks/useCurrentUser'
 // Khai báo type cho props
 interface ProfileViewProps {
