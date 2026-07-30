@@ -14,7 +14,7 @@ export default function LoginPage() {
       className="min-h-screen bg-cover bg-center flex items-center justify-center p-8"
       style={{ backgroundImage: "url('/background.jpg')" }}
     >
-      <div className="w-full max-w-[1200px] h-[700px] bg-white/5 backdrop-blur-md border border-white/20 rounded-[40px] p-8 flex flex-col relative overflow-hidden shadow-2xl">
+      <div className="w-full max-w-300 h-175 bg-white/5 backdrop-blur-md border border-white/20 rounded-[40px] p-8 flex flex-col relative overflow-hidden shadow-2xl">
         
         <GlassNavbar />
 
@@ -28,7 +28,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="w-105 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[32px] p-10 shadow-xl">
+          <div className="w-105 bg-white/10 backdrop-blur-xl border border-white/20 rounded-4xl p-10 shadow-xl">
             <AuthTabs active={activeTab} onChange={setActiveTab} />
             
             {activeTab === 'login' ? (
