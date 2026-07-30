@@ -77,4 +77,8 @@ export class CreateClientDto {
   @IsOptional()
   @IsString()
   clientNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  citizenship?: string;
 }

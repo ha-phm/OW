@@ -29,10 +29,11 @@ export interface IssClientDetailsV2APIRecord {
   IdentityCard?: string;
   IdentityCardNumber?: string;
   IdentityCardDetails?: string;
-  ClientNumber?: string | number;
-  SocialSecurityNumber?: string;
+  LastApplicationStatus?: string;
   RegistrationDate?: string;
-  ID?: number;
+  SocialSecurityNumber?: string;
+  ID?: string;
+  ClientNumber?: string;
 }
 
 interface ClientProfile {
