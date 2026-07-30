@@ -5,6 +5,7 @@ import { LogOut } from 'lucide-react';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { ThemeSwitcher } from './ThemeSwitcher';
+import { apiPost } from '../../lib/api'
 
 type TopbarProps = {
   userName: string;
@@ -15,8 +16,14 @@ export function Topbar({ userName, companyName }: TopbarProps) {
   const router = useRouter();
   const { t } = useTranslation();
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token'); // sửa đúng key khớp với api.ts
+  const handleLogout = async () => {
+    try {
+      await apiPost('/auth/logout', {});
+    } catch {
+    // vẫn tiếp tục xóa token phía client dù API lỗi
+    }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     router.push('/login');
   };
 

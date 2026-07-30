@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SoapService } from '../soap/soap.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -42,9 +46,21 @@ export class ClientService {
   }
 
   async createClient(userId: number, dto: CreateClientDto) {
+    // Chặn tạo trùng: nếu user đã có clientId rồi thì từ chối luôn
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { clientId: true },
+    });
+    if (existingUser?.clientId) {
+      throw new BadRequestException(
+        'Bạn đã có hồ sơ khách hàng, không thể tạo thêm.',
+      );
+    }
+
     const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
 
-    const clientNumber = dto.clientNumber ?? this.generateClientNumber();
+    const clientNumber =
+      dto.clientNumber ?? (await this.generateUniqueClientNumber());
     const dtoWithClientNumber = { ...dto, clientNumber };
 
     const xml = buildCreateClientXml(dtoWithClientNumber, officer);
@@ -86,10 +102,21 @@ export class ClientService {
   }
 
   // Sinh ClientNumber duy nhất: timestamp (ms) + 3 số ngẫu nhiên, đảm bảo đủ dài và khó trùng
-  private generateClientNumber(): string {
-    const timestamp = Date.now().toString(); // 13 chữ số
-    const random = Math.floor(100 + Math.random() * 900); // 3 chữ số ngẫu nhiên
-    return `${timestamp}${random}`; // 16 chữ số
+  private async generateUniqueClientNumber(): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const timestamp = Date.now().toString();
+      const random = Math.floor(100 + Math.random() * 900);
+      const candidate = `${timestamp}${random}`;
+
+      const existing = await this.prisma.user.findFirst({
+        where: { clientNumber: candidate },
+        select: { id: true },
+      });
+      if (!existing) return candidate;
+    }
+    throw new InternalServerErrorException(
+      'Không thể sinh mã khách hàng duy nhất, vui lòng thử lại.',
+    );
   }
 
   async updateClient(clientId: string, dto: UpdateClientDto) {

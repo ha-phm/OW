@@ -4,7 +4,7 @@ import {
   Get,
   Post,
   Body,
-  Param,
+  BadRequestException,
   Patch,
 } from '@nestjs/common';
 import { ClientService } from './client.service';
@@ -57,19 +57,18 @@ export class ClientController {
     };
   }
 
-  @Get(':id')
-  getById(@Param('id') id: string) {
-    return this.clientService.getByParams(id);
-  }
-
   @Post()
   create(@Request() req: RequestWithUser, @Body() dto: CreateClientDto) {
     const userId = req.user.userId;
     return this.clientService.createClient(userId, dto);
   }
 
-  @Patch(':clientId')
-  update(@Param('clientId') clientId: string, @Body() dto: UpdateClientDto) {
+  @Patch('me')
+  update(@Request() req: RequestWithUser, @Body() dto: UpdateClientDto) {
+    const clientId = req.user.clientId;
+    if (!clientId) {
+      throw new BadRequestException('Bạn chưa có hồ sơ khách hàng');
+    }
     return this.clientService.updateClient(clientId, dto);
   }
 }

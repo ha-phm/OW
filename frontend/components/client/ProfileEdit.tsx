@@ -35,7 +35,7 @@ type EditFormData = {
   socialSecurityNumber: string;
 };
 
-export default function ProfileEdit({ profile, clientId, onCancel, onSuccess }: ProfileEditProps) {
+export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEditProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   
   const {
@@ -74,7 +74,7 @@ export default function ProfileEdit({ profile, clientId, onCancel, onSuccess }: 
           .map(([key, value]) => [key, String(value)])
       );
 
-      await apiPatch(`/clients/${clientId}`, cleanData);
+      await apiPatch(`/clients/me`, cleanData);
       await onSuccess(); // Gọi hàm refetch từ component cha truyền xuống
     } catch (error: unknown) {
       const errorMsg =

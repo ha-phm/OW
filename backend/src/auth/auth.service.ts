@@ -67,8 +67,7 @@ export class AuthService {
       const decoded = await this.jwtService.verifyAsync<{ sub: string }>(
         refreshToken,
         {
-          secret:
-            process.env.JWT_REFRESH_SECRET || 'secret_du_phong_cho_refresh',
+          secret: process.env.JWT_REFRESH_SECRET,
         },
       );
 
@@ -116,7 +115,7 @@ export class AuthService {
         expiresIn: '15m',
       }),
       this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_REFRESH_SECRET || 'secret_du_phong_cho_refresh',
+        secret: process.env.JWT_REFRESH_SECRET,
         expiresIn: '7d',
       }),
     ]);
@@ -133,5 +132,13 @@ export class AuthService {
       where: { id: userId },
       data: { refreshToken: hashedRefreshToken },
     });
+  }
+
+  async logout(userId: number) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: null },
+    });
+    return { message: 'Đăng xuất thành công' };
   }
 }

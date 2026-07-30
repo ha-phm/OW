@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
+import { AuthDto } from './dto/auth.dto';
+import { CurrentUser } from './decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -15,25 +17,15 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  async register(@Body('email') email: string, @Body('password') pass: string) {
-    if (!email || !pass) {
-      throw new BadRequestException(
-        'Vui lòng cung cấp đầy đủ email và password',
-      );
-    }
-    return this.authService.register(email, pass);
+  async register(@Body() dto: AuthDto) {
+    return this.authService.register(dto.email, dto.password);
   }
 
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  async login(@Body('email') email: string, @Body('password') pass: string) {
-    if (!email || !pass) {
-      throw new BadRequestException(
-        'Vui lòng cung cấp đầy đủ email và password',
-      );
-    }
-    return this.authService.login(email, pass);
+  async login(@Body() dto: AuthDto) {
+    return this.authService.login(dto.email, dto.password);
   }
 
   @Public()
@@ -46,5 +38,10 @@ export class AuthController {
       );
     }
     return this.authService.refreshTokens(refreshToken);
+  }
+
+  @Post('logout')
+  async logout(@CurrentUser() user: { userId: number }) {
+    return this.authService.logout(user.userId);
   }
 }
