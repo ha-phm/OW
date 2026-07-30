@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useCurrentUser } from '../../hooks/useCurrentUser';
-import { CreateClientForm } from '../../components/client/CreateClientForm';
-import { apiGet } from '../../lib/api';
+import { useCurrentUser } from '../../../hooks/useCurrentUser';
+import { CreateClientForm } from '../../../components/client/CreateClientForm';
+import { apiGet } from '../../../lib/api';
 
 export default function DashboardPage() {
   const { data, isLoading } = useCurrentUser(); // Nên lấy thêm isLoading nếu hook của bạn (như React Query) có hỗ trợ

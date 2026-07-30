@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiGet, ApiError } from '../../../lib/api';
+import { apiGet, ApiError } from '../../../../lib/api';
 import { FileText, ArrowLeft, Loader2, ChevronRight, AlertCircle } from 'lucide-react';
 
 type ContractRecord = {

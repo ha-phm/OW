@@ -2,9 +2,9 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCurrentUser } from '../../hooks/useCurrentUser';
-import { Sidebar } from '../../components/layout/SideBar';
-import { Topbar } from '../../components/layout/TopBar';
+import { useCurrentUser } from '../../../hooks/useCurrentUser';
+import { Sidebar } from '../../../components/layout/SideBar';
+import { Topbar } from '../../../components/layout/TopBar';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();

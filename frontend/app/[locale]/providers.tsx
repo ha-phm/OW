@@ -2,14 +2,22 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import { ThemeProvider } from 'next-themes';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  // Đảm bảo QueryClient chỉ được khởi tạo một lần duy nhất cho mỗi session
   const [queryClient] = useState(() => new QueryClient());
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <ThemeProvider 
+        attribute="class" 
+        defaultTheme="system" 
+        enableSystem
+        enableColorScheme 
+        disableTransitionOnChange 
+      >
+        {children}
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

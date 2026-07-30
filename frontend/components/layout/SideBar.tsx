@@ -3,16 +3,19 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, FileText, CreditCard } from 'lucide-react';
+import { useTranslation } from 'react-i18next'; // 1. Import hook
 
+// Thay vì viết cứng text tiếng Việt, ta lưu key (ví dụ: 'sidebar.dashboard')
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { href: '/dashboard/clients', label: 'Khách hàng', icon: Users },
-  { href: '/dashboard/contracts', label: 'Hợp đồng', icon: FileText },
-  { href: '/dashboard/cards', label: 'Thẻ', icon: CreditCard },
+  { href: '/dashboard', labelKey: 'sidebar.dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/clients', labelKey: 'sidebar.clients', icon: Users },
+  { href: '/dashboard/contracts', labelKey: 'sidebar.contracts', icon: FileText },
+  { href: '/dashboard/cards', labelKey: 'sidebar.cards', icon: CreditCard },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
@@ -24,7 +27,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-3">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
           const isActive = pathname === href;
           return (
             <Link
@@ -37,7 +40,7 @@ export function Sidebar() {
               }`}
             >
               <Icon className="h-5 w-5" />
-              {label}
+              {t(labelKey)}
             </Link>
           );
         })}

@@ -1,0 +1,51 @@
+{
+  "loginPage": {
+    "welcome": "Chào mừng",
+    "subtitle": "Hệ thống"
+  },
+
+  "authTabs": {
+    "login": "Đăng nhập",
+    "signup": "Đăng ký"
+  },
+
+  "loginForm": {
+    "emailLabel": "Email",
+    "emailPlaceholder": "Nhập email của bạn",
+    "passwordLabel": "Mật khẩu",
+    "passwordPlaceholder": "Nhập mật khẩu",
+    "processing": "Đang xử lý...",
+    "submitBtn": "Đăng nhập",
+    "forgotPassword": "Quên mật khẩu?"
+  },
+
+  "signupForm": {
+    "successAlert": "Đăng ký thành công! Mời bạn đăng nhập.",
+    "errorAlert": "Đăng ký thất bại, vui lòng thử lại.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Nhập email của bạn",
+    "passwordLabel": "Mật khẩu",
+    "passwordPlaceholder": "Nhập mật khẩu (Tối thiểu 6 ký tự)",
+    "processing": "Đang xử lý...",
+    "submitBtn": "Đăng ký ngay"
+  },
+
+  "glassNavbar": {
+    "home": "Trang chủ",
+    "about": "Giới thiệu",
+    "login": "Đăng nhập",
+    "contact": "Liên hệ"
+  },
+
+  "sidebar": {
+    "dashboard": "Tổng quan",
+    "clients": "Khách hàng",
+    "contracts": "Hợp đồng",
+    "cards": "Thẻ"
+  },
+
+  "topbar": {
+    "logout": "Đăng xuất"
+  }
+}
+

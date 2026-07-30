@@ -4,8 +4,10 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Lock } from 'lucide-react';
 import { useLogin } from '../../hooks/useLogin';
+import { useTranslation } from 'react-i18next';
 
 export function LoginForm() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
@@ -32,7 +34,7 @@ export function LoginForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter email"
+          placeholder={t('loginForm.emailPlaceholder')}
           required
           autoComplete="nope"
           className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-6 pr-12 text-white placeholder:text-white/70 focus:outline-none focus:border-white/50 transition-colors"
@@ -47,7 +49,7 @@ export function LoginForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter password"
+          placeholder={t('loginForm.passwordPlaceholder')}
           required
           autoComplete="new-password"
           className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-6 pr-12 text-white placeholder:text-white/70 focus:outline-none focus:border-white/50 transition-colors"
@@ -61,12 +63,12 @@ export function LoginForm() {
         disabled={isPending}
         className="w-full bg-[#4ade80] hover:bg-[#3ee075] text-white rounded-2xl py-4 font-bold text-lg transition-colors mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {isPending ? 'Đang xử lý...' : 'Log in'}
+        {isPending ? t('loginForm.processing') : t('loginForm.submitBtn')}
       </button>
 
       {/* Quên mật khẩu */}
       <button type="button" className="text-white/70 text-sm hover:text-white transition-colors mt-2">
-        Forgot password?
+        {t('loginForm.forgotPassword')}
       </button>
     </form>
   );

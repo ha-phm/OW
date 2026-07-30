@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { AuthTabs } from '../../components/auth/AuthTabs';
-import { LoginForm } from '../../components/auth/LoginForm';
-import { SignupForm } from '../../components/auth/SignupForm';
-import { GlassNavbar } from '../../components/layout/GlassNavbar';
+import { AuthTabs } from '../../../components/auth/AuthTabs';
+import { LoginForm } from '../../../components/auth/LoginForm';
+import { SignupForm } from '../../../components/auth/SignupForm';
+import { GlassNavbar } from '../../../components/layout/GlassNavbar';
 
 export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');

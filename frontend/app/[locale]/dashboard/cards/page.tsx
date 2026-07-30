@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiGet, apiPost, ApiError } from '../../../lib/api';
+import { apiGet, apiPost, ApiError } from '../../../../lib/api';
 import {
   CreditCard,
   ChevronRight,

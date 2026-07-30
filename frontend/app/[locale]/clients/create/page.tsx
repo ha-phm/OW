@@ -2,8 +2,8 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { apiPost } from '../../../lib/api';
-import { createClientSchema, CreateClientFormValues } from '../../../components/client/client.schema';
+import { apiPost } from '../../../../lib/api';
+import { createClientSchema, CreateClientFormValues } from '../../../../components/client/client.schema';
 
 export default function CreateClientPage() {
   const {

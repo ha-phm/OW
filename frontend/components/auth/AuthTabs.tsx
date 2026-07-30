@@ -1,9 +1,12 @@
+import { useTranslation } from 'react-i18next';
+
 interface AuthTabsProps {
   active: 'login' | 'signup';
   onChange: (tab: 'login' | 'signup') => void;
 }
 
 export function AuthTabs({ active, onChange }: AuthTabsProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex justify-center gap-12 mb-10">
       <button 
@@ -13,7 +16,7 @@ export function AuthTabs({ active, onChange }: AuthTabsProps) {
           active === 'login' ? 'text-white border-white' : 'text-white/50 border-transparent hover:text-white/80'
         }`}
       >
-        Log in
+        {t('authTabs.login')}
       </button>
       <button 
         type="button"
@@ -22,7 +25,7 @@ export function AuthTabs({ active, onChange }: AuthTabsProps) {
           active === 'signup' ? 'text-white border-white' : 'text-white/50 border-transparent hover:text-white/80'
         }`}
       >
-        Sign up
+        {t('authTabs.signup')}
       </button>
     </div>
   );
