@@ -2,8 +2,8 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { apiPost } from '../../../lib/api'; // Đường dẫn tới axios interceptor của bạn
-import { createClientSchema, CreateClientFormValues } from '../../../schema/client.schema';
+import { apiPost } from '../../../lib/api';
+import { createClientSchema, CreateClientFormValues } from '../../../components/client/client.schema';
 
 export default function CreateClientPage() {
   const {
@@ -16,7 +16,7 @@ export default function CreateClientPage() {
       gender: 'F',
       salutationCode: 'MR',
       maritalStatusCode: 'S',
-      branch: '0101', // Mặc định như template
+      branch: '0101',
     },
   });
 

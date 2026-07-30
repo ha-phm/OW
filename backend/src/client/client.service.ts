@@ -35,20 +35,10 @@ export class ClientService {
   async getByParams(clientId: string) {
     const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
 
-    // Sử dụng template getClient mới tạo để đồng bộ luồng sendRaw
     const xml = buildGetClientXml('CLIENT_ID', clientId, officer);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.soap.sendRaw<any>('GetClientByParmsV2', xml);
-
-    /* 
-    Lưu ý: Nếu bạn vẫn muốn dùng hàm call() cấu hình sẵn trước đó thay vì sendRaw, 
-    bạn có thể xóa 2 dòng trên và giữ nguyên code cũ như dưới đây:
-    return this.soap.call('GetClientByParmsV2', {
-      ClientSearchMethod: 'CLIENT_ID',
-      ClientIdentifier: clientId,
-    });
-    */
   }
 
   async createClient(userId: number, dto: CreateClientDto) {

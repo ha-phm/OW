@@ -33,11 +33,9 @@ export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 
   @Get('me')
-  // Bỏ Promise<any> và để TypeScript tự nội suy (infer) kiểu trả về
   async getProfile(@Request() req: RequestWithUser) {
     const user = req.user;
 
-    // Kiểm tra an toàn nếu user chưa đăng nhập hoặc chưa có clientId
     if (!user || !user.clientId) {
       return { IssClientDetailsV2APIRecord: null, clientId: null };
     }
@@ -47,14 +45,12 @@ export class ClientController {
       user.clientId,
     )) as Way4SoapResponse;
 
-    // Tuỳ thuộc vào cách soap.service bóc tách XML
     const clientRecord =
       result?.OutObject?.IssClientDetailsV2APIRecord ||
       result?.IssClientDetailsV2APIRecord ||
       result;
 
     return {
-      // Đảm bảo trả ra đúng key mà màn hình CustomerProfilePage đang expect
       IssClientDetailsV2APIRecord: clientRecord,
       clientId: user.clientId,
       clientNumber: user.clientNumber ?? null,

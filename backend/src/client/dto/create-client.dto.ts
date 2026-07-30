@@ -37,7 +37,7 @@ export class CreateClientDto {
   @IsIn(['M', 'F'])
   gender!: 'M' | 'F';
 
-  @IsIn(['S', 'M', 'D', 'W']) // Single/Married/Divorced/Widowed - confirm với BA mã thật
+  @IsIn(['S', 'M', 'D', 'W'])
   maritalStatusCode!: string;
 
   @IsIn(['MR', 'MRS', 'MS'])

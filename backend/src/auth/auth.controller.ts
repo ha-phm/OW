@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Public } from './decorators/public.decorator'; // Đảm bảo import đúng đường dẫn decorator của bạn
+import { Public } from './decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
