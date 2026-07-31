@@ -28,16 +28,14 @@ apiClient.interceptors.request.use(
   (error: unknown) => Promise.reject(error)
 );
 
-// --- ĐỊNH NGHĨA TYPE THAY CHO ANY ---
 interface PromiseCallback {
   resolve: (value: string | null) => void;
   reject: (reason?: unknown) => void;
 }
 
 let isRefreshing = false;
-let failedQueue: PromiseCallback[] = []; // Thay vì any[]
+let failedQueue: PromiseCallback[] = []; 
 
-// Thay vì (error: any), ta dùng unknown để đúng chuẩn strict mode
 const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -48,7 +46,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
   });
   failedQueue = [];
 };
-// ----------------------------------------
+
 
 apiClient.interceptors.response.use(
   (response) => response.data,
@@ -61,7 +59,6 @@ apiClient.interceptors.response.use(
 
       if (status === 401 && originalRequest && !originalRequest._retry) {
         if (isRefreshing) {
-          // Định nghĩa kiểu rõ ràng cho Promise là trả về chuỗi <string | null>
           return new Promise<string | null>((resolve, reject) => {
             failedQueue.push({ resolve, reject });
           })

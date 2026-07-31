@@ -21,9 +21,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    // Luôn lấy clientId mới nhất từ DB thay vì tin vào token cũ,
-    // vì token được phát hành lúc login có thể chưa có clientId
-    // nếu lúc đó user chưa tạo hồ sơ WAY4.
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
     });

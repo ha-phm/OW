@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
-import { XMLBuilder } from 'fast-xml-parser';
+import XMLBuilder from 'fast-xml-builder';
 
 interface SoapEnvelopeResponse {
   Envelope?: {
@@ -27,12 +27,13 @@ export class SoapService {
 
   constructor(private readonly config: ConfigService) {}
 
+  // ---- Public API ----
+
   async call<T>(
     operation: string,
     params: Record<string, string | number>,
   ): Promise<T> {
     const officer = this.config.get<string>('OPENWAY_OFFICER');
-    const baseUrl = this.config.get<string>('OPENWAY_BASE_URL');
 
     const envelope = this.builder.build({
       'soapenv:Envelope': {
@@ -49,7 +50,19 @@ export class SoapService {
       },
     });
 
-    const { data } = await axios.post<string>(baseUrl as string, envelope, {
+    return this.postAndParse<T>(operation, envelope);
+  }
+
+  async sendRaw<T>(operation: string, xml: string): Promise<T> {
+    return this.postAndParse<T>(operation, xml);
+  }
+
+  // ---- Private helpers ----
+
+  private async postAndParse<T>(operation: string, xml: string): Promise<T> {
+    const baseUrl = this.config.get<string>('OPENWAY_BASE_URL');
+
+    const { data } = await axios.post<string>(baseUrl as string, xml, {
       headers: { 'Content-Type': 'text/xml;charset=UTF-8' },
     });
 
@@ -75,26 +88,5 @@ export class SoapService {
       prefixed[`wsin:${key}`] = value;
     }
     return prefixed;
-  }
-
-  async sendRaw<T>(operation: string, xml: string): Promise<T> {
-    const baseUrl = this.config.get<string>('OPENWAY_BASE_URL');
-
-    const { data } = await axios.post<string>(baseUrl as string, xml, {
-      headers: { 'Content-Type': 'text/xml;charset=UTF-8' },
-    });
-
-    const parsed = this.parser.parse(data) as SoapEnvelopeResponse;
-    const result =
-      parsed.Envelope?.Body?.[`${operation}Response`]?.[`${operation}Result`];
-
-    if (!result || result.RetCode !== 0) {
-      throw new BadRequestException({
-        retCode: result?.RetCode ?? null,
-        message: result?.RetMsg ?? 'OpenWay không trả về kết quả hợp lệ',
-      });
-    }
-
-    return (result.OutObject !== undefined ? result.OutObject : result) as T;
   }
 }

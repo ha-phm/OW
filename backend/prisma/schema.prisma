@@ -29,7 +29,7 @@ enum ContractType {
 model Contract {
   id                Int          @id @default(autoincrement())
   userId            Int
-  clientNumber      String       // Số client Way4 (VD: 93830)
+  clientNumber      String       
   contractNumber    String       @unique
   applicationNumber String?
   type              ContractType // LIABILITY hoặc ISSUING
@@ -41,7 +41,7 @@ model Contract {
 
   user              User         @relation(fields: [userId], references: [id])
 
-  // Tự liên kết: Issuing Contract trỏ về Liability Contract cha của nó
+  
   parentContractId  Int?
   parentContract    Contract?    @relation("ContractHierarchy", fields: [parentContractId], references: [id])
   childContracts    Contract[]   @relation("ContractHierarchy")
