@@ -7,6 +7,9 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { User } from '@prisma/client';
+
+type AuthUser = Pick<User, 'id' | 'email' | 'clientId' | 'clientNumber'>;
 
 @Injectable()
 export class AuthService {
@@ -49,17 +52,7 @@ export class AuthService {
       throw new UnauthorizedException('Sai mật khẩu');
     }
 
-    const payload: JwtPayload = {
-      email: user.email,
-      sub: user.id,
-      clientId: user.clientId,
-      clientNumber: user.clientNumber,
-    };
-
-    const tokens = await this.generateTokens(payload);
-    await this.updateRefreshToken(user.id, tokens.refresh_token);
-
-    return tokens;
+    return this.issueTokens(user);
   }
 
   async refreshTokens(refreshToken: string) {
@@ -89,17 +82,7 @@ export class AuthService {
         throw new UnauthorizedException('Refresh token không hợp lệ.');
       }
 
-      const payload: JwtPayload = {
-        sub: user.id,
-        email: user.email,
-        clientId: user.clientId,
-        clientNumber: user.clientNumber,
-      };
-
-      const tokens = await this.generateTokens(payload);
-      await this.updateRefreshToken(user.id, tokens.refresh_token);
-
-      return tokens;
+      return this.issueTokens(user);
     } catch {
       throw new UnauthorizedException(
         'Refresh token đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.',
@@ -107,7 +90,31 @@ export class AuthService {
     }
   }
 
-  // --- HELPER METHODS ---
+  async logout(userId: number) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: null },
+    });
+    return { message: 'Đăng xuất thành công' };
+  }
+
+  /* đóng gói payload */
+  private buildPayload(user: AuthUser): JwtPayload {
+    return {
+      sub: user.id,
+      email: user.email,
+      clientId: user.clientId,
+      clientNumber: user.clientNumber,
+    };
+  }
+
+  /** Sinh cặp access/refresh token mới và lưu refresh token (đã hash) vào DB */
+  private async issueTokens(user: AuthUser) {
+    const tokens = await this.generateTokens(this.buildPayload(user));
+    await this.updateRefreshToken(user.id, tokens.refresh_token);
+    return tokens;
+  }
+
   private async generateTokens(payload: JwtPayload) {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
@@ -132,13 +139,5 @@ export class AuthService {
       where: { id: userId },
       data: { refreshToken: hashedRefreshToken },
     });
-  }
-
-  async logout(userId: number) {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { refreshToken: null },
-    });
-    return { message: 'Đăng xuất thành công' };
   }
 }
