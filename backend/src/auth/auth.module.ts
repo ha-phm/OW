@@ -14,13 +14,14 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
 
 @Module({
   imports: [
-    PrismaModule,
-    PassportModule,
+    PrismaModule, // để AuthService dùng được PrismaService
+    PassportModule, // module có sẵn của thư viện passport, cần thiết để JwtStategy hoạt động
     JwtModule.register({
+      // cung cấp JwtService (hàm signAsync dùng để tạo token)
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '15m' },
     }),
-  ],
+  ], // import 3 cái này, AuthService dùng constructor(private prisma: PrismaService, private jwtService: JwtService) mà không bị lỗi thiếu provider.
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
 })

@@ -27,8 +27,6 @@ export class SoapService {
 
   constructor(private readonly config: ConfigService) {}
 
-  // ---- Public API ----
-
   async call<T>(
     operation: string,
     params: Record<string, string | number>,
@@ -56,8 +54,6 @@ export class SoapService {
   async sendRaw<T>(operation: string, xml: string): Promise<T> {
     return this.postAndParse<T>(operation, xml);
   }
-
-  // ---- Private helpers ----
 
   private async postAndParse<T>(operation: string, xml: string): Promise<T> {
     const baseUrl = this.config.get<string>('OPENWAY_BASE_URL');
