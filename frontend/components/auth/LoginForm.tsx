@@ -27,7 +27,7 @@ export function LoginForm() {
       {/* Báo lỗi nếu có */}
       {error && <p className="text-red-400 text-sm text-center">{error.message}</p>}
 
-      {/* Input Username/Email */}
+      {/* Input Email */}
       <div className="relative">
         <label className="text-white/80 block mb-1">Email</label>
         <input
@@ -57,7 +57,6 @@ export function LoginForm() {
         <Lock className="absolute right-5 top-1/2 -translate-y-1/2 text-white/70" size={20} />
       </div>
 
-      {/* Nút Submit */}
       <button
         type="submit"
         disabled={isPending}
@@ -66,7 +65,6 @@ export function LoginForm() {
         {isPending ? t('loginForm.processing') : t('loginForm.submitBtn')}
       </button>
 
-      {/* Quên mật khẩu */}
       <button type="button" className="text-white/70 text-sm hover:text-white transition-colors mt-2">
         {t('loginForm.forgotPassword')}
       </button>

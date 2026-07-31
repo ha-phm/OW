@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   description: 'Client Profile Management System',
 };
 
-// 1. Thêm 'async' vào hàm
 export default async function RootLayout({
   children,
   params, 
