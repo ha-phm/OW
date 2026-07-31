@@ -46,7 +46,6 @@ export class ClientService {
   }
 
   async createClient(userId: number, dto: CreateClientDto) {
-    // Chặn tạo trùng: nếu user đã có clientId rồi thì từ chối luôn
     const existingUser = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { clientId: true },
@@ -70,7 +69,6 @@ export class ClientService {
       xml,
     );
 
-    // Kiểm tra mã lỗi từ hệ thống (0 là thành công)
     if (String(way4Response.RetCode) !== '0') {
       throw new InternalServerErrorException(
         `Lỗi từ WAY4: ${way4Response.RetMsg}`,
@@ -85,7 +83,6 @@ export class ClientService {
       );
     }
 
-    // Lưu cả 2 giá trị: clientId (WAY4 tự sinh) và clientNumber (tự sinh ở local)
     await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -101,7 +98,6 @@ export class ClientService {
     };
   }
 
-  // Sinh ClientNumber duy nhất: timestamp (ms) + 3 số ngẫu nhiên, đảm bảo đủ dài và khó trùng
   private async generateUniqueClientNumber(): Promise<string> {
     for (let attempt = 0; attempt < 5; attempt++) {
       const timestamp = Date.now().toString();
@@ -122,7 +118,6 @@ export class ClientService {
   async updateClient(clientId: string, dto: UpdateClientDto) {
     const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
 
-    // Thêm tham số searchMethod (CLIENT_ID) khớp với hàm buildEditClientXml
     const xml = buildEditClientXml('CLIENT_ID', clientId, dto, officer);
 
     const response = await this.soap.sendRaw<EditClientResult>(
@@ -130,7 +125,6 @@ export class ClientService {
       xml,
     );
 
-    // Kiểm tra lỗi đồng bộ như ở createClient
     if (String(response.RetCode) !== '0') {
       throw new InternalServerErrorException(
         `Lỗi từ WAY4: ${response.RetMsg || 'Không thể cập nhật hồ sơ'}`,

@@ -10,15 +10,11 @@ function escapeXml(value: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// Hàm helper chỉ sinh thẻ XML nếu có dữ liệu truyền vào
 function buildOptionalTag(tag: string, value: string | undefined): string {
   if (value === undefined || value === null || value === '') return '';
   return `<wsin:${tag}>${escapeXml(value)}</wsin:${tag}>`;
 }
 
-// ==========================================
-// 1. TEMPLATE TẠO MỚI KHÁCH HÀNG
-// ==========================================
 export function buildCreateClientXml(
   dto: CreateClientDto,
   officer: string,
@@ -51,16 +47,16 @@ export function buildCreateClientXml(
             <wsin:FirstName>${escapeXml(dto.firstName)}</wsin:FirstName>
             <wsin:LastName>${escapeXml(dto.lastName)}</wsin:LastName>
             <wsin:MiddleName>${escapeXml(dto.middleName ?? '')}</wsin:MiddleName>
-            <wsin:MaritalStatusCode>${dto.maritalStatusCode}</wsin:MaritalStatusCode>
-            <wsin:SocialSecurityNumber>${dto.socialSecurityNumber}</wsin:SocialSecurityNumber>
-            <wsin:SalutationCode>${dto.salutationCode}</wsin:SalutationCode>
-            <wsin:BirthDate>${dto.birthDate}</wsin:BirthDate>
-            <wsin:Gender>${dto.gender}</wsin:Gender>
+            <wsin:MaritalStatusCode>${escapeXml(dto.maritalStatusCode)}</wsin:MaritalStatusCode>
+            <wsin:SocialSecurityNumber>${escapeXml(dto.socialSecurityNumber)}</wsin:SocialSecurityNumber>
+            <wsin:SalutationCode>${escapeXml(dto.salutationCode)}</wsin:SalutationCode>
+            <wsin:BirthDate>${escapeXml(dto.birthDate)}</wsin:BirthDate>
+            <wsin:Gender>${escapeXml(dto.gender)}</wsin:Gender>
             <wsin:BirthPlace></wsin:BirthPlace>
             <wsin:BirthName></wsin:BirthName>
             <wsin:Citizenship>VNM</wsin:Citizenship>
             <wsin:TaxBracket></wsin:TaxBracket>
-            <wsin:IndividualTaxpayerNumber>${dto.individualTaxpayerNumber ?? ''}</wsin:IndividualTaxpayerNumber>
+            <wsin:IndividualTaxpayerNumber>${escapeXml(dto.individualTaxpayerNumber ?? '')}</wsin:IndividualTaxpayerNumber>
             <wsin:SecretPhrase></wsin:SecretPhrase>
             <wsin:CompanyName>${escapeXml(dto.companyName ?? '')}</wsin:CompanyName>
             <wsin:Trademark></wsin:Trademark>
@@ -70,7 +66,7 @@ export function buildCreateClientXml(
             <wsin:EmbossedLastName></wsin:EmbossedLastName>
             <wsin:EmbossedCompanyName></wsin:EmbossedCompanyName>
             <wsin:IdentityCardType></wsin:IdentityCardType>
-            <wsin:IdentityCardNumber>${dto.identityCardNumber}</wsin:IdentityCardNumber>
+            <wsin:IdentityCardNumber>${escapeXml(dto.identityCardNumber)}</wsin:IdentityCardNumber>
             <wsin:IdentityCardDetails>${escapeXml(dto.identityCardDetails ?? '')}</wsin:IdentityCardDetails>
             <wsin:ClientNumber>${dto.clientNumber ?? ''}</wsin:ClientNumber>
             <wsin:Profession>${escapeXml(dto.profession ?? '')}</wsin:Profession>
@@ -99,9 +95,6 @@ export function buildCreateClientXml(
 </soapenv:Envelope>`;
 }
 
-// ==========================================
-// 2. TEMPLATE LẤY THÔNG TIN KHÁCH HÀNG (MỚI)
-// ==========================================
 export function buildGetClientXml(
   searchMethod: string,
   identifier: string,
@@ -123,9 +116,6 @@ export function buildGetClientXml(
 </soapenv:Envelope>`;
 }
 
-// ==========================================
-// 3. TEMPLATE CẬP NHẬT KHÁCH HÀNG
-// ==========================================
 export function buildEditClientXml(
   searchMethod: string,
   clientIdentifier: string,

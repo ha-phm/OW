@@ -40,7 +40,6 @@ export class ClientController {
       return { IssClientDetailsV2APIRecord: null, clientId: null };
     }
 
-    // Ép kiểu về Way4SoapResponse thay vì Record<string, any>
     const result = (await this.clientService.getByParams(
       user.clientId,
     )) as Way4SoapResponse;
