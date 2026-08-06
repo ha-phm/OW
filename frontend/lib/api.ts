@@ -139,3 +139,8 @@ export async function apiPatch<TResponse, TBody>(path: string, body: TBody): Pro
   const response = await apiClient.patch<TResponse>(path, body);
   return response as unknown as TResponse;
 }
+
+export async function apiDelete<TResponse>(path: string): Promise<TResponse> {
+  const response = await apiClient.delete<TResponse>(path);
+  return response as unknown as TResponse;
+}

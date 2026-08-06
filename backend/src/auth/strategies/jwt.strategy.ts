@@ -1,7 +1,7 @@
 // nơi token thực sự đọc khi có request tới
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export type JwtPayload = {
@@ -26,11 +26,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       where: { id: payload.sub },
     });
 
+    if (!user) {
+      throw new UnauthorizedException('Tài khoản không còn tồn tại');
+    }
+
     return {
       userId: payload.sub,
       email: payload.email,
       clientId: user?.clientId ?? null,
       clientNumber: user?.clientNumber ?? null,
+      role: user.role,
     };
   }
 }

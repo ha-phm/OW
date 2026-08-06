@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  Get,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
@@ -15,6 +16,19 @@ import { CurrentUser } from './decorators/current-user.decorator';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Get('me')
+  me(
+    @CurrentUser()
+    user: {
+      userId: number;
+      email: string;
+      role: string;
+      clientId: string | null;
+    },
+  ) {
+    return user;
+  }
 
   @Public()
   @Post('signup')
