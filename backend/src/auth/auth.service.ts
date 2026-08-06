@@ -8,7 +8,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { User } from '@prisma/client';
+import { ClientService } from '../client/client.service';
+import { RegisterDto } from './dto/register.dto';
 
+// 👈 THIẾU DÒNG NÀY trong bản trước — gây lỗi "Cannot find name 'AuthUser'"
 type AuthUser = Pick<User, 'id' | 'email' | 'clientId' | 'clientNumber'>;
 
 @Injectable()
@@ -16,29 +19,50 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private clientService: ClientService,
   ) {}
 
-  async register(email: string, pass: string) {
+  async register(dto: RegisterDto) {
     const existingUser = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email: dto.email },
     });
     if (existingUser) {
       throw new BadRequestException('Email này đã được đăng ký!');
     }
 
-    const hashedPassword = await bcrypt.hash(pass, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
 
+    // B1: tạo User trước, CHƯA có clientId
     const newUser = await this.prisma.user.create({
       data: {
-        email: email,
+        email: dto.email,
         password: hashedPassword,
       },
     });
 
-    return {
-      message: 'Tạo tài khoản thành công!',
-      email: newUser.email,
-    };
+    // B2: tách phần hồ sơ (bỏ password) để gửi cho ClientService
+    // 👈 dùng "..." rest thay vì destructure biến password không dùng tới,
+    // tránh lỗi ESLint no-unused-vars
+    const clientDto = { ...dto };
+    delete (clientDto as { password?: string }).password;
+
+    try {
+      // B3: tạo hồ sơ bên OpenWay — hàm này tự update clientId/clientNumber vào User
+      const clientResult = await this.clientService.createClient(
+        newUser.id,
+        clientDto,
+      );
+
+      return {
+        message: 'Tạo tài khoản và hồ sơ thành công!',
+        email: newUser.email,
+        clientId: clientResult.clientId,
+      };
+    } catch (error) {
+      // Nếu OpenWay lỗi, xoá User vừa tạo để tránh "tài khoản mồ côi" không có hồ sơ
+      await this.prisma.user.delete({ where: { id: newUser.id } });
+      throw error;
+    }
   }
 
   async login(email: string, pass: string) {
@@ -98,7 +122,6 @@ export class AuthService {
     return { message: 'Đăng xuất thành công' };
   }
 
-  /* đóng gói payload */
   private buildPayload(user: AuthUser): JwtPayload {
     return {
       sub: user.id,
@@ -108,7 +131,6 @@ export class AuthService {
     };
   }
 
-  /** Sinh cặp access/refresh token mới và lưu refresh token (đã hash) vào DB */
   private async issueTokens(user: AuthUser) {
     const tokens = await this.generateTokens(this.buildPayload(user));
     await this.updateRefreshToken(user.id, tokens.refresh_token);

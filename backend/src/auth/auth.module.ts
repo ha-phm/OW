@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PrismaModule } from '../prisma/prisma.module';
+import { ClientModule } from '../client/client.module';
 
 if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
   throw new Error(
@@ -16,6 +17,7 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
   imports: [
     PrismaModule, // để AuthService dùng được PrismaService
     PassportModule, // module có sẵn của thư viện passport, cần thiết để JwtStategy hoạt động
+    ClientModule,
     JwtModule.register({
       // cung cấp JwtService (hàm signAsync dùng để tạo token)
       secret: process.env.JWT_SECRET,
