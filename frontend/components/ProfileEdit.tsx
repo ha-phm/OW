@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { X } from 'lucide-react';
-import { apiPatch, ApiError } from '../lib/api';
+import { apiPatch, ApiError } from '../api/api';
 import { extractCode } from '../utils/client.utils';
 import { IssClientDetailsV2APIRecord } from '../hooks/useCurrentUser'
 

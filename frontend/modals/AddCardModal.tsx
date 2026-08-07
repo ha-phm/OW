@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CreditCard, Loader2, AlertCircle, Wallet, CheckCircle2 } from 'lucide-react';
-import { apiPost, ApiError } from '../lib/api';
+import { apiPost, ApiError } from '../api/api';
 import { CardApplicationResponse } from '../types/contract.types';
 import { ModalShell } from './ModalShell';
 import { ModalField } from './ModalField';

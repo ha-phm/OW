@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, AlertCircle, Plus, Search } from 'lucide-react';
-import { apiGet, ApiError } from '../../../lib/api';
+import { apiGet, ApiError } from '../../../api/api';
 import { PaginatedContractTree } from '../../../types/contract.types';
 import { LiabilityCard } from '../../../components/LiabilityCard';
 import { EmptyLiabilityState } from '../../../components/EmptyLiabilityState';

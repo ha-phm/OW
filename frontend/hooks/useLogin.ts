@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { apiPost } from '../lib/api';
+import { apiPost } from '../api/api';
 
 interface LoginPayload {
   email: string;

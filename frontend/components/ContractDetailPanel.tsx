@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
-import { apiGet, ApiError } from '../lib/api';
+import { apiGet, ApiError } from '../api/api';
 import { ContractDetail } from '../types/contract.types';
 import { formatVnd } from '../utils/format';
 

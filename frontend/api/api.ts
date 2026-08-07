@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/\/+$/, '');
 
@@ -8,6 +9,15 @@ export class ApiError extends Error {
   }
 }
 
+// Hàm xử lý việc logout, phát sự kiện ra ngoài thay vì dùng window.location.href
+const forceLogout = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    window.dispatchEvent(new Event('auth:unauthorized'));
+  }
+};
+
 const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
@@ -15,26 +25,13 @@ const apiClient = axios.create({
   },
 });
 
-apiClient.interceptors.request.use(
-  (config) => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-    return config;
-  },
-  (error: unknown) => Promise.reject(error)
-);
-
 interface PromiseCallback {
   resolve: (value: string | null) => void;
   reject: (reason?: unknown) => void;
 }
 
 let isRefreshing = false;
-let failedQueue: PromiseCallback[] = []; 
+let failedQueue: PromiseCallback[] = [];
 
 const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
@@ -47,6 +44,55 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
+apiClient.interceptors.request.use(
+  async (config) => {
+    if (typeof window !== 'undefined') {
+      let token = localStorage.getItem('access_token');
+      
+      if (token) {
+        try {
+          const decodedToken = jwtDecode(token);
+          const currentTime = Date.now() / 1000;
+
+          if (decodedToken.exp && decodedToken.exp < currentTime + 10) {
+            const refreshToken = localStorage.getItem('refresh_token');
+            
+            if (refreshToken && !isRefreshing) {
+              isRefreshing = true;
+              try {
+                const res = await axios.post(`${API_URL}/auth/refresh`, {
+                  refresh_token: refreshToken,
+                });
+                
+                const { access_token, refresh_token: new_refresh_token } = res.data;
+                localStorage.setItem('access_token', access_token);
+                localStorage.setItem('refresh_token', new_refresh_token);
+                
+                token = access_token; // Cập nhật token mới
+                processQueue(null, access_token);
+              } catch (err) {
+                processQueue(err, null);
+                forceLogout();
+              } finally {
+                isRefreshing = false;
+              }
+            } else if (isRefreshing) {
+              token = await new Promise<string | null>((resolve, reject) => {
+                failedQueue.push({ resolve, reject });
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Invalid token format', error);
+        }
+
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error: unknown) => Promise.reject(error)
+);
 
 apiClient.interceptors.response.use(
   (response) => response.data,
@@ -56,7 +102,7 @@ apiClient.interceptors.response.use(
     if (error.response) {
       const status = error.response.status;
       const data = error.response.data;
-
+      
       if (status === 401 && originalRequest && !originalRequest._retry) {
         if (isRefreshing) {
           return new Promise<string | null>((resolve, reject) => {
@@ -75,11 +121,7 @@ apiClient.interceptors.response.use(
         const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
 
         if (!refreshToken) {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            window.location.href = '/login';
-          }
+          forceLogout();
           return Promise.reject(error);
         }
 
@@ -103,11 +145,7 @@ apiClient.interceptors.response.use(
           return retryResponse.data;
         } catch (refreshError: unknown) {
           processQueue(refreshError, null);
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            window.location.href = '/login';
-          }
+          forceLogout(); // Refresh thất bại -> Phát sự kiện logout
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;

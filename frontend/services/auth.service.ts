@@ -1,4 +1,4 @@
-import { apiPost } from '@/lib/api';
+import { apiPost } from '@/api/api';
 
 import { SignupFormValues } from '../schema/client.schema'; 
 

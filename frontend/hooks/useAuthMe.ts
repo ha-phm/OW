@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api';
+import { apiGet } from '@/api/api';
 import { AuthMe } from '@/types/user';
 
 export function useAuthMe() {

@@ -1,4 +1,4 @@
-import { apiGet, apiPatch, apiDelete } from '@/lib/api';
+import { apiGet, apiPatch, apiDelete } from '@/api/api';
 import { AdminUser, Role } from '@/types/user';
 
 export const adminService = {

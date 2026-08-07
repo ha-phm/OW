@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Landmark, Loader2, AlertCircle, Plus } from 'lucide-react';
-import { apiPost, ApiError } from '../lib/api';
+import { apiPost, ApiError } from '../api/api';
 import { ContractResponse } from '../types/contract.types';
 import { ModalShell } from './ModalShell';
 import { ModalField } from './ModalField';
