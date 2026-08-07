@@ -15,6 +15,7 @@ import { CreateLiabilityDto } from './dto/create-liability.dto';
 import { AddIssuingDto } from './dto/add-issuing.dto';
 import { CreateCardApplicationDto } from './dto/create-card-application.dto';
 import { GetContractDetailDto } from './dto/get-contract-detail.dto';
+import { GetContractTreeQueryDto } from './dto/get-contract-tree-query.dto';
 import {
   buildCreateContractXml,
   buildCreateIssuingContractXml,
@@ -71,6 +72,16 @@ export interface ContractTreeLiability {
   issuings: ContractTreeIssuing[];
 }
 
+export interface PaginatedResult<T> {
+  data: T[];
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 interface Way4ContractRecord {
   ContractNumber?: string;
   ContractName?: string;
@@ -121,6 +132,23 @@ export class ContractService {
     private readonly prisma: PrismaService,
     private readonly cardService: CardService,
   ) {}
+
+  // ---------------------------------------------------------------------
+  // Cache cây hợp đồng theo clientNumber, dùng cho GET /contracts/me (phân
+  // trang + tìm kiếm). Mục đích: tránh gọi lại SOAP WAY4 mỗi lần user đổi
+  // trang hoặc gõ tìm kiếm. TTL ngắn (30s) vì hạn mức/dư nợ có thể thay đổi
+  // liên tục phía WAY4.
+  //
+  // LƯU Ý KHI SCALE: Map trong bộ nhớ chỉ đúng khi service chạy 1 instance.
+  // Nếu deploy nhiều instance sau load balancer, phải thay bằng cache dùng
+  // chung (Redis qua @nestjs/cache-manager) để tránh mỗi instance thấy dữ
+  // liệu khác nhau.
+  // ---------------------------------------------------------------------
+  private readonly treeCache = new Map<
+    string,
+    { data: ContractTreeLiability[]; expiresAt: number }
+  >();
+  private readonly TREE_CACHE_TTL_MS = 30_000;
 
   private toStringOrUndefined(value: unknown): string | undefined {
     return value !== null && value !== undefined ? String(value) : undefined;
@@ -353,6 +381,86 @@ export class ContractService {
     return this.buildContractTree(records);
   }
 
+  // ---------------------------------------------------------------------
+  // Cache + filter + pagination cho GET /contracts/me
+  // ---------------------------------------------------------------------
+
+  private async getContractTreeCachedByClientNumber(
+    clientNumber: string,
+  ): Promise<ContractTreeLiability[]> {
+    const cached = this.treeCache.get(clientNumber);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+
+    const records = await this.getContractsByClientNumber(clientNumber);
+    const tree = this.buildContractTree(records);
+    this.treeCache.set(clientNumber, {
+      data: tree,
+      expiresAt: Date.now() + this.TREE_CACHE_TTL_MS,
+    });
+    return tree;
+  }
+
+  /** Gọi ngay sau khi tạo/sửa Liability, Issuing, hoặc Card thành công. */
+  private invalidateTreeCache(clientNumber: string): void {
+    this.treeCache.delete(clientNumber);
+  }
+
+  private filterContractTree(
+    tree: ContractTreeLiability[],
+    search?: string,
+  ): ContractTreeLiability[] {
+    const q = search?.trim().toLowerCase();
+    if (!q) return tree;
+
+    const matches = (s?: string) => (s ?? '').toLowerCase().includes(q);
+
+    return tree.filter((liability) => {
+      if (
+        matches(liability.contractNumber) ||
+        matches(liability.contractName)
+      ) {
+        return true;
+      }
+      return liability.issuings.some((issuing) => {
+        if (matches(issuing.contractNumber) || matches(issuing.contractName)) {
+          return true;
+        }
+        return issuing.cards.some((card) => matches(card.contractNumber));
+      });
+    });
+  }
+
+  async getMyContractTreePaginated(
+    clientId: string,
+    query: GetContractTreeQueryDto,
+  ): Promise<PaginatedResult<ContractTreeLiability>> {
+    const clientResult = await this.clientService.getByParams(clientId);
+    const clientNumber =
+      clientResult?.IssClientDetailsV2APIRecord?.ClientNumber;
+    if (!clientNumber) {
+      throw new InternalServerErrorException(
+        'Không lấy được ClientNumber từ hồ sơ khách hàng',
+      );
+    }
+
+    const fullTree = await this.getContractTreeCachedByClientNumber(
+      String(clientNumber),
+    );
+    const filtered = this.filterContractTree(fullTree, query.search);
+
+    const { page, pageSize } = query;
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const start = (page - 1) * pageSize;
+
+    return {
+      data: filtered.slice(start, start + pageSize),
+      meta: { page, pageSize, total, totalPages },
+    };
+  }
+
   private async callCreateContract(
     dto: CreateContractDto,
   ): Promise<ContractResponse> {
@@ -435,6 +543,8 @@ export class ContractService {
       },
     });
 
+    this.invalidateTreeCache(clientNumber);
+
     return result;
   }
 
@@ -493,6 +603,8 @@ export class ContractService {
       },
     });
 
+    this.invalidateTreeCache(liability.clientNumber);
+
     return result;
   }
 
@@ -540,6 +652,8 @@ export class ContractService {
         embossedLastName: dto.embossedLastName,
       },
     });
+
+    this.invalidateTreeCache(issuing.clientNumber);
 
     return {
       success: true,

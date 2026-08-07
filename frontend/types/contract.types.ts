@@ -71,4 +71,24 @@ export type ContractDetail = {
   topContract?: string;
 };
 
+// ==========================================
+// Giới hạn số thẻ tối đa cho mỗi hợp đồng phát hành (Issuing)
+// Phải khớp với MAX_CARDS_PER_ISSUING bên backend (contract.constants.ts)
+// ==========================================
 export const MAX_CARDS_PER_ISSUING = 4;
+
+// ==========================================
+// Response phân trang cho GET /contracts/me?search=&page=&pageSize=
+// Khớp với PaginatedResult<ContractTreeLiability> ở contract.service.ts
+// ==========================================
+export type PaginationMeta = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+export type PaginatedContractTree = {
+  data: ContractTreeLiability[];
+  meta: PaginationMeta;
+};

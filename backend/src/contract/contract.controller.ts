@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Query,
   Request,
   UseGuards,
   BadRequestException,
@@ -16,11 +17,13 @@ import {
   ContractResponse,
   CardApplicationResponse,
   ContractTreeLiability,
+  PaginatedResult,
 } from './contract.service';
 import { CreateLiabilityDto } from './dto/create-liability.dto';
 import { AddIssuingDto } from './dto/add-issuing.dto';
 import { CreateCardApplicationDto } from './dto/create-card-application.dto';
 import { GetContractDetailDto } from './dto/get-contract-detail.dto';
+import { GetContractTreeQueryDto } from './dto/get-contract-tree-query.dto';
 
 interface RequestWithUser {
   user: {
@@ -35,12 +38,29 @@ interface RequestWithUser {
 export class ContractController {
   constructor(private readonly contractService: ContractService) {}
 
+  // Hỗ trợ tìm kiếm + phân trang: GET /contracts/me?search=&page=&pageSize=
+  // Query params được validate/transform bởi GetContractTreeQueryDto (yêu cầu
+  // main.ts đã bật ValidationPipe({ transform: true }) toàn cục).
   @Get('me')
   getMyContractTree(
     @Request() req: RequestWithUser,
-  ): Promise<ContractTreeLiability[]> {
-    if (!req.user.clientId) return Promise.resolve([]);
-    return this.contractService.getContractTreeByClientId(req.user.clientId);
+    @Query() query: GetContractTreeQueryDto,
+  ): Promise<PaginatedResult<ContractTreeLiability>> {
+    if (!req.user.clientId) {
+      return Promise.resolve({
+        data: [],
+        meta: {
+          page: query.page,
+          pageSize: query.pageSize,
+          total: 0,
+          totalPages: 1,
+        },
+      });
+    }
+    return this.contractService.getMyContractTreePaginated(
+      req.user.clientId,
+      query,
+    );
   }
 
   // LƯU Ý: route ':contractNumber' phải luôn đứng SAU mọi route tĩnh 1-segment
