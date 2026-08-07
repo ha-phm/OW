@@ -1,72 +1,111 @@
-import { Controller, Get, Post, Body, Param, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Request,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
+import { Role } from '@prisma/client';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import {
   ContractService,
   ContractResponse,
-  FullCardApplicationResponse,
+  CardApplicationResponse,
+  ContractTreeLiability,
 } from './contract.service';
-import { CardService, CardContractResponse } from '../card/card.service';
-import { CreateContractDto } from './dto/create-contract.dto';
-import { CreateIssuingContractDto } from './dto/create-issuing-contract.dto';
-import { CreateFullCardDto } from './dto/create-full-card.dto';
-import { CreateCardDto } from '../card/dto/create-card.dto';
+import { CreateLiabilityDto } from './dto/create-liability.dto';
+import { AddIssuingDto } from './dto/add-issuing.dto';
+import { CreateCardApplicationDto } from './dto/create-card-application.dto';
+import { GetContractDetailDto } from './dto/get-contract-detail.dto';
 
 interface RequestWithUser {
   user: {
     userId: number;
     email: string;
-    clientId?: string;
+    clientId?: string | null;
+    clientNumber?: string | null;
   };
 }
 
 @Controller('contracts')
 export class ContractController {
-  constructor(
-    private readonly contractService: ContractService,
-    private readonly cardService: CardService, // thêm dependency này
-  ) {}
+  constructor(private readonly contractService: ContractService) {}
 
   @Get('me')
-  getMyContracts(@Request() req: RequestWithUser): Promise<unknown[]> {
-    if (!req.user.clientId) {
-      return Promise.resolve([]);
-    }
-    return this.contractService.getContractsByClientId(req.user.clientId);
+  getMyContractTree(
+    @Request() req: RequestWithUser,
+  ): Promise<ContractTreeLiability[]> {
+    if (!req.user.clientId) return Promise.resolve([]);
+    return this.contractService.getContractTreeByClientId(req.user.clientId);
   }
 
+  // LƯU Ý: route ':contractNumber' phải luôn đứng SAU mọi route tĩnh 1-segment
+  // khác trong controller này (như 'me' ở trên) — nếu không route tĩnh sẽ bị
+  // route động này "nuốt" mất tuỳ theo thứ tự khai báo.
   @Get(':contractNumber')
   getContract(
+    @Request() req: RequestWithUser,
     @Param('contractNumber') contractNumber: string,
-  ): Promise<unknown> {
-    return this.contractService.getContract(contractNumber);
+  ): Promise<GetContractDetailDto> {
+    // Trước đây endpoint này gọi thẳng WAY4 theo contractNumber trên URL mà
+    // KHÔNG kiểm tra quyền sở hữu -> user A có thể xem hợp đồng của user B chỉ
+    // bằng cách đổi số trên URL. Đã fix: bắt buộc truyền userId để service kiểm
+    // tra hợp đồng có thuộc về user hiện tại (Liability/Issuing trong bảng
+    // Contract, hoặc Card trong bảng Card) trước khi gọi WAY4.
+    return this.contractService.getContract(contractNumber, req.user.userId);
   }
 
-  // 1. Tạo riêng Liability Contract
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/:clientNumber')
+  getContractTreeForAdmin(
+    @Param('clientNumber') clientNumber: string,
+  ): Promise<ContractTreeLiability[]> {
+    return this.contractService.getContractTreeByClientNumber(clientNumber);
+  }
+
   @Post()
-  createContract(@Body() dto: CreateContractDto): Promise<ContractResponse> {
-    return this.contractService.createContract(dto);
-  }
-
-  // 2. Tạo riêng Issuing Contract (Cần tự truyền liabContractNumber vào)
-  @Post('issuing')
-  createIssuingContract(
-    @Body() dto: CreateIssuingContractDto,
+  createLiability(
+    @Request() req: RequestWithUser,
+    @Body() dto: CreateLiabilityDto,
   ): Promise<ContractResponse> {
-    return this.contractService.createIssuingContract(dto);
+    if (!req.user.clientId) {
+      throw new BadRequestException('Bạn cần tạo hồ sơ khách hàng trước.');
+    }
+    return this.contractService.createLiabilityForUserByClientId(
+      req.user.userId,
+      req.user.clientId,
+      dto,
+    );
   }
 
-  // 3. Luồng kết hợp: frontend chỉ cần gọi API này là tự động ra cả 3 contract liên kết nhau
-  @Post('full-application')
-  createFullApplication(
-    @Body() dto: CreateFullCardDto,
-  ): Promise<FullCardApplicationResponse> {
-    return this.contractService.createFullCardApplication(dto);
+  @Post(':liabilityContractNumber/issuing')
+  addIssuing(
+    @Request() req: RequestWithUser,
+    @Param('liabilityContractNumber') liabilityContractNumber: string,
+    @Body() dto: AddIssuingDto,
+  ): Promise<ContractResponse> {
+    return this.contractService.addIssuingUnderLiability(
+      req.user.userId,
+      liabilityContractNumber,
+      dto,
+    );
   }
 
-  // 4. Sinh số thẻ từ Issuing Contract
-  // -> Gọi thẳng CardService thay vì qua ContractService,
-  //    vì logic tạo thẻ giờ đã chuyển hẳn về CardService.
-  @Post('card')
-  createCard(@Body() dto: CreateCardDto): Promise<CardContractResponse> {
-    return this.cardService.createCardContract(dto);
+  @Post(':issuingContractNumber/cards')
+  addCard(
+    @Request() req: RequestWithUser,
+    @Param('issuingContractNumber') issuingContractNumber: string,
+    @Body() dto: CreateCardApplicationDto,
+  ): Promise<CardApplicationResponse> {
+    return this.contractService.addCardUnderIssuing(
+      req.user.userId,
+      issuingContractNumber,
+      dto,
+    );
   }
 }

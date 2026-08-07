@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { UserCog, Trash2 } from 'lucide-react';
+import { UserCog, Trash2, Pencil } from 'lucide-react';
 import { useAdminUsers, useUpdateUserRole, useDeleteUser } from '../../../hooks/useAdminUsers';
 import { useAuthMe } from '../../../hooks/useAuthMe';
 import { Role } from '../../../types/user';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 export default function UsersPage() {
   const router = useRouter();
@@ -15,15 +16,12 @@ export default function UsersPage() {
   const deleteUser = useDeleteUser();
   const [search, setSearch] = useState('');
 
-  // thay vì hiện thông báo, đá thẳng về dashboard nếu không phải admin
   useEffect(() => {
-  if (!meLoading && me?.role !== 'ADMIN') {
-    router.replace('/dashboard');
-  }
-}, [meLoading, me, router]);
+    if (!meLoading && me?.role !== 'ADMIN') {
+      router.replace('/dashboard');
+    }
+  }, [meLoading, me, router]);
 
-  // trong lúc đang kiểm tra quyền (hoặc đang redirect), không render gì cả
-  // tránh nháy nội dung trang users lên rồi mới biến mất
   if (meLoading || me?.role !== 'ADMIN') {
     return null;
   }
@@ -33,6 +31,42 @@ export default function UsersPage() {
   const filtered = (users ?? []).filter((u) =>
     u.email.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const handleRoleChange = (userId: number, userEmail: string, newRole: Role) => {
+    toast(`Xác nhận đổi quyền?`, {
+      description: `Đổi quyền của ${userEmail} thành ${newRole}.`,
+      action: {
+        label: 'Đồng ý',
+        onClick: () => {
+            updateRole.mutate({ id: userId, role: newRole });
+        },
+      },
+      cancel: {
+        label: 'Huỷ',
+        onClick: () => {}, 
+      },
+    });
+  };
+
+  const handleDeleteUser = (userId: number, userEmail: string) => {
+    toast.error(`Xoá vĩnh viễn tài khoản?`, {
+      description: `Tài khoản ${userEmail} sẽ bị xoá và không thể khôi phục.`,
+      // Custom màu cho nút xoá nổi bật trên nền đỏ như bạn muốn ở câu trước
+      actionButtonStyle: { backgroundColor: '#dc2626', color: 'white' },
+      cancelButtonStyle: { backgroundColor: '#e5e7eb', color: '#374151' },
+      action: {
+        label: 'Xoá ngay',
+        onClick: () => {
+          // Chỉ cần truyền userId, xoá onSuccess/onError ở đây
+          deleteUser.mutate(userId);
+        },
+      },
+      cancel: {
+        label: 'Huỷ',
+        onClick: () => {}, 
+      },
+    });
+  };
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -59,12 +93,12 @@ export default function UsersPage() {
               <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-400">Hồ sơ</th>
               <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-400">Quyền</th>
               <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-400">Ngày tạo</th>
-              <th className="px-5 py-3"></th>
+              <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wide text-slate-400">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((user) => (
-              <tr key={user.id} className="border-t border-slate-100">
+              <tr key={user.id} className="border-t border-slate-100 hover:bg-slate-50/50">
                 <td className="px-5 py-3 text-sm text-slate-700">{user.email}</td>
                 <td className="px-5 py-3 text-sm">
                   {user.clientId ? (
@@ -80,10 +114,8 @@ export default function UsersPage() {
                 <td className="px-5 py-3 text-sm">
                   <select
                     value={user.role}
-                    onChange={(e) =>
-                      updateRole.mutate({ id: user.id, role: e.target.value as Role })
-                    }
-                    className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-emerald-400 focus:outline-none"
+                    onChange={(e) => handleRoleChange(user.id, user.email, e.target.value as Role)}
+                    className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-emerald-400 focus:outline-none cursor-pointer bg-white"
                   >
                     <option value="USER">USER</option>
                     <option value="ADMIN">ADMIN</option>
@@ -93,14 +125,28 @@ export default function UsersPage() {
                   {new Date(user.createdAt).toLocaleDateString('vi-VN')}
                 </td>
                 <td className="px-5 py-3 text-right">
-                  <button
-                    onClick={() => {
-                      if (confirm(`Xoá tài khoản ${user.email}?`)) deleteUser.mutate(user.id);
-                    }}
-                    className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center justify-end gap-1">
+                    {/* Nút Chỉnh sửa */}
+                    <button
+                      onClick={() => {
+                        // Logic mở Modal hoặc chuyển trang Edit ở đây
+                        toast('Đang mở trang chỉnh sửa...', { description: user.email });
+                      }}
+                      title="Chỉnh sửa thông tin"
+                      className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    
+                    {/* Nút Xoá */}
+                    <button
+                      onClick={() => handleDeleteUser(user.id, user.email)}
+                      title="Xoá tài khoản"
+                      className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -1,6 +1,8 @@
 import {
   Injectable,
   InternalServerErrorException,
+  BadRequestException,
+  NotFoundException,
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -9,24 +11,24 @@ import { ClientService } from '../client/client.service';
 import { CardService, CardContractResponse } from '../card/card.service';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { CreateIssuingContractDto } from './dto/create-issuing-contract.dto';
-import { CreateFullCardDto } from './dto/create-full-card.dto';
-import { CreateCardDto } from '../card/dto/create-card.dto';
+import { CreateLiabilityDto } from './dto/create-liability.dto';
+import { AddIssuingDto } from './dto/add-issuing.dto';
+import { CreateCardApplicationDto } from './dto/create-card-application.dto';
+import { GetContractDetailDto } from './dto/get-contract-detail.dto';
 import {
   buildCreateContractXml,
   buildCreateIssuingContractXml,
 } from './contract.templates';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException } from '@nestjs/common';
+import {
+  CARD_APPLICATION_PRODUCT_CODES,
+  MAX_CARDS_PER_ISSUING,
+  splitWay4Field,
+} from './contract.constants';
 
-// --- INTERFACES ---
 export interface CreateContractResult {
-  CreatedContract?: string;
   ContractNumber?: string;
   ApplicationNumber?: string;
-  CreatedCard?: string;
-  CardNumber?: string;
-  ExpiryDate?: string;
-  SequenceNumber?: string;
 }
 
 export interface ContractResponse {
@@ -35,13 +37,77 @@ export interface ContractResponse {
   applicationNumber?: string;
 }
 
-export interface FullCardApplicationResponse {
+export interface CardApplicationResponse {
   success: boolean;
   message: string;
-  liabilityContract?: string;
   issuingContract?: string;
   cardPan: string;
   expiryDate: string;
+}
+
+export interface ContractTreeCard {
+  contractNumber: string;
+  contractName: string;
+  status: string;
+  productCode: string;
+}
+
+export interface ContractTreeIssuing {
+  contractNumber: string;
+  contractName: string;
+  status: string;
+  productCode: string;
+  creditLimit: number;
+  balance: number;
+  cards: ContractTreeCard[];
+}
+
+export interface ContractTreeLiability {
+  contractNumber: string;
+  contractName: string;
+  status: string;
+  productCode: string;
+  openDate: string;
+  issuings: ContractTreeIssuing[];
+}
+
+interface Way4ContractRecord {
+  ContractNumber?: string;
+  ContractName?: string;
+  ContractCategory?: string;
+  ParentContract?: string;
+  Status?: string;
+  ProductCode?: string;
+  CreditLimit?: string | number;
+  Balance?: string | number;
+  OpenDate?: string;
+}
+
+// Record chi tiết đầy đủ trả về bởi GetContractV2 (IssContractDetailsAPIOutputV2Record).
+// Chỉ khai những field mình dùng tới, phần còn lại WAY4 có thể trả thêm nhưng bỏ qua.
+interface Way4ContractDetailRecord {
+  ContractNumber?: string;
+  ContractName?: string;
+  ContractCategory?: string;
+  Status?: string;
+  StatusCode?: string;
+  ProductCode?: string;
+  Product?: string;
+  Currency?: string;
+  CreditLimit?: string | number;
+  Available?: string | number;
+  Balance?: string | number;
+  TotalDue?: string | number;
+  PastDue?: string | number;
+  PastDueDays?: string | number;
+  OpenDate?: string;
+  LastBillingDate?: string;
+  NextBillingDate?: string;
+  Institution?: string;
+  Branch?: string;
+  ClientFullName?: string;
+  ParentContract?: string;
+  TopContract?: string;
 }
 
 @Injectable()
@@ -53,26 +119,9 @@ export class ContractService {
     private readonly config: ConfigService,
     private readonly clientService: ClientService,
     private readonly prisma: PrismaService,
-    private readonly cardService: CardService, // thêm dependency này
+    private readonly cardService: CardService,
   ) {}
 
-  // --- HELPER: Parse dữ liệu an toàn từ Way4 ---
-  private extractWay4Data(
-    result: any,
-    methodName: string,
-  ): CreateContractResult {
-    const data = result?.[`${methodName}Result`] || result;
-
-    if (!data || (!data.ContractNumber && !data.CardNumber)) {
-      this.logger.error(`Lỗi parse kết quả Way4 cho ${methodName}`, result);
-      throw new InternalServerErrorException(
-        `Không lấy được định danh hợp đồng/thẻ từ WAY4 cho method ${methodName}`,
-      );
-    }
-    return data as CreateContractResult;
-  }
-
-  // --- HELPER: Ép về string an toàn (WAY4/SOAP đôi khi trả về number) ---
   private toStringOrUndefined(value: unknown): string | undefined {
     return value !== null && value !== undefined ? String(value) : undefined;
   }
@@ -81,50 +130,236 @@ export class ContractService {
     return value !== null && value !== undefined ? String(value) : null;
   }
 
-  // --- QUERY METHODS ---
-  async getContractsByClientId(clientId: string): Promise<unknown[]> {
+  private toNumberOrUndefined(value: unknown): number | undefined {
+    if (value === null || value === undefined || value === '') return undefined;
+    const n = Number(value);
+    return Number.isNaN(n) ? undefined : n;
+  }
+
+  private extractWay4Data(
+    result: any,
+    methodName: string,
+  ): CreateContractResult {
+    const data = result?.[`${methodName}Result`] || result;
+    if (!data || !data.ContractNumber) {
+      this.logger.error(`Lỗi parse kết quả WAY4 cho ${methodName}`, data);
+      throw new InternalServerErrorException(
+        `Không lấy được số hợp đồng từ WAY4 cho method ${methodName}`,
+      );
+    }
+    return data as CreateContractResult;
+  }
+
+  async getContractsByClientId(
+    clientId: string,
+  ): Promise<Way4ContractRecord[]> {
     const clientResult = await this.clientService.getByParams(clientId);
-
-    const clientNumber = (clientResult as any)?.IssClientDetailsV2APIRecord
-      ?.ClientNumber;
-
+    const clientNumber =
+      clientResult?.IssClientDetailsV2APIRecord?.ClientNumber;
     if (!clientNumber) {
       throw new InternalServerErrorException(
         'Không lấy được ClientNumber từ hồ sơ khách hàng',
       );
     }
-
     return this.getContractsByClientNumber(String(clientNumber));
   }
 
-  async getContractsByClientNumber(clientNumber: string): Promise<unknown[]> {
+  async getContractsByClientNumber(
+    clientNumber: string,
+  ): Promise<Way4ContractRecord[]> {
     const result = await this.soap.call<{
-      IssContractDetailsAPIOutputV2Record?: unknown | unknown[];
+      IssContractDetailsAPIOutputV2Record?:
+        Way4ContractRecord | Way4ContractRecord[];
     }>('GetContractsByClientV2', {
       ClientSearchMethod: 'CLIENT_NUMBER',
       ClientIdentifier: clientNumber,
     });
-
     const records = result?.IssContractDetailsAPIOutputV2Record;
     if (!records) return [];
     return Array.isArray(records) ? records : [records];
   }
 
-  getContract(contractNumber: string): Promise<unknown> {
-    return this.soap.call('GetContractV2', {
+  /**
+   * Kiểm tra contractNumber có thuộc về userId hiện tại không, trước khi cho
+   * phép gọi WAY4 lấy chi tiết. Bắt buộc phải xử lý 2 trường hợp:
+   *  - contractNumber là Liability/Issuing -> nằm trong bảng `contract`.
+   *  - contractNumber là số PAN của thẻ -> nằm trong bảng `card`, liên kết
+   *    ngược tới `contract` (issuing) qua issuingContractId.
+   *
+   * LƯU Ý: mình đoán tên quan hệ ngược trên model Card là `issuingContract`
+   * (khớp với field `issuingContractId` bạn dùng ở addCardUnderIssuing, và
+   * quan hệ thuận `cards` trên Contract mà bạn đã include ở addCardUnderIssuing).
+   * Nếu trong schema.prisma bạn đặt tên khác, đổi lại tên field trong
+   * where.issuingContract cho khớp.
+   */
+  private async assertContractAccessible(
+    contractNumber: string,
+    userId: number,
+  ): Promise<void> {
+    const ownContract = await this.prisma.contract.findFirst({
+      where: { userId, contractNumber },
+    });
+    if (ownContract) return;
+
+    const ownCard = await this.prisma.card.findFirst({
+      where: {
+        cardNumber: contractNumber,
+        issuingContract: { userId },
+      },
+    });
+    if (ownCard) return;
+
+    throw new NotFoundException('Không tìm thấy hợp đồng này thuộc về bạn.');
+  }
+
+  private mapWay4RecordToDetail(raw: any): GetContractDetailDto {
+    // soap.call() ở các method khác (vd GetContractsByClientV2) trả thẳng nội
+    // dung đã unwrap tới field IssContractDetailsAPIOutputV2Record, nên xử lý
+    // phòng cả 2 trường hợp: raw đã là record, hoặc raw còn bọc thêm 1 lớp.
+    const record: Way4ContractDetailRecord =
+      raw?.IssContractDetailsAPIOutputV2Record ?? raw;
+
+    if (!record || !record.ContractNumber) {
+      throw new NotFoundException('Không tìm thấy hợp đồng trên WAY4.');
+    }
+
+    return {
+      contractNumber: String(record.ContractNumber),
+      contractName: String(record.ContractName ?? ''),
+      status: splitWay4Field(record.Status).label,
+      statusCode: record.StatusCode
+        ? splitWay4Field(record.StatusCode).code
+        : undefined,
+      contractCategory: undefined, // GetContractV2 record không trả ContractCategory riêng lẻ như GetContractsByClientV2
+      productCode: record.ProductCode,
+      productName: record.Product
+        ? splitWay4Field(record.Product).label
+        : undefined,
+      currency: record.Currency
+        ? splitWay4Field(record.Currency).label
+        : undefined,
+      creditLimit: this.toNumberOrUndefined(record.CreditLimit),
+      available: this.toNumberOrUndefined(record.Available),
+      balance: this.toNumberOrUndefined(record.Balance),
+      totalDue: this.toNumberOrUndefined(record.TotalDue),
+      pastDue: this.toNumberOrUndefined(record.PastDue),
+      pastDueDays: this.toNumberOrUndefined(record.PastDueDays),
+      openDate: record.OpenDate,
+      lastBillingDate: record.LastBillingDate,
+      nextBillingDate: record.NextBillingDate,
+      institution: record.Institution
+        ? splitWay4Field(record.Institution).label
+        : undefined,
+      branch: record.Branch ? splitWay4Field(record.Branch).label : undefined,
+      clientFullName: record.ClientFullName,
+      parentContract: record.ParentContract
+        ? splitWay4Field(record.ParentContract).label
+        : undefined,
+      topContract: record.TopContract
+        ? splitWay4Field(record.TopContract).label
+        : undefined,
+    };
+  }
+
+  async getContract(
+    contractNumber: string,
+    userId: number,
+  ): Promise<GetContractDetailDto> {
+    await this.assertContractAccessible(contractNumber, userId);
+
+    const raw = await this.soap.call('GetContractV2', {
       ContractSearchMethod: 'CONTRACT_NUMBER',
       ContractIdentifier: contractNumber,
     });
+
+    return this.mapWay4RecordToDetail(raw);
   }
 
-  // --- CREATE METHODS ---
-  async createContract(dto: CreateContractDto): Promise<ContractResponse> {
+  private buildContractTree(
+    records: Way4ContractRecord[],
+  ): ContractTreeLiability[] {
+    type FlatNode = {
+      contractNumber: string;
+      contractName: string;
+      category: string;
+      parentContractNumber: string | null;
+      status: string;
+      productCode: string;
+      creditLimit: number;
+      balance: number;
+      openDate: string;
+    };
+
+    const flat: FlatNode[] = records.map((r) => ({
+      contractNumber: String(r.ContractNumber ?? ''),
+      contractName: String(r.ContractName ?? ''),
+      category: splitWay4Field(r.ContractCategory).code,
+      parentContractNumber: r.ParentContract
+        ? splitWay4Field(r.ParentContract).label
+        : null,
+      status: splitWay4Field(r.Status).label,
+      productCode: String(r.ProductCode ?? ''),
+      creditLimit: Number(r.CreditLimit ?? 0),
+      balance: Number(r.Balance ?? 0),
+      openDate: String(r.OpenDate ?? ''),
+    }));
+
+    const liabilities = flat.filter(
+      (n) => n.category === 'A' && !n.parentContractNumber,
+    );
+    const issuings = flat.filter(
+      (n) => n.category === 'A' && n.parentContractNumber,
+    );
+    const cards = flat.filter((n) => n.category === 'C');
+
+    return liabilities.map((liab) => ({
+      contractNumber: liab.contractNumber,
+      contractName: liab.contractName,
+      status: liab.status,
+      productCode: liab.productCode,
+      openDate: liab.openDate,
+      issuings: issuings
+        .filter((iss) => iss.parentContractNumber === liab.contractNumber)
+        .map((iss) => ({
+          contractNumber: iss.contractNumber,
+          contractName: iss.contractName,
+          status: iss.status,
+          productCode: iss.productCode,
+          creditLimit: iss.creditLimit,
+          balance: iss.balance,
+          cards: cards
+            .filter((c) => c.parentContractNumber === iss.contractNumber)
+            .map((c) => ({
+              contractNumber: c.contractNumber,
+              contractName: c.contractName,
+              status: c.status,
+              productCode: c.productCode,
+            })),
+        })),
+    }));
+  }
+
+  async getContractTreeByClientId(
+    clientId: string,
+  ): Promise<ContractTreeLiability[]> {
+    const records = await this.getContractsByClientId(clientId);
+    return this.buildContractTree(records);
+  }
+
+  async getContractTreeByClientNumber(
+    clientNumber: string,
+  ): Promise<ContractTreeLiability[]> {
+    const records = await this.getContractsByClientNumber(clientNumber);
+    return this.buildContractTree(records);
+  }
+
+  private async callCreateContract(
+    dto: CreateContractDto,
+  ): Promise<ContractResponse> {
     const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
     const xml = buildCreateContractXml(dto, officer);
-
     const rawResult = await this.soap.sendRaw('CreateContractV4', xml);
     const result = this.extractWay4Data(rawResult, 'CreateContractV4');
-
     return {
       success: true,
       contractNumber: this.toStringOrUndefined(result.ContractNumber),
@@ -132,12 +367,11 @@ export class ContractService {
     };
   }
 
-  async createIssuingContract(
+  private async callCreateIssuingContract(
     dto: CreateIssuingContractDto,
   ): Promise<ContractResponse> {
     const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
     const xml = buildCreateIssuingContractXml(dto, officer);
-
     const rawResult = await this.soap.sendRaw(
       'CreateIssuingContractWithLiabilityV2',
       xml,
@@ -146,7 +380,6 @@ export class ContractService {
       rawResult,
       'CreateIssuingContractWithLiabilityV2',
     );
-
     return {
       success: true,
       contractNumber: this.toStringOrUndefined(result.ContractNumber),
@@ -154,60 +387,89 @@ export class ContractService {
     };
   }
 
-  // Đã xóa hàm createCardContract() ở đây — logic này giờ nằm ở
-  // CardService.createCardContract(), tránh trùng lặp và tránh gọi
-  // trực tiếp buildCreateCardXml (vốn không được import trong file này).
-
-  // --- ORCHESTRATION: Tạo luồng chuẩn 3 bước ---
-  async createFullCardApplication(
-    dto: CreateFullCardDto,
-  ): Promise<FullCardApplicationResponse> {
-    const user = await this.prisma.user.findFirst({
-      where: { clientNumber: dto.clientNumber },
-    });
-
-    if (!user) {
-      throw new NotFoundException(
-        `Không tìm thấy User ứng với clientNumber ${dto.clientNumber}.`,
+  async createLiabilityForUserByClientId(
+    userId: number,
+    clientId: string,
+    dto: CreateLiabilityDto,
+  ): Promise<ContractResponse> {
+    const clientResult = await this.clientService.getByParams(clientId);
+    const clientNumber =
+      clientResult?.IssClientDetailsV2APIRecord?.ClientNumber;
+    if (!clientNumber) {
+      throw new InternalServerErrorException(
+        'Không lấy được ClientNumber từ hồ sơ khách hàng',
       );
     }
+    return this.createLiabilityForUser(userId, String(clientNumber), dto);
+  }
 
-    // Bước 1: Tạo Liability Contract (WAY4)
-    const liabDto: CreateContractDto = {
-      clientNumber: dto.clientNumber,
-      productCode: dto.liabProductCode,
+  async createLiabilityForUser(
+    userId: number,
+    clientNumber: string,
+    dto: CreateLiabilityDto,
+  ): Promise<ContractResponse> {
+    // Đã bỏ giới hạn "mỗi user tối đa 1 Liability": 1 user giờ có thể mở nhiều
+    // nhánh Liability -> Issuing -> Card độc lập với nhau. Mỗi Liability vẫn
+    // chỉ có đúng 1 Issuing (xem check existingIssuing trong
+    // addIssuingUnderLiability bên dưới — KHÔNG đổi), và mỗi Issuing vẫn tối
+    // đa MAX_CARDS_PER_ISSUING thẻ như cũ.
+    const result = await this.callCreateContract({
+      clientNumber,
+      productCode: CARD_APPLICATION_PRODUCT_CODES.LIABILITY,
       contractName: 'Liability Contract',
       cbsNumber: dto.cbsNumber,
       institutionCode: dto.institutionCode,
       branch: dto.branch,
-      reason: 'Auto created via full-card application',
-    };
+      reason: 'Mo ho so han muc',
+    });
 
-    this.logger.log(
-      `Đang tạo Liability Contract cho KH ${dto.clientNumber}...`,
-    );
-    const liabResult = await this.createContract(liabDto);
-    this.logger.log(`✅ Liability OK: ${liabResult.contractNumber}`);
-
-    // Lưu Liability Contract vào Postgres
-    const liabRecord = await this.prisma.contract.create({
+    await this.prisma.contract.create({
       data: {
-        userId: user.id,
-        clientNumber: dto.clientNumber,
-        contractNumber: liabResult.contractNumber!,
-        applicationNumber: this.toStringOrNull(liabResult.applicationNumber),
+        userId,
+        clientNumber,
+        contractNumber: result.contractNumber!,
+        applicationNumber: this.toStringOrNull(result.applicationNumber),
         type: 'LIABILITY',
-        productCode: dto.liabProductCode,
+        productCode: CARD_APPLICATION_PRODUCT_CODES.LIABILITY,
         contractName: 'Liability Contract',
       },
     });
 
-    // Bước 2: Tạo Issuing Contract (WAY4)
-    const issuingDto: CreateIssuingContractDto = {
-      liabContractNumber: liabResult.contractNumber!,
-      clientNumber: dto.clientNumber,
-      productCode: dto.issuingProductCode,
-      contractName: dto.contractName,
+    return result;
+  }
+
+  async addIssuingUnderLiability(
+    userId: number,
+    liabilityContractNumber: string,
+    dto: AddIssuingDto,
+  ): Promise<ContractResponse> {
+    const liability = await this.prisma.contract.findFirst({
+      where: {
+        userId,
+        type: 'LIABILITY',
+        contractNumber: liabilityContractNumber,
+      },
+    });
+    if (!liability) {
+      throw new NotFoundException(
+        'Không tìm thấy hợp đồng hạn mức này thuộc về bạn.',
+      );
+    }
+
+    const existingIssuing = await this.prisma.contract.findFirst({
+      where: { parentContractId: liability.id, type: 'ISSUING' },
+    });
+    if (existingIssuing) {
+      throw new BadRequestException(
+        'Hợp đồng hạn mức này đã có hợp đồng phát hành.',
+      );
+    }
+
+    const result = await this.callCreateIssuingContract({
+      liabContractNumber: liability.contractNumber,
+      clientNumber: liability.clientNumber,
+      productCode: CARD_APPLICATION_PRODUCT_CODES.ISSUING,
+      contractName: 'Issuing Contract',
       cbsNumber: dto.cbsNumber,
       institutionCode: dto.institutionCode,
       branch: dto.branch,
@@ -216,50 +478,61 @@ export class ContractService {
       account: dto.account,
       bankCode: dto.bankCode,
       accName: dto.accName,
-    };
+    });
 
-    this.logger.log(
-      `Đang tạo Issuing Contract liên kết với Liability: ${liabResult.contractNumber}...`,
-    );
-    const issuingResult = await this.createIssuingContract(issuingDto);
-    this.logger.log(`✅ Issuing OK: ${issuingResult.contractNumber}`);
-
-    // Lưu Issuing Contract vào Postgres, trỏ về Liability vừa tạo
-    const issuingRecord = await this.prisma.contract.create({
+    await this.prisma.contract.create({
       data: {
-        userId: user.id,
-        clientNumber: dto.clientNumber,
-        contractNumber: issuingResult.contractNumber!,
-        applicationNumber: this.toStringOrNull(
-          issuingResult.applicationNumber,
-        ),
+        userId,
+        clientNumber: liability.clientNumber,
+        contractNumber: result.contractNumber!,
+        applicationNumber: this.toStringOrNull(result.applicationNumber),
         type: 'ISSUING',
-        productCode: dto.issuingProductCode,
-        contractName: dto.contractName,
-        parentContractId: liabRecord.id,
+        productCode: CARD_APPLICATION_PRODUCT_CODES.ISSUING,
+        contractName: 'Issuing Contract',
+        parentContractId: liability.id,
       },
     });
 
-    // Bước 3: Sinh số thẻ (WAY4)
-    const cardDto: CreateCardDto = {
-      issuingContractNumber: issuingResult.contractNumber!,
-      productCode: dto.cardProductCode,
-      embossedFirstName: dto.embossedFirstName,
-      embossedLastName: dto.embossedLastName,
-      embossedCompanyName: dto.embossedCompanyName,
-    };
+    return result;
+  }
 
-    this.logger.log(
-      `Đang sinh số thẻ cho Issuing Contract: ${issuingResult.contractNumber}...`,
-    );
+  async addCardUnderIssuing(
+    userId: number,
+    issuingContractNumber: string,
+    dto: CreateCardApplicationDto,
+  ): Promise<CardApplicationResponse> {
+    const issuing = await this.prisma.contract.findFirst({
+      where: { userId, type: 'ISSUING', contractNumber: issuingContractNumber },
+      include: { cards: true },
+    });
+    if (!issuing) {
+      throw new NotFoundException(
+        'Không tìm thấy hợp đồng phát hành này thuộc về bạn.',
+      );
+    }
+
+    const existingCardCount = issuing.cards.length;
+    if (existingCardCount >= MAX_CARDS_PER_ISSUING) {
+      throw new BadRequestException(
+        `Hợp đồng này đã đạt giới hạn tối đa ${MAX_CARDS_PER_ISSUING} thẻ.`,
+      );
+    }
+
+    const cardProductCode =
+      CARD_APPLICATION_PRODUCT_CODES.CARDS[existingCardCount];
+
     const cardResult: CardContractResponse =
-      await this.cardService.createCardContract(cardDto);
-    this.logger.log(`✅ Card OK: ${cardResult.cardNumber}`);
+      await this.cardService.createCardContract({
+        issuingContractNumber: issuing.contractNumber,
+        productCode: cardProductCode,
+        embossedFirstName: dto.embossedFirstName,
+        embossedLastName: dto.embossedLastName,
+        embossedCompanyName: dto.embossedCompanyName,
+      });
 
-    // Lưu Card vào Postgres, trỏ về Issuing Contract vừa tạo
     await this.prisma.card.create({
       data: {
-        issuingContractId: issuingRecord.id,
+        issuingContractId: issuing.id,
         cardNumber: String(cardResult.cardNumber),
         expiryDate: this.toStringOrNull(cardResult.expiryDate),
         sequenceNumber: this.toStringOrNull(cardResult.sequenceNumber),
@@ -270,9 +543,8 @@ export class ContractService {
 
     return {
       success: true,
-      message: 'Card application completed successfully',
-      liabilityContract: liabResult.contractNumber,
-      issuingContract: issuingResult.contractNumber,
+      message: `Mở thẻ thành công (thẻ số ${existingCardCount + 1}/${MAX_CARDS_PER_ISSUING})`,
+      issuingContract: issuing.contractNumber,
       cardPan: cardResult.cardNumber,
       expiryDate: cardResult.expiryDate,
     };
