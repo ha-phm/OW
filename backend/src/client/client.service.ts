@@ -28,6 +28,24 @@ interface EditClientResult {
   ResultInfo: string;
 }
 
+// Kiểu dữ liệu của GetClientByParmsV2 — record chi tiết khách hàng trả về
+// từ WAY4. Đây là "nguồn sự thật" duy nhất; mọi nơi gọi getByParams() sẽ tự
+// động có type đúng, không cần khai báo lại ở nơi khác.
+export interface IssClientDetailsV2APIRecord {
+  ClientNumber?: string;
+  FirstName?: string;
+  LastName?: string;
+  MiddleName?: string;
+  FullName?: string;
+  MobilePhone?: string;
+  EMail?: string;
+  // thêm field khác nếu bạn có dùng ở nơi khác (vd IdentificationNumber...)
+}
+
+export interface GetClientResult {
+  IssClientDetailsV2APIRecord?: IssClientDetailsV2APIRecord;
+}
+
 @Injectable()
 export class ClientService {
   constructor(
@@ -36,13 +54,12 @@ export class ClientService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async getByParams(clientId: string) {
+  async getByParams(clientId: string): Promise<GetClientResult> {
     const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
 
     const xml = buildGetClientXml('CLIENT_ID', clientId, officer);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return this.soap.sendRaw<any>('GetClientByParmsV2', xml);
+    return this.soap.sendRaw<GetClientResult>('GetClientByParmsV2', xml);
   }
 
   async createClient(userId: number, dto: CreateClientDto) {

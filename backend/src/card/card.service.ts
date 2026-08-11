@@ -117,6 +117,19 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+/**
+ * Chỉ cho phép stringify khi giá trị chắc chắn là string hoặc number.
+ * Tránh cảnh báo no-base-to-string vì `unknown` có thể là object lồng nhau
+ * (SOAP parser đôi khi trả `{ _: '0' }` thay vì `'0'` cho field trông giống
+ * số), và tránh luôn lỗi logic ngầm khi so sánh "[object Object]" !== '0'
+ * (luôn true -> code coi mọi response là thất bại một cách sai lệch).
+ */
+function toComparableString(value: unknown): string | undefined {
+  return typeof value === 'string' || typeof value === 'number'
+    ? String(value)
+    : undefined;
+}
+
 @Injectable()
 export class CardService {
   private readonly logger = new Logger(CardService.name);
@@ -163,8 +176,8 @@ export class CardService {
     const envelope = asRecord(rawResult) ?? {};
     const data = asRecord(envelope.CreateCardV3Result) ?? envelope;
 
-    const retCode = data.RetCode;
-    if (retCode === undefined || String(retCode) !== '0') {
+    const retCode = toComparableString(data.RetCode);
+    if (retCode === undefined || retCode !== '0') {
       this.logger.error('CreateCardV3 thất bại', data);
       throw new InternalServerErrorException(
         typeof data.RetMsg === 'string'
@@ -184,16 +197,8 @@ export class CardService {
         typeof data.CreatedCard === 'string' ? data.CreatedCard : undefined,
       CardNumber:
         typeof data.CardNumber === 'string' ? data.CardNumber : undefined,
-      ExpiryDate:
-        typeof data.ExpiryDate === 'string' ||
-        typeof data.ExpiryDate === 'number'
-          ? String(data.ExpiryDate)
-          : undefined,
-      SequenceNumber:
-        typeof data.SequenceNumber === 'string' ||
-        typeof data.SequenceNumber === 'number'
-          ? String(data.SequenceNumber)
-          : undefined,
+      ExpiryDate: toComparableString(data.ExpiryDate),
+      SequenceNumber: toComparableString(data.SequenceNumber),
     };
   }
 
@@ -409,8 +414,8 @@ export class CardService {
   private assertEditSuccess(rawResult: unknown): void {
     const envelope = asRecord(rawResult) ?? {};
     const data = asRecord(envelope.EditCardV2Result) ?? envelope;
-    const retCode = data.RetCode;
-    if (retCode === undefined || String(retCode) !== '0') {
+    const retCode = toComparableString(data.RetCode);
+    if (retCode === undefined || retCode !== '0') {
       this.logger.error('EditCardV2 thất bại', data);
       throw new InternalServerErrorException(
         typeof data.RetMsg === 'string'

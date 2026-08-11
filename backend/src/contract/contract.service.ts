@@ -25,6 +25,8 @@ import {
   CARD_APPLICATION_PRODUCT_CODES,
   MAX_CARDS_PER_ISSUING,
   splitWay4Field,
+  asRecord,
+  toComparableString,
 } from './contract.constants';
 
 export interface CreateContractResult {
@@ -131,16 +133,6 @@ export class ContractService {
     private readonly cardService: CardService,
   ) {}
 
-  // Cache cây hợp đồng theo clientNumber, dùng cho GET /contracts/me (phân
-  // trang + tìm kiếm). Mục đích: tránh gọi lại SOAP WAY4 mỗi lần user đổi
-  // trang hoặc gõ tìm kiếm. TTL ngắn (30s) vì hạn mức/dư nợ có thể thay đổi
-  // liên tục phía WAY4.
-  //
-  // LƯU Ý KHI SCALE: Map trong bộ nhớ chỉ đúng khi service chạy 1 instance.
-  // Nếu deploy nhiều instance sau load balancer, phải thay bằng cache dùng
-  // chung (Redis qua @nestjs/cache-manager) để tránh mỗi instance thấy dữ
-  // liệu khác nhau.
-
   private readonly treeCache = new Map<
     string,
     { data: ContractTreeLiability[]; expiresAt: number }
@@ -148,11 +140,36 @@ export class ContractService {
   private readonly TREE_CACHE_TTL_MS = 30_000;
 
   private toStringOrUndefined(value: unknown): string | undefined {
-    return value !== null && value !== undefined ? String(value) : undefined;
+    if (value === null || value === undefined) return undefined;
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
+      return String(value);
+    }
+    // Trường hợp hiếm: value là object không mong đợi (SOAP parser trả sai
+    // hình dạng) -> không stringify mù quáng thành "[object Object]", ném lỗi
+    // rõ ràng để dễ debug thay vì lưu dữ liệu rác vào DB.
+    this.logger.warn(
+      `toStringOrUndefined nhận giá trị không phải primitive: ${JSON.stringify(value)}`,
+    );
+    return undefined;
   }
 
   private toStringOrNull(value: unknown): string | null {
-    return value !== null && value !== undefined ? String(value) : null;
+    if (value === null || value === undefined) return null;
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
+      return String(value);
+    }
+    this.logger.warn(
+      `toStringOrNull nhận giá trị không phải primitive: ${JSON.stringify(value)}`,
+    );
+    return null;
   }
 
   private toNumberOrUndefined(value: unknown): number | undefined {
@@ -162,25 +179,31 @@ export class ContractService {
   }
 
   private extractWay4Data(
-    result: any,
+    result: unknown,
     methodName: string,
   ): CreateContractResult {
-    const data = result?.[`${methodName}Result`] || result;
-    if (!data || !data.ContractNumber) {
+    const envelope = asRecord(result) ?? {};
+    const data = asRecord(envelope[`${methodName}Result`]) ?? envelope;
+
+    const contractNumber = toComparableString(data.ContractNumber);
+    if (contractNumber === undefined) {
       this.logger.error(`Lỗi parse kết quả WAY4 cho ${methodName}`, data);
       throw new InternalServerErrorException(
         `Không lấy được số hợp đồng từ WAY4 cho method ${methodName}`,
       );
     }
-    return data as CreateContractResult;
+
+    return {
+      ContractNumber: contractNumber,
+      ApplicationNumber: toComparableString(data.ApplicationNumber),
+    };
   }
 
   async getContractsByClientId(
     clientId: string,
   ): Promise<Way4ContractRecord[]> {
     const clientResult = await this.clientService.getByParams(clientId);
-    const clientNumber =
-      clientResult?.IssClientDetailsV2APIRecord?.ClientNumber;
+    const clientNumber = clientResult.IssClientDetailsV2APIRecord?.ClientNumber;
     if (!clientNumber) {
       throw new InternalServerErrorException(
         'Không lấy được ClientNumber từ hồ sơ khách hàng',
@@ -204,13 +227,6 @@ export class ContractService {
     return Array.isArray(records) ? records : [records];
   }
 
-  /**
-   * Kiểm tra contractNumber có thuộc về userId hiện tại không, trước khi cho
-   * phép gọi WAY4 lấy chi tiết. Bắt buộc phải xử lý 2 trường hợp:
-   *  - contractNumber là Liability/Issuing -> nằm trong bảng `contract`.
-   *  - contractNumber là số PAN của thẻ -> nằm trong bảng `card`, liên kết
-   *    ngược tới `contract` (issuing) qua issuingContractId.
-   */
   private async assertContractAccessible(
     contractNumber: string,
     userId: number,
@@ -231,14 +247,12 @@ export class ContractService {
     throw new NotFoundException('Không tìm thấy hợp đồng này thuộc về bạn.');
   }
 
-  private mapWay4RecordToDetail(raw: any): GetContractDetailDto {
-    // soap.call() ở các method khác (vd GetContractsByClientV2) trả thẳng nội
-    // dung đã unwrap tới field IssContractDetailsAPIOutputV2Record, nên xử lý
-    // phòng cả 2 trường hợp: raw đã là record, hoặc raw còn bọc thêm 1 lớp.
-    const record: Way4ContractDetailRecord =
-      raw?.IssContractDetailsAPIOutputV2Record ?? raw;
+  private mapWay4RecordToDetail(raw: unknown): GetContractDetailDto {
+    const envelope = asRecord(raw) ?? {};
+    const record = (asRecord(envelope.IssContractDetailsAPIOutputV2Record) ??
+      envelope) as Way4ContractDetailRecord;
 
-    if (!record || !record.ContractNumber) {
+    if (!record.ContractNumber) {
       throw new NotFoundException('Không tìm thấy hợp đồng trên WAY4.');
     }
 
@@ -249,7 +263,7 @@ export class ContractService {
       statusCode: record.StatusCode
         ? splitWay4Field(record.StatusCode).code
         : undefined,
-      contractCategory: undefined, // GetContractV2 record không trả ContractCategory riêng lẻ như GetContractsByClientV2
+      contractCategory: undefined,
       productCode: record.ProductCode,
       productName: record.Product
         ? splitWay4Field(record.Product).label
@@ -372,10 +386,6 @@ export class ContractService {
     return this.buildContractTree(records);
   }
 
-  // ---------------------------------------------------------------------
-  // Cache + filter cho GET /contracts/me
-  // ---------------------------------------------------------------------
-
   private async getContractTreeCachedByClientNumber(
     clientNumber: string,
   ): Promise<ContractTreeLiability[]> {
@@ -393,7 +403,6 @@ export class ContractService {
     return tree;
   }
 
-  /** Gọi ngay sau khi tạo/sửa Liability, Issuing, hoặc Card thành công. */
   private invalidateTreeCache(clientNumber: string): void {
     this.treeCache.delete(clientNumber);
   }
@@ -423,14 +432,9 @@ export class ContractService {
     });
   }
 
-  // ---------------------------------------------------------------------
-  // Recency sort: hợp đồng/thẻ vừa tạo (theo createdAt trong DB nội bộ) sẽ
-  // được đẩy lên đầu danh sách, không phụ thuộc thứ tự WAY4 trả về.
-  // ---------------------------------------------------------------------
-
   private buildRecencyRank(rows: { key: string }[]): Map<string, number> {
     const rank = new Map<string, number>();
-    rows.forEach((row, idx) => rank.set(row.key, idx)); // rows đã ORDER BY createdAt desc
+    rows.forEach((row, idx) => rank.set(row.key, idx));
     return rank;
   }
 
@@ -445,15 +449,13 @@ export class ContractService {
     });
   }
 
-  // DUY NHẤT MỘT bản getMyContractTreePaginated — có userId để sort recency.
   async getMyContractTreePaginated(
     clientId: string,
     userId: number,
     query: GetContractTreeQueryDto,
   ): Promise<PaginatedResult<ContractTreeLiability>> {
     const clientResult = await this.clientService.getByParams(clientId);
-    const clientNumber =
-      clientResult?.IssClientDetailsV2APIRecord?.ClientNumber;
+    const clientNumber = clientResult.IssClientDetailsV2APIRecord?.ClientNumber;
     if (!clientNumber) {
       throw new InternalServerErrorException(
         'Không lấy được ClientNumber từ hồ sơ khách hàng',
@@ -547,8 +549,7 @@ export class ContractService {
     dto: CreateLiabilityDto,
   ): Promise<ContractResponse> {
     const clientResult = await this.clientService.getByParams(clientId);
-    const clientNumber =
-      clientResult?.IssClientDetailsV2APIRecord?.ClientNumber;
+    const clientNumber = clientResult.IssClientDetailsV2APIRecord?.ClientNumber;
     if (!clientNumber) {
       throw new InternalServerErrorException(
         'Không lấy được ClientNumber từ hồ sơ khách hàng',
