@@ -59,6 +59,7 @@ export class ContractController {
     }
     return this.contractService.getMyContractTreePaginated(
       req.user.clientId,
+      req.user.userId,
       query,
     );
   }

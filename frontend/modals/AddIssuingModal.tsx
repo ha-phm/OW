@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { FileText, Loader2, AlertCircle, Plus } from 'lucide-react';
-import { apiPost, ApiError } from '../api/api';
-import { ContractResponse } from '../types/contract.types';
-import { ModalShell } from './ModalShell';
-import { ModalField } from './ModalField';
+import { ApiError } from '../api/api';
+import { contractService } from '../services/contract.service'; // <-- Import service
+import { ModalShell } from '../components/ModalShell';
+import { ModalField } from '../components/ModalField';
 
-// POST /contracts/:liabilityContractNumber/issuing
 export function AddIssuingModal({
   liabilityContractNumber,
   onClose,
@@ -15,50 +15,50 @@ export function AddIssuingModal({
 }: {
   liabilityContractNumber: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (contractNumber: string) => void;
 }) {
   const [paymentOption, setPaymentOption] = useState('');
   const [bank, setBank] = useState('');
   const [account, setAccount] = useState('');
   const [bankCode, setBankCode] = useState('');
   const [accName, setAccName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const canSubmit = paymentOption.trim() !== '' && bank.trim() !== '' && account.trim() !== '';
 
-  const handleSubmit = async () => {
+  const mutation = useMutation({
+    // Sử dụng contractService thay vì gọi trực tiếp apiPost
+    mutationFn: (payload: Record<string, string>) =>
+      contractService.createIssuing(liabilityContractNumber, payload),
+    onSuccess: (data) => {
+      if (data.contractNumber) onSuccess(data.contractNumber);
+    },// Giữ nguyên logic đóng modal và reload trang
+  });
+
+  const handleSubmit = () => {
     if (!canSubmit) {
-      setError('Vui lòng điền Hình thức thanh toán, Ngân hàng và Số tài khoản.');
+      setValidationError('Vui lòng điền Hình thức thanh toán, Ngân hàng và Số tài khoản.');
       return;
     }
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await apiPost<ContractResponse, Record<string, string>>(
-        `/contracts/${liabilityContractNumber}/issuing`,
-        { paymentOption, bank, account, bankCode, accName },
-      );
-      onSuccess();
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Không thể thêm hợp đồng phát hành. Vui lòng thử lại.';
-      setError(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
+    setValidationError(null);
+    mutation.mutate({ paymentOption, bank, account, bankCode, accName });
   };
+
+  const displayError = validationError || (mutation.error ? (mutation.error instanceof ApiError ? mutation.error.message : 'Không thể thêm hợp đồng phát hành. Vui lòng thử lại.') : null);
 
   return (
     <ModalShell title="Thêm hợp đồng phát hành" icon={<FileText className="h-4 w-4" />} onClose={onClose}>
       <p className="mb-4 text-sm text-slate-500">
         Liên kết với hạn mức <span className="font-medium text-slate-700">{liabilityContractNumber}</span>.
       </p>
-      {error && (
+      
+      {displayError && (
         <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          {error}
+          {displayError}
         </div>
       )}
+
       <div className="space-y-3">
         <ModalField label="Hình thức thanh toán" value={paymentOption} onChange={setPaymentOption} placeholder="VD: FULL_PAYMENT" />
         <div className="grid grid-cols-2 gap-3">
@@ -70,20 +70,21 @@ export function AddIssuingModal({
           <ModalField label="Tên chủ tài khoản" value={accName} onChange={setAccName} placeholder="VD: NGUYEN VAN A" optional />
         </div>
       </div>
+      
       <div className="mt-6 flex gap-3">
         <button
           onClick={onClose}
-          disabled={isSubmitting}
+          disabled={mutation.isPending}
           className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
         >
           Hủy
         </button>
         <button
           onClick={handleSubmit}
-          disabled={isSubmitting}
+          disabled={mutation.isPending}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
         >
-          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           Thêm hợp đồng
         </button>
       </div>

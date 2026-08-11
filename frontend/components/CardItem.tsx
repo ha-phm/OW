@@ -2,19 +2,11 @@
 
 import { useState } from 'react';
 import { CreditCard, ChevronDown, ChevronRight } from 'lucide-react';
-import { ContractTreeCard, ContractDetail } from '../types/contract.types';
+import { ContractTreeCard } from '../types/contract.types';
 import { StatusBadge } from './StatusBadge';
 import { ContractDetailPanel } from './ContractDetailPanel';
 
-export function CardItem({
-  card,
-  detail,
-  onDetailLoaded,
-}: {
-  card: ContractTreeCard;
-  detail?: ContractDetail;
-  onDetailLoaded: (contractNumber: string, detail: ContractDetail) => void;
-}) {
+export function CardItem({ card }: { card: ContractTreeCard }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -34,13 +26,11 @@ export function CardItem({
           <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
         )}
       </button>
+      
+      {/* Chỉ cần gọi Component và truyền ID là xong, không cần props lằng nhằng */}
       {expanded && (
         <div className="mt-2">
-          <ContractDetailPanel
-            contractNumber={card.contractNumber}
-            cachedDetail={detail}
-            onLoaded={(d) => onDetailLoaded(card.contractNumber, d)}
-          />
+          <ContractDetailPanel contractNumber={card.contractNumber} />
         </div>
       )}
     </div>

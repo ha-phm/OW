@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { FileText, Plus, ChevronDown, ChevronRight } from 'lucide-react';
-import { ContractTreeIssuing, ContractDetail, MAX_CARDS_PER_ISSUING } from '../types/contract.types';
+import { ContractTreeIssuing, MAX_CARDS_PER_ISSUING } from '../types/contract.types';
 import { StatusBadge } from './StatusBadge';
 import { ContractDetailPanel } from './ContractDetailPanel';
 import { CardItem } from './CardItem';
@@ -11,13 +11,9 @@ import { formatVnd } from '../utils/format';
 export function IssuingRow({
   issuing,
   onAddCard,
-  detailCache,
-  onDetailLoaded,
 }: {
   issuing: ContractTreeIssuing;
   onAddCard: () => void;
-  detailCache: Record<string, ContractDetail>;
-  onDetailLoaded: (contractNumber: string, detail: ContractDetail) => void;
 }) {
   const [detailExpanded, setDetailExpanded] = useState(false);
   const cardCount = issuing.cards.length;
@@ -29,6 +25,7 @@ export function IssuingRow({
         onClick={() => setDetailExpanded((v) => !v)}
         className="flex w-full flex-wrap items-center justify-between gap-3 text-left"
       >
+        {/* ... Giao diện Header giữ nguyên (tôi ẩn đi cho gọn) ... */}
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-sky-50 p-2 text-sky-600">
             <FileText className="h-4 w-4" />
@@ -52,21 +49,13 @@ export function IssuingRow({
               <span className="font-medium text-slate-700">{formatVnd(issuing.balance)}</span>
             </div>
           </div>
-          {detailExpanded ? (
-            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
-          ) : (
-            <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
-          )}
+          {detailExpanded ? <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" /> : <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />}
         </div>
       </button>
 
       {detailExpanded && (
         <div className="mt-3">
-          <ContractDetailPanel
-            contractNumber={issuing.contractNumber}
-            cachedDetail={detailCache[issuing.contractNumber]}
-            onLoaded={(d) => onDetailLoaded(issuing.contractNumber, d)}
-          />
+          <ContractDetailPanel contractNumber={issuing.contractNumber} />
         </div>
       )}
 
@@ -76,15 +65,11 @@ export function IssuingRow({
         ) : (
           <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {issuing.cards.map((card) => (
-              <CardItem
-                key={card.contractNumber}
-                card={card}
-                detail={detailCache[card.contractNumber]}
-                onDetailLoaded={onDetailLoaded}
-              />
+              <CardItem key={card.contractNumber} card={card} />
             ))}
           </div>
         )}
+        
         <div className="flex items-center justify-between">
           <span className="text-xs text-slate-400">
             {cardCount}/{MAX_CARDS_PER_ISSUING} thẻ

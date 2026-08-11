@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { CardService } from './card.service';
 import { CardController } from './card.controller';
-import { SoapModule } from '../soap/soap.module'; // Import đường dẫn theo project của bạn
+import { SoapModule } from '../soap/soap.module';
+import { ClientModule } from '../client/client.module';
 
 @Module({
-  imports: [SoapModule],
+  imports: [SoapModule, ClientModule],
   controllers: [CardController],
   providers: [CardService],
-  exports: [CardService], // Export để ContractService có thể gọi hàm createCardContract
+  exports: [CardService], // ContractModule vẫn inject CardService.createCardContract
 })
 export class CardModule {}

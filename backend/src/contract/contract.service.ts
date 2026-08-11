@@ -94,8 +94,6 @@ interface Way4ContractRecord {
   OpenDate?: string;
 }
 
-// Record chi tiết đầy đủ trả về bởi GetContractV2 (IssContractDetailsAPIOutputV2Record).
-// Chỉ khai những field mình dùng tới, phần còn lại WAY4 có thể trả thêm nhưng bỏ qua.
 interface Way4ContractDetailRecord {
   ContractNumber?: string;
   ContractName?: string;
@@ -133,7 +131,6 @@ export class ContractService {
     private readonly cardService: CardService,
   ) {}
 
-  // ---------------------------------------------------------------------
   // Cache cây hợp đồng theo clientNumber, dùng cho GET /contracts/me (phân
   // trang + tìm kiếm). Mục đích: tránh gọi lại SOAP WAY4 mỗi lần user đổi
   // trang hoặc gõ tìm kiếm. TTL ngắn (30s) vì hạn mức/dư nợ có thể thay đổi
@@ -143,7 +140,7 @@ export class ContractService {
   // Nếu deploy nhiều instance sau load balancer, phải thay bằng cache dùng
   // chung (Redis qua @nestjs/cache-manager) để tránh mỗi instance thấy dữ
   // liệu khác nhau.
-  // ---------------------------------------------------------------------
+
   private readonly treeCache = new Map<
     string,
     { data: ContractTreeLiability[]; expiresAt: number }
@@ -213,12 +210,6 @@ export class ContractService {
    *  - contractNumber là Liability/Issuing -> nằm trong bảng `contract`.
    *  - contractNumber là số PAN của thẻ -> nằm trong bảng `card`, liên kết
    *    ngược tới `contract` (issuing) qua issuingContractId.
-   *
-   * LƯU Ý: mình đoán tên quan hệ ngược trên model Card là `issuingContract`
-   * (khớp với field `issuingContractId` bạn dùng ở addCardUnderIssuing, và
-   * quan hệ thuận `cards` trên Contract mà bạn đã include ở addCardUnderIssuing).
-   * Nếu trong schema.prisma bạn đặt tên khác, đổi lại tên field trong
-   * where.issuingContract cho khớp.
    */
   private async assertContractAccessible(
     contractNumber: string,
@@ -382,7 +373,7 @@ export class ContractService {
   }
 
   // ---------------------------------------------------------------------
-  // Cache + filter + pagination cho GET /contracts/me
+  // Cache + filter cho GET /contracts/me
   // ---------------------------------------------------------------------
 
   private async getContractTreeCachedByClientNumber(
@@ -432,8 +423,32 @@ export class ContractService {
     });
   }
 
+  // ---------------------------------------------------------------------
+  // Recency sort: hợp đồng/thẻ vừa tạo (theo createdAt trong DB nội bộ) sẽ
+  // được đẩy lên đầu danh sách, không phụ thuộc thứ tự WAY4 trả về.
+  // ---------------------------------------------------------------------
+
+  private buildRecencyRank(rows: { key: string }[]): Map<string, number> {
+    const rank = new Map<string, number>();
+    rows.forEach((row, idx) => rank.set(row.key, idx)); // rows đã ORDER BY createdAt desc
+    return rank;
+  }
+
+  private sortByRecency<T extends { contractNumber: string }>(
+    items: T[],
+    rank: Map<string, number>,
+  ): T[] {
+    return [...items].sort((a, b) => {
+      const ra = rank.get(a.contractNumber) ?? Number.MAX_SAFE_INTEGER;
+      const rb = rank.get(b.contractNumber) ?? Number.MAX_SAFE_INTEGER;
+      return ra - rb;
+    });
+  }
+
+  // DUY NHẤT MỘT bản getMyContractTreePaginated — có userId để sort recency.
   async getMyContractTreePaginated(
     clientId: string,
+    userId: number,
     query: GetContractTreeQueryDto,
   ): Promise<PaginatedResult<ContractTreeLiability>> {
     const clientResult = await this.clientService.getByParams(clientId);
@@ -448,8 +463,39 @@ export class ContractService {
     const fullTree = await this.getContractTreeCachedByClientNumber(
       String(clientNumber),
     );
-    const filtered = this.filterContractTree(fullTree, query.search);
 
+    const [contractRows, cardRows] = await Promise.all([
+      this.prisma.contract.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        select: { contractNumber: true },
+      }),
+      this.prisma.card.findMany({
+        where: { issuingContract: { userId } },
+        orderBy: { createdAt: 'desc' },
+        select: { cardNumber: true },
+      }),
+    ]);
+    const contractRank = this.buildRecencyRank(
+      contractRows.map((r) => ({ key: r.contractNumber })),
+    );
+    const cardRank = this.buildRecencyRank(
+      cardRows.map((c) => ({ key: c.cardNumber })),
+    );
+
+    const sortedTree = this.sortByRecency(fullTree, contractRank).map(
+      (liab) => ({
+        ...liab,
+        issuings: this.sortByRecency(liab.issuings, contractRank).map(
+          (iss) => ({
+            ...iss,
+            cards: this.sortByRecency(iss.cards, cardRank),
+          }),
+        ),
+      }),
+    );
+
+    const filtered = this.filterContractTree(sortedTree, query.search);
     const { page, pageSize } = query;
     const total = filtered.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -516,11 +562,6 @@ export class ContractService {
     clientNumber: string,
     dto: CreateLiabilityDto,
   ): Promise<ContractResponse> {
-    // Đã bỏ giới hạn "mỗi user tối đa 1 Liability": 1 user giờ có thể mở nhiều
-    // nhánh Liability -> Issuing -> Card độc lập với nhau. Mỗi Liability vẫn
-    // chỉ có đúng 1 Issuing (xem check existingIssuing trong
-    // addIssuingUnderLiability bên dưới — KHÔNG đổi), và mỗi Issuing vẫn tối
-    // đa MAX_CARDS_PER_ISSUING thẻ như cũ.
     const result = await this.callCreateContract({
       clientNumber,
       productCode: CARD_APPLICATION_PRODUCT_CODES.LIABILITY,

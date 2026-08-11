@@ -1,55 +1,39 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, AlertCircle, Plus, Search } from 'lucide-react';
-import { apiGet, ApiError } from '../../../api/api';
-import { PaginatedContractTree } from '../../../types/contract.types';
+import { useContractsTree, CONTRACTS_QUERY_KEY } from '../../../hooks/useContractsTree';
+import { ApiError } from '../../../api/api';
 import { LiabilityCard } from '../../../components/LiabilityCard';
 import { EmptyLiabilityState } from '../../../components/EmptyLiabilityState';
 import { CreateLiabilityModal } from '../../../modals/CreateLiabilityModal';
 import { AddIssuingModal } from '../../../modals/AddIssuingModal';
 import { AddCardModal } from '../../../modals/AddCardModal';
 
-const PAGE_SIZE = 1;
 const SEARCH_DEBOUNCE_MS = 300;
-
-const CONTRACTS_QUERY_KEY = 'contracts-tree';
-
-async function fetchContractTree(
-  search: string,
-  page: number,
-): Promise<PaginatedContractTree> {
-  const params = new URLSearchParams({
-    page: String(page),
-    pageSize: String(PAGE_SIZE),
-  });
-  if (search.trim()) params.set('search', search.trim());
-
-  return apiGet<PaginatedContractTree>(`/contracts/me?${params.toString()}`);
-}
 
 export default function ContractsPage() {
   const queryClient = useQueryClient();
 
+  // --- Quản lý trạng thái Modals ---
   const [openLiabilityModal, setOpenLiabilityModal] = useState(false);
   const [issuingModalFor, setIssuingModalFor] = useState<string | null>(null);
   const [cardModalFor, setCardModalFor] = useState<string | null>(null);
 
-  const [searchInput, setSearchInput] = useState(''); // giá trị gõ trực tiếp trong ô input
-  const [search, setSearch] = useState(''); // giá trị đã debounce, thực sự dùng để query
+  // --- Quản lý trạng thái Tìm kiếm và Phân trang ---
+  const [searchInput, setSearchInput] = useState(''); // Giá trị gõ trực tiếp trong ô input
+  const [search, setSearch] = useState('');           // Giá trị đã debounce, thực sự dùng để query
   const [page, setPage] = useState(1);
 
-  // Debounce: chỉ bắn request sau khi user ngừng gõ 300ms, tránh gọi API
-  // mỗi lần bấm phím.
+  
   useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput), SEARCH_DEBOUNCE_MS);
+    const timer = setTimeout(() => {
+      setSearch(searchInput); 
+      setPage(1);             
+    }, SEARCH_DEBOUNCE_MS);
+    
     return () => clearTimeout(timer);
   }, [searchInput]);
-
-  // Về trang 1 mỗi khi search (đã debounce) thay đổi
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
 
   const {
     data,
@@ -57,27 +41,24 @@ export default function ContractsPage() {
     isFetching,
     isError,
     error,
-  } = useQuery({
-    queryKey: [CONTRACTS_QUERY_KEY, search, page],
-    queryFn: () => fetchContractTree(search, page),
-    placeholderData: keepPreviousData, // giữ dữ liệu trang cũ khi đang tải trang mới, tránh nháy loading
-  });
+  } = useContractsTree(search, page);
 
   const refetchTree = () =>
     queryClient.invalidateQueries({ queryKey: [CONTRACTS_QUERY_KEY] });
 
+  
   const tree = data?.data ?? [];
   const meta = data?.meta;
   const hasAnyResult = tree.length > 0;
   const isFirstLoad = isLoading && !data;
+  
   const errorMessage = isError
     ? error instanceof ApiError
       ? error.message
       : 'Không thể tải dữ liệu hợp đồng.'
     : null;
 
-  // "Chưa có hợp đồng nào" (lần đầu, không search) khác với "không tìm thấy
-  // kết quả khớp search" — 2 trạng thái này cần UI khác nhau.
+  // "Chưa có hợp đồng nào" (lần đầu, không search)
   const isTrulyEmpty = !isFirstLoad && !hasAnyResult && !search;
   const isEmptySearchResult = !isFirstLoad && !hasAnyResult && !!search;
 
@@ -96,6 +77,7 @@ export default function ContractsPage() {
         </button>
       </div>
 
+      
       {!isTrulyEmpty && (
         <div className="relative mb-6">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -131,6 +113,7 @@ export default function ContractsPage() {
         </p>
       ) : (
         <>
+          {/* Danh sách Hợp đồng Hạn mức */}
           <div className="space-y-6">
             {tree.map((liability) => (
               <LiabilityCard
@@ -142,6 +125,7 @@ export default function ContractsPage() {
             ))}
           </div>
 
+          {/* Phân trang */}
           {meta && meta.totalPages > 1 && (
             <div className="mt-6 flex items-center justify-between">
               <span className="text-xs text-slate-400">
@@ -171,9 +155,12 @@ export default function ContractsPage() {
       {openLiabilityModal && (
         <CreateLiabilityModal
           onClose={() => setOpenLiabilityModal(false)}
-          onSuccess={() => {
+          onSuccess={(contractNumber) => {
             setOpenLiabilityModal(false);
             refetchTree();
+            if (contractNumber) {
+              setIssuingModalFor(contractNumber);
+            }
           }}
         />
       )}
@@ -181,9 +168,12 @@ export default function ContractsPage() {
         <AddIssuingModal
           liabilityContractNumber={issuingModalFor}
           onClose={() => setIssuingModalFor(null)}
-          onSuccess={() => {
+          onSuccess={(issuingContractNumber) => {
             setIssuingModalFor(null);
             refetchTree();
+            if (issuingContractNumber) {
+              setCardModalFor(issuingContractNumber);
+            }
           }}
         />
       )}

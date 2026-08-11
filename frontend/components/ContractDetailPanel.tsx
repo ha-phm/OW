@@ -1,71 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
-import { apiGet, ApiError } from '../api/api';
-import { ContractDetail } from '../types/contract.types';
+import { useContractDetail } from '../hooks/useContractDetail';
+import { ApiError } from '../api/api';
 import { formatVnd } from '../utils/format';
 
-/**
- * Hiển thị thông tin chi tiết của MỘT hợp đồng (Liability / Issuing / Card).
- * Chỉ gọi API khi người dùng thực sự mở rộng dòng đó (lazy load),
- * và cache lại trong state của component cha (xem `detailCache` ở ContractsPage)
- * để không gọi lại API mỗi lần đóng/mở.
- *
- * Yêu cầu backend: GET /contracts/:contractNumber  (xem backend/ đính kèm)
- */
 export function ContractDetailPanel({
   contractNumber,
-  cachedDetail,
-  onLoaded,
 }: {
   contractNumber: string;
-  cachedDetail?: ContractDetail;
-  onLoaded: (detail: ContractDetail) => void;
 }) {
-  // isFetching chỉ phản ánh việc GỌI API, không phản ánh việc "có dữ liệu để hiển thị hay không".
-  // Khi render, ta kết hợp isFetching với cachedDetail (xem showLoading bên dưới) thay vì set
-  // state trực tiếp trong nhánh "đã có cache" của effect — tránh setState đồng bộ trong effect.
-  const [isFetching, setIsFetching] = useState(!cachedDetail);
-  const [error, setError] = useState<string | null>(null);
+  // Code component bây giờ cực kỳ "sạch", chỉ tập trung vào UI
+  const { data, isLoading, error } = useContractDetail(contractNumber);
 
-  useEffect(() => {
-    if (cachedDetail) {
-      // Đã có dữ liệu (từ cache của component cha) — không cần gọi API, và không cần
-      // setState ở đây: showLoading bên dưới đã tự tắt vì kết hợp với cachedDetail.
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        setIsFetching(true);
-        setError(null);
-        const data = await apiGet<ContractDetail>(
-          `/contracts/${encodeURIComponent(contractNumber)}`,
-        );
-        if (!cancelled) onLoaded(data);
-      } catch (err) {
-        if (!cancelled) {
-          const msg =
-            err instanceof ApiError ? err.message : 'Không thể tải chi tiết hợp đồng.';
-          setError(msg);
-        }
-      } finally {
-        if (!cancelled) setIsFetching(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contractNumber, cachedDetail]);
-
-  const showLoading = isFetching && !cachedDetail;
-
-  if (showLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-4 py-3 text-xs text-slate-400">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -74,51 +22,40 @@ export function ContractDetailPanel({
     );
   }
 
-  if (error && !cachedDetail) {
+  if (error) {
+    const msg = error instanceof ApiError ? error.message : 'Không thể tải chi tiết hợp đồng.';
     return (
       <div className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-xs text-red-600">
         <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-        {error}
+        {msg}
       </div>
     );
   }
 
-  if (!cachedDetail) return null;
+  // Chặn trường hợp fetch xong nhưng không có dữ liệu
+  if (!data) return null;
 
+  // --- Khúc dưới này là logic hiển thị UI (giữ nguyên) ---
   type DetailRow = { label: string; value: string };
 
   const candidateRows: Array<{ label: string; value?: string }> = [
-    { label: 'Sản phẩm', value: cachedDetail.productName || cachedDetail.productCode },
-    {
-      label: 'Hạn mức',
-      value: cachedDetail.creditLimit != null ? formatVnd(cachedDetail.creditLimit) : undefined,
-    },
-    {
-      label: 'Khả dụng',
-      value: cachedDetail.available != null ? formatVnd(cachedDetail.available) : undefined,
-    },
-    {
-      label: 'Dư nợ',
-      value: cachedDetail.balance != null ? formatVnd(cachedDetail.balance) : undefined,
-    },
-    {
-      label: 'Tổng nợ đến hạn',
-      value: cachedDetail.totalDue != null ? formatVnd(cachedDetail.totalDue) : undefined,
-    },
-    {
-      label: 'Nợ quá hạn',
-      value: cachedDetail.pastDue != null ? formatVnd(cachedDetail.pastDue) : undefined,
-    },
-    { label: 'Ngày mở', value: cachedDetail.openDate },
-    { label: 'Kỳ sao kê gần nhất', value: cachedDetail.lastBillingDate },
-    { label: 'Kỳ sao kê kế tiếp', value: cachedDetail.nextBillingDate },
-    { label: 'Chi nhánh', value: cachedDetail.branch },
-    { label: 'Khách hàng', value: cachedDetail.clientFullName },
-    { label: 'Hợp đồng cha', value: cachedDetail.parentContract },
+    { label: 'Sản phẩm', value: data.productName || data.productCode },
+    { label: 'Hạn mức', value: data.creditLimit != null ? formatVnd(data.creditLimit) : undefined },
+    { label: 'Khả dụng', value: data.available != null ? formatVnd(data.available) : undefined },
+    { label: 'Dư nợ', value: data.balance != null ? formatVnd(data.balance) : undefined },
+    { label: 'Tổng nợ đến hạn', value: data.totalDue != null ? formatVnd(data.totalDue) : undefined },
+    { label: 'Nợ quá hạn', value: data.pastDue != null ? formatVnd(data.pastDue) : undefined },
+    { label: 'Ngày mở', value: data.openDate },
+    { label: 'Kỳ sao kê gần nhất', value: data.lastBillingDate },
+    { label: 'Kỳ sao kê kế tiếp', value: data.nextBillingDate },
+    { label: 'Chi nhánh', value: data.branch },
+    { label: 'Khách hàng', value: data.clientFullName },
+    { label: 'Hợp đồng cha', value: data.parentContract },
   ];
 
+  // Lọc bỏ những dòng không có dữ liệu
   const rows: DetailRow[] = candidateRows.filter(
-    (row): row is DetailRow => Boolean(row.value),
+    (row): row is DetailRow => Boolean(row.value)
   );
 
   return (
