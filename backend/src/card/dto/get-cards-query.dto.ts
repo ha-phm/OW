@@ -1,21 +1,5 @@
-import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
-export class GetCardsQueryDto {
-  @IsOptional()
-  @IsString()
-  search?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page: number = 1;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(50)
+export class GetCardsQueryDto extends PaginationQueryDto {
   pageSize: number = 9;
 }

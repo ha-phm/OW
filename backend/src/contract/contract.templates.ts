@@ -1,20 +1,13 @@
+import { escapeXml } from '../common/utils/xml.util';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { CreateIssuingContractDto } from './dto/create-issuing-contract.dto';
-
-function escapeXml(value: string): string {
-  if (!value) return '';
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
 
 function buildAddInfoTags(dto: CreateIssuingContractDto): string {
   const info01: string[] = [];
   const info02: string[] = [];
-  if (dto.paymentOption) info01.push(`PAYMENT_OPTION=${escapeXml(dto.paymentOption)}`);
+
+  if (dto.paymentOption)
+    info01.push(`PAYMENT_OPTION=${escapeXml(dto.paymentOption)}`);
   if (dto.bank) info01.push(`BANK=${escapeXml(dto.bank)}`);
   if (dto.account) info01.push(`ACCOUNT=${escapeXml(dto.account)}`);
   if (dto.bankCode) info02.push(`BANK_CODE=${escapeXml(dto.bankCode)}`);
@@ -30,7 +23,10 @@ function buildAddInfoTags(dto: CreateIssuingContractDto): string {
   return tags;
 }
 
-export function buildCreateContractXml(dto: CreateContractDto, officer: string): string {
+export function buildCreateContractXml(
+  dto: CreateContractDto,
+  officer: string,
+): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
   <soapenv:Header>
@@ -58,8 +54,12 @@ export function buildCreateContractXml(dto: CreateContractDto, officer: string):
 </soapenv:Envelope>`;
 }
 
-export function buildCreateIssuingContractXml(dto: CreateIssuingContractDto, officer: string): string {
+export function buildCreateIssuingContractXml(
+  dto: CreateIssuingContractDto,
+  officer: string,
+): string {
   const addInfoTags = buildAddInfoTags(dto);
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
   <soapenv:Header>

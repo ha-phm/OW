@@ -11,7 +11,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EditCardDto } from './dto/edit-card.dto';
 import { GetCardsQueryDto } from './dto/get-cards-query.dto';
 import { buildCreateCardXml, buildEditCardXml } from './card.templates';
-import { splitWay4Field } from './common/way4.util';
+import { splitWay4Field } from '../common/way4.util';
+import {
+  asRecord,
+  toComparableString,
+  toNumberOrUndefined,
+} from '../common/utils/way4-response.util';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
 // ---------------------------------------------------------------------
 // Types
@@ -57,15 +63,7 @@ export interface CardDetail extends CardListItem {
   pastDue?: number;
 }
 
-export interface PaginatedResult<T> {
-  data: T[];
-  meta: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
-}
+export type { PaginatedResult };
 
 interface Way4CreateCardResult {
   CreatedCard?: string;
@@ -105,29 +103,6 @@ interface Way4CardDetailRecord {
   EmbossedLastName?: string;
   EmbossedCompanyName?: string;
   ExpirationDate?: string | number;
-}
-
-/**
- * SOAP client trả về dữ liệu không có type tĩnh, coi là unknown và thu hẹp
- * kiểu bằng type-guard này thay vì dùng `any`.
- */
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === 'object' && value !== null
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
-/**
- * Chỉ cho phép stringify khi giá trị chắc chắn là string hoặc number.
- * Tránh cảnh báo no-base-to-string vì `unknown` có thể là object lồng nhau
- * (SOAP parser đôi khi trả `{ _: '0' }` thay vì `'0'` cho field trông giống
- * số), và tránh luôn lỗi logic ngầm khi so sánh "[object Object]" !== '0'
- * (luôn true -> code coi mọi response là thất bại một cách sai lệch).
- */
-function toComparableString(value: unknown): string | undefined {
-  return typeof value === 'string' || typeof value === 'number'
-    ? String(value)
-    : undefined;
 }
 
 @Injectable()
@@ -175,8 +150,8 @@ export class CardService {
   private extractCreateCardResult(rawResult: unknown): Way4CreateCardResult {
     const envelope = asRecord(rawResult) ?? {};
     const data = asRecord(envelope.CreateCardV3Result) ?? envelope;
-
     const retCode = toComparableString(data.RetCode);
+
     if (retCode === undefined || retCode !== '0') {
       this.logger.error('CreateCardV3 thất bại', data);
       throw new InternalServerErrorException(
@@ -185,6 +160,7 @@ export class CardService {
           : 'Không thể tạo thẻ trên WAY4.',
       );
     }
+
     if (!data.CardNumber) {
       this.logger.error('CreateCardV3 không trả về CardNumber', data);
       throw new InternalServerErrorException(
@@ -231,12 +207,6 @@ export class CardService {
     return str;
   }
 
-  private toNumberOrUndefined(value: unknown): number | undefined {
-    if (value === null || value === undefined || value === '') return undefined;
-    const n = Number(value);
-    return Number.isNaN(n) ? undefined : n;
-  }
-
   private async fetchWay4CardsSafely(
     clientNumber: string,
   ): Promise<Map<string, Way4CardRecord>> {
@@ -247,12 +217,14 @@ export class CardService {
         ClientSearchMethod: 'CLIENT_NUMBER',
         ClientIdentifier: clientNumber,
       });
+
       const records = result?.CardDetailsAPIRecord;
       const list: Way4CardRecord[] = records
         ? Array.isArray(records)
           ? records
           : [records]
         : [];
+
       return new Map(list.map((r) => [String(r.CardNumber), r]));
     } catch (err: unknown) {
       this.logger.warn(
@@ -266,7 +238,8 @@ export class CardService {
   private filterCards(items: CardListItem[], search?: string): CardListItem[] {
     const q = search?.trim().toLowerCase();
     if (!q) return items;
-    const matches = (s?: string) => (s ?? '').toLowerCase().includes(q);
+    const matches = (s?: string): boolean =>
+      (s ?? '').toLowerCase().includes(q);
     return items.filter(
       (c) =>
         matches(c.cardNumber) ||
@@ -289,6 +262,7 @@ export class CardService {
       orderBy: { createdAt: 'desc' },
       include: { issuingContract: true },
     });
+
     if (ownedCards.length === 0) {
       return {
         data: [],
@@ -317,8 +291,8 @@ export class CardService {
         productName: way4?.Product
           ? splitWay4Field(way4.Product).label
           : undefined,
-        creditLimit: this.toNumberOrUndefined(way4?.CreditLimit),
-        available: this.toNumberOrUndefined(way4?.Available),
+        creditLimit: toNumberOrUndefined(way4?.CreditLimit),
+        available: toNumberOrUndefined(way4?.Available),
         issuingContractNumber: card.issuingContract.contractNumber,
       };
     });
@@ -360,8 +334,8 @@ export class CardService {
       productName: record.Product
         ? splitWay4Field(record.Product).label
         : undefined,
-      creditLimit: this.toNumberOrUndefined(record.CreditLimit),
-      available: this.toNumberOrUndefined(record.Available),
+      creditLimit: toNumberOrUndefined(record.CreditLimit),
+      available: toNumberOrUndefined(record.Available),
       currency: record.Currency
         ? splitWay4Field(record.Currency).label
         : undefined,
@@ -371,8 +345,8 @@ export class CardService {
         ? splitWay4Field(record.Institution).label
         : undefined,
       clientFullName: record.ClientFullName,
-      totalDue: this.toNumberOrUndefined(record.TotalDue),
-      pastDue: this.toNumberOrUndefined(record.PastDue),
+      totalDue: toNumberOrUndefined(record.TotalDue),
+      pastDue: toNumberOrUndefined(record.PastDue),
       issuingContractNumber: '', // gán ở getCardDetailForUser sau khi include quan hệ
     };
   }
@@ -415,6 +389,7 @@ export class CardService {
     const envelope = asRecord(rawResult) ?? {};
     const data = asRecord(envelope.EditCardV2Result) ?? envelope;
     const retCode = toComparableString(data.RetCode);
+
     if (retCode === undefined || retCode !== '0') {
       this.logger.error('EditCardV2 thất bại', data);
       throw new InternalServerErrorException(
@@ -431,10 +406,10 @@ export class CardService {
     dto: EditCardDto,
   ): Promise<CardDetail> {
     const card = await this.assertCardAccessible(cardNumber, userId);
-
     const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
     const xml = buildEditCardXml(cardNumber, dto, officer);
     const rawResult = await this.soap.sendRaw('EditCardV2', xml);
+
     // EditCardV2Result chỉ trả RetCode/RetMsg, không trả lại record -> tự
     // cập nhật DB nội bộ bằng đúng giá trị vừa gửi lên WAY4.
     this.assertEditSuccess(rawResult);

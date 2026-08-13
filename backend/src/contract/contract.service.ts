@@ -25,9 +25,15 @@ import {
   CARD_APPLICATION_PRODUCT_CODES,
   MAX_CARDS_PER_ISSUING,
   splitWay4Field,
+} from './contract.constants';
+import {
   asRecord,
   toComparableString,
-} from './contract.constants';
+  toStringOrUndefined,
+  toStringOrNull,
+  toNumberOrUndefined,
+} from '../common/utils/way4-response.util';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
 export interface CreateContractResult {
   ContractNumber?: string;
@@ -74,15 +80,7 @@ export interface ContractTreeLiability {
   issuings: ContractTreeIssuing[];
 }
 
-export interface PaginatedResult<T> {
-  data: T[];
-  meta: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
-}
+export type { PaginatedResult };
 
 interface Way4ContractRecord {
   ContractNumber?: string;
@@ -139,53 +137,14 @@ export class ContractService {
   >();
   private readonly TREE_CACHE_TTL_MS = 30_000;
 
-  private toStringOrUndefined(value: unknown): string | undefined {
-    if (value === null || value === undefined) return undefined;
-    if (
-      typeof value === 'string' ||
-      typeof value === 'number' ||
-      typeof value === 'boolean'
-    ) {
-      return String(value);
-    }
-    // Trường hợp hiếm: value là object không mong đợi (SOAP parser trả sai
-    // hình dạng) -> không stringify mù quáng thành "[object Object]", ném lỗi
-    // rõ ràng để dễ debug thay vì lưu dữ liệu rác vào DB.
-    this.logger.warn(
-      `toStringOrUndefined nhận giá trị không phải primitive: ${JSON.stringify(value)}`,
-    );
-    return undefined;
-  }
-
-  private toStringOrNull(value: unknown): string | null {
-    if (value === null || value === undefined) return null;
-    if (
-      typeof value === 'string' ||
-      typeof value === 'number' ||
-      typeof value === 'boolean'
-    ) {
-      return String(value);
-    }
-    this.logger.warn(
-      `toStringOrNull nhận giá trị không phải primitive: ${JSON.stringify(value)}`,
-    );
-    return null;
-  }
-
-  private toNumberOrUndefined(value: unknown): number | undefined {
-    if (value === null || value === undefined || value === '') return undefined;
-    const n = Number(value);
-    return Number.isNaN(n) ? undefined : n;
-  }
-
   private extractWay4Data(
     result: unknown,
     methodName: string,
   ): CreateContractResult {
     const envelope = asRecord(result) ?? {};
     const data = asRecord(envelope[`${methodName}Result`]) ?? envelope;
-
     const contractNumber = toComparableString(data.ContractNumber);
+
     if (contractNumber === undefined) {
       this.logger.error(`Lỗi parse kết quả WAY4 cho ${methodName}`, data);
       throw new InternalServerErrorException(
@@ -222,6 +181,7 @@ export class ContractService {
       ClientSearchMethod: 'CLIENT_NUMBER',
       ClientIdentifier: clientNumber,
     });
+
     const records = result?.IssContractDetailsAPIOutputV2Record;
     if (!records) return [];
     return Array.isArray(records) ? records : [records];
@@ -237,10 +197,7 @@ export class ContractService {
     if (ownContract) return;
 
     const ownCard = await this.prisma.card.findFirst({
-      where: {
-        cardNumber: contractNumber,
-        issuingContract: { userId },
-      },
+      where: { cardNumber: contractNumber, issuingContract: { userId } },
     });
     if (ownCard) return;
 
@@ -271,12 +228,12 @@ export class ContractService {
       currency: record.Currency
         ? splitWay4Field(record.Currency).label
         : undefined,
-      creditLimit: this.toNumberOrUndefined(record.CreditLimit),
-      available: this.toNumberOrUndefined(record.Available),
-      balance: this.toNumberOrUndefined(record.Balance),
-      totalDue: this.toNumberOrUndefined(record.TotalDue),
-      pastDue: this.toNumberOrUndefined(record.PastDue),
-      pastDueDays: this.toNumberOrUndefined(record.PastDueDays),
+      creditLimit: toNumberOrUndefined(record.CreditLimit),
+      available: toNumberOrUndefined(record.Available),
+      balance: toNumberOrUndefined(record.Balance),
+      totalDue: toNumberOrUndefined(record.TotalDue),
+      pastDue: toNumberOrUndefined(record.PastDue),
+      pastDueDays: toNumberOrUndefined(record.PastDueDays),
       openDate: record.OpenDate,
       lastBillingDate: record.LastBillingDate,
       nextBillingDate: record.NextBillingDate,
@@ -299,19 +256,17 @@ export class ContractService {
     userId: number,
   ): Promise<GetContractDetailDto> {
     await this.assertContractAccessible(contractNumber, userId);
-
     const raw = await this.soap.call('GetContractV2', {
       ContractSearchMethod: 'CONTRACT_NUMBER',
       ContractIdentifier: contractNumber,
     });
-
     return this.mapWay4RecordToDetail(raw);
   }
 
   private buildContractTree(
     records: Way4ContractRecord[],
   ): ContractTreeLiability[] {
-    type FlatNode = {
+    interface FlatNode {
       contractNumber: string;
       contractName: string;
       category: string;
@@ -321,7 +276,7 @@ export class ContractService {
       creditLimit: number;
       balance: number;
       openDate: string;
-    };
+    }
 
     const flat: FlatNode[] = records.map((r) => ({
       contractNumber: String(r.ContractNumber ?? ''),
@@ -413,8 +368,8 @@ export class ContractService {
   ): ContractTreeLiability[] {
     const q = search?.trim().toLowerCase();
     if (!q) return tree;
-
-    const matches = (s?: string) => (s ?? '').toLowerCase().includes(q);
+    const matches = (s?: string): boolean =>
+      (s ?? '').toLowerCase().includes(q);
 
     return tree.filter((liability) => {
       if (
@@ -475,9 +430,10 @@ export class ContractService {
       this.prisma.card.findMany({
         where: { issuingContract: { userId } },
         orderBy: { createdAt: 'desc' },
-        select: { cardNumber: true },
+        include: { issuingContract: true },
       }),
     ]);
+
     const contractRank = this.buildRecencyRank(
       contractRows.map((r) => ({ key: r.contractNumber })),
     );
@@ -516,10 +472,11 @@ export class ContractService {
     const xml = buildCreateContractXml(dto, officer);
     const rawResult = await this.soap.sendRaw('CreateContractV4', xml);
     const result = this.extractWay4Data(rawResult, 'CreateContractV4');
+
     return {
       success: true,
-      contractNumber: this.toStringOrUndefined(result.ContractNumber),
-      applicationNumber: this.toStringOrUndefined(result.ApplicationNumber),
+      contractNumber: toStringOrUndefined(result.ContractNumber),
+      applicationNumber: toStringOrUndefined(result.ApplicationNumber),
     };
   }
 
@@ -536,10 +493,11 @@ export class ContractService {
       rawResult,
       'CreateIssuingContractWithLiabilityV2',
     );
+
     return {
       success: true,
-      contractNumber: this.toStringOrUndefined(result.ContractNumber),
-      applicationNumber: this.toStringOrUndefined(result.ApplicationNumber),
+      contractNumber: toStringOrUndefined(result.ContractNumber),
+      applicationNumber: toStringOrUndefined(result.ApplicationNumber),
     };
   }
 
@@ -578,7 +536,7 @@ export class ContractService {
         userId,
         clientNumber,
         contractNumber: result.contractNumber!,
-        applicationNumber: this.toStringOrNull(result.applicationNumber),
+        applicationNumber: toStringOrNull(result.applicationNumber),
         type: 'LIABILITY',
         productCode: CARD_APPLICATION_PRODUCT_CODES.LIABILITY,
         contractName: 'Liability Contract',
@@ -586,7 +544,6 @@ export class ContractService {
     });
 
     this.invalidateTreeCache(clientNumber);
-
     return result;
   }
 
@@ -637,7 +594,7 @@ export class ContractService {
         userId,
         clientNumber: liability.clientNumber,
         contractNumber: result.contractNumber!,
-        applicationNumber: this.toStringOrNull(result.applicationNumber),
+        applicationNumber: toStringOrNull(result.applicationNumber),
         type: 'ISSUING',
         productCode: CARD_APPLICATION_PRODUCT_CODES.ISSUING,
         contractName: 'Issuing Contract',
@@ -646,7 +603,6 @@ export class ContractService {
     });
 
     this.invalidateTreeCache(liability.clientNumber);
-
     return result;
   }
 
@@ -666,6 +622,7 @@ export class ContractService {
     }
 
     const existingCardCount = issuing.cards.length;
+
     if (existingCardCount >= MAX_CARDS_PER_ISSUING) {
       throw new BadRequestException(
         `Hợp đồng này đã đạt giới hạn tối đa ${MAX_CARDS_PER_ISSUING} thẻ.`,
@@ -674,7 +631,6 @@ export class ContractService {
 
     const cardProductCode =
       CARD_APPLICATION_PRODUCT_CODES.CARDS[existingCardCount];
-
     const cardResult: CardContractResponse =
       await this.cardService.createCardContract({
         issuingContractNumber: issuing.contractNumber,
@@ -688,8 +644,8 @@ export class ContractService {
       data: {
         issuingContractId: issuing.id,
         cardNumber: String(cardResult.cardNumber),
-        expiryDate: this.toStringOrNull(cardResult.expiryDate),
-        sequenceNumber: this.toStringOrNull(cardResult.sequenceNumber),
+        expiryDate: toStringOrNull(cardResult.expiryDate),
+        sequenceNumber: toStringOrNull(cardResult.sequenceNumber),
         embossedFirstName: dto.embossedFirstName,
         embossedLastName: dto.embossedLastName,
       },

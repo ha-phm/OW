@@ -2,7 +2,7 @@ export {
   splitWay4Field,
   asRecord,
   toComparableString,
-} from '../card/common/way4.util';
+} from '../common/way4.util';
 
 export const CARD_APPLICATION_PRODUCT_CODES = {
   LIABILITY: 'LIAB_TRAINING01',

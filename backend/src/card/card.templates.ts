@@ -1,14 +1,5 @@
+import { escapeXml } from '../common/utils/xml.util';
 import { EditCardDto } from './dto/edit-card.dto';
-
-function escapeXml(value?: string): string {
-  if (!value) return '';
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
 
 export interface BuildCreateCardXmlParams {
   issuingContractNumber: string;
@@ -20,7 +11,10 @@ export interface BuildCreateCardXmlParams {
   cbsNumber?: string;
 }
 
-export function buildCreateCardXml(params: BuildCreateCardXmlParams, officer: string): string {
+export function buildCreateCardXml(
+  params: BuildCreateCardXmlParams,
+  officer: string,
+): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
   <soapenv:Header>
@@ -47,7 +41,11 @@ export function buildCreateCardXml(params: BuildCreateCardXmlParams, officer: st
 </soapenv:Envelope>`;
 }
 
-export function buildEditCardXml(contractNumber: string, dto: EditCardDto, officer: string): string {
+export function buildEditCardXml(
+  contractNumber: string,
+  dto: EditCardDto,
+  officer: string,
+): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
   <soapenv:Header>
