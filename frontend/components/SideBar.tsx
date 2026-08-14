@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, FileText, CreditCard, UserCog, LucideIcon } from 'lucide-react'; 
+import { LayoutDashboard, Users, FileText, CreditCard, UserCog, FileStack, Landmark, LucideIcon } from 'lucide-react'; 
 import { useAuthMe } from '../hooks/useAuthMe';
 
 // 1. Chỉ khai báo những thuộc tính cơ bản nhất
@@ -20,6 +20,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/contracts', label: 'Hợp đồng', icon: FileText },
   { href: '/cards', label: 'Thẻ', icon: CreditCard },
   { href: '/users', label: 'Người dùng', icon: UserCog, adminOnly: true },
+  { href: '/contracts-admin', label: 'Quản lý hợp đồng', icon: FileStack, adminOnly: true },
+  { href: '/cards-admin', label: 'Quản lý thẻ', icon: Landmark, adminOnly: true },
 ];
 
 export function Sidebar() {
