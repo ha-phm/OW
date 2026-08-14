@@ -15,7 +15,7 @@ export function CreateLiabilityModal({
   onClose: () => void;
   onSuccess: (contractNumber: string) => void;
 }) {
-  // State quản lý form
+  
   const [cbsNumber, setCbsNumber] = useState('');
   const [institutionCode, setInstitutionCode] = useState('');
   const [branch, setBranch] = useState('');

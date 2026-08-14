@@ -27,12 +27,12 @@ export function AddIssuingModal({
   const canSubmit = paymentOption.trim() !== '' && bank.trim() !== '' && account.trim() !== '';
 
   const mutation = useMutation({
-    // Sử dụng contractService thay vì gọi trực tiếp apiPost
+    
     mutationFn: (payload: Record<string, string>) =>
       contractService.createIssuing(liabilityContractNumber, payload),
     onSuccess: (data) => {
       if (data.contractNumber) onSuccess(data.contractNumber);
-    },// Giữ nguyên logic đóng modal và reload trang
+    },
   });
 
   const handleSubmit = () => {

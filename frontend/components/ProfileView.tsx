@@ -75,7 +75,6 @@ export default function ProfileView({ profile, onEdit }: ProfileViewProps) {
   );
 }
 
-// Giữ ViewField ở dạng private component trong file này vì chỉ có ProfileView dùng đến nó
 function ViewField({ label, value }: { label: string; value?: string | number }) {
   return (
     <div>

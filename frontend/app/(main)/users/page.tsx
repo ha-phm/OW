@@ -51,13 +51,11 @@ export default function UsersPage() {
   const handleDeleteUser = (userId: number, userEmail: string) => {
     toast.error(`Xoá vĩnh viễn tài khoản?`, {
       description: `Tài khoản ${userEmail} sẽ bị xoá và không thể khôi phục.`,
-      // Custom màu cho nút xoá nổi bật trên nền đỏ như bạn muốn ở câu trước
       actionButtonStyle: { backgroundColor: '#dc2626', color: 'white' },
       cancelButtonStyle: { backgroundColor: '#e5e7eb', color: '#374151' },
       action: {
         label: 'Xoá ngay',
         onClick: () => {
-          // Chỉ cần truyền userId, xoá onSuccess/onError ở đây
           deleteUser.mutate(userId);
         },
       },
@@ -126,10 +124,8 @@ export default function UsersPage() {
                 </td>
                 <td className="px-5 py-3 text-right">
                   <div className="flex items-center justify-end gap-1">
-                    {/* Nút Chỉnh sửa */}
                     <button
                       onClick={() => {
-                        // Logic mở Modal hoặc chuyển trang Edit ở đây
                         toast('Đang mở trang chỉnh sửa...', { description: user.email });
                       }}
                       title="Chỉnh sửa thông tin"
@@ -138,7 +134,6 @@ export default function UsersPage() {
                       <Pencil className="h-4 w-4" />
                     </button>
                     
-                    {/* Nút Xoá */}
                     <button
                       onClick={() => handleDeleteUser(user.id, user.email)}
                       title="Xoá tài khoản"

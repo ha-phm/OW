@@ -10,6 +10,7 @@ import { AdminContractItem, ContractType } from '../../../types/admin-tables';
 import { AdminDataTable } from '../../../components/AdminDataTable';
 
 const PAGE_SIZE = 10;
+const SEARCH_DEBOUNCE_MS = 300; 
 
 const TYPE_LABEL: Record<ContractType, string> = {
   LIABILITY: 'Hạn mức (Liability)',
@@ -25,13 +26,12 @@ export default function AdminContractsPage() {
   const [type, setType] = useState<ContractType | ''>('');
   const [page, setPage] = useState(1);
 
-  // Debounce ô tìm kiếm 350ms trước khi bắn request, tránh gọi API theo
-  // từng ký tự gõ.
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchInput);
       setPage(1);
-    }, 350);
+    }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchInput]);
 

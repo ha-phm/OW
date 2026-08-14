@@ -19,7 +19,6 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      {/* Báo lỗi nếu có */}
       {error && <p className="text-red-400 text-sm text-center">{error.message}</p>}
 
       {/* Input Email */}

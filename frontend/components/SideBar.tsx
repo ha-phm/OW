@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, FileText, CreditCard, UserCog, FileStack, Landmark, LucideIcon } from 'lucide-react'; 
 import { useAuthMe } from '../hooks/useAuthMe';
 
-// 1. Chỉ khai báo những thuộc tính cơ bản nhất
 type NavItem = {
   href: string;
   label: string;
@@ -13,7 +12,6 @@ type NavItem = {
   adminOnly?: boolean;
 };
 
-// 2. Xóa bỏ cờ requireAdmin, mở toàn bộ menu cho mọi user
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { href: '/clients', label: 'Khách hàng', icon: Users },
@@ -28,7 +26,6 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: me } = useAuthMe();
    const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || me?.role === 'ADMIN');
-  // Đã xóa toàn bộ logic check isAdmin ở đây để tránh lỗi TS
 
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white shadow-sm z-10">
@@ -42,7 +39,6 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col gap-1.5 px-4 mt-2">
         {visibleItems.map(({ href, label, icon: Icon }) => {
           
-          // Kiểm tra active menu
           const isActive = href === '/dashboard' 
             ? pathname === href
             : pathname === href || pathname.startsWith(`${href}/`);

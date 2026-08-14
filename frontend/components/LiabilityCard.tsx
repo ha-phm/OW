@@ -24,7 +24,7 @@ export function LiabilityCard({
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex w-full items-center justify-between gap-4 border-b border-slate-100 bg-slate-50 px-6 py-4">
-        {/* ... Header nút bấm lật giữ nguyên ... */}
+        
         <button onClick={() => setChildrenExpanded((v) => !v)} className="flex flex-1 items-center gap-3 text-left">
           <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-600">
             <Landmark className="h-5 w-5" />

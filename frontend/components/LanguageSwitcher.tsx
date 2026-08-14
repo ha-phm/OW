@@ -13,13 +13,11 @@ export function LanguageSwitcher() {
     const currentLang = i18n.language;
     const newLang = currentLang === 'vi' ? 'en' : 'vi';
 
-    // 1. Lưu ngôn ngữ mới vào Cookie để proxy.ts tự động nhận diện cho lần sau
     const days = 30;
     const date = new Date();
     date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
     document.cookie = `NEXT_LOCALE=${newLang};expires=${date.toUTCString()};path=/`;
 
-    // 2. Tính toán đường dẫn URL mới (đổi /vi/... thành /en/...)
     let newPath;
     if (currentPathname.startsWith(`/${currentLang}`)) {
       newPath = currentPathname.replace(`/${currentLang}`, `/${newLang}`);
@@ -27,7 +25,6 @@ export function LanguageSwitcher() {
       newPath = `/${newLang}${currentPathname}`;
     }
 
-    // 3. Cập nhật state, đẩy URL mới lên trình duyệt và làm mới trang
     i18n.changeLanguage(newLang);
     router.push(newPath);
     router.refresh(); 

@@ -39,16 +39,13 @@ export type CardApplicationResponse = {
   expiryDate: string;
 };
 
-// ==========================================
-// Chi tiết 1 hợp đồng (dùng khi "mở rộng" 1 dòng trong cây)
-// Field map theo IssContractDetailsAPIOutputV2Record của WAY4 (GetContractV2)
-// ==========================================
+
 export type ContractDetail = {
   contractNumber: string;
   contractName: string;
   status: string;
   statusCode?: string;
-  contractCategory?: string; // Liability / Issuing / Card
+  contractCategory?: string; 
   productCode?: string;
   productName?: string;
   currency?: string;

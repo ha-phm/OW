@@ -10,7 +10,6 @@ export function ContractDetailPanel({
 }: {
   contractNumber: string;
 }) {
-  // Code component bây giờ cực kỳ "sạch", chỉ tập trung vào UI
   const { data, isLoading, error } = useContractDetail(contractNumber);
 
   if (isLoading) {
@@ -32,10 +31,10 @@ export function ContractDetailPanel({
     );
   }
 
-  // Chặn trường hợp fetch xong nhưng không có dữ liệu
+
   if (!data) return null;
 
-  // --- Khúc dưới này là logic hiển thị UI (giữ nguyên) ---
+  
   type DetailRow = { label: string; value: string };
 
   const candidateRows: Array<{ label: string; value?: string }> = [
@@ -53,7 +52,6 @@ export function ContractDetailPanel({
     { label: 'Hợp đồng cha', value: data.parentContract },
   ];
 
-  // Lọc bỏ những dòng không có dữ liệu
   const rows: DetailRow[] = candidateRows.filter(
     (row): row is DetailRow => Boolean(row.value)
   );

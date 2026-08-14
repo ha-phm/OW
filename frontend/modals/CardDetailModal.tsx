@@ -45,8 +45,6 @@ export function CardDetailModal({
         embossedCompanyName,
       }),
     onSuccess: () => {
-      // Làm mới cả trang danh sách lẫn chi tiết đang mở -> dữ liệu nhất quán
-      // ngay lập tức mà không cần đóng modal.
       queryClient.invalidateQueries({ queryKey: [CARDS_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: ['cardDetail', cardNumber] });
       setIsEditing(false);

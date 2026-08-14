@@ -27,7 +27,6 @@ export function CardItem({ card }: { card: ContractTreeCard }) {
         )}
       </button>
       
-      {/* Chỉ cần gọi Component và truyền ID là xong, không cần props lằng nhằng */}
       {expanded && (
         <div className="mt-2">
           <ContractDetailPanel contractNumber={card.contractNumber} />

@@ -1,11 +1,10 @@
 import { z } from 'zod';
 
 export const signupSchema = z.object({
-  // --- 1. Thông tin tài khoản đăng nhập ---
+  
   email: z.string().email('Email không hợp lệ'),
   password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
 
-  // --- 2. Thông tin hồ sơ (giữ nguyên từ form cũ) ---
   firstName: z.string().min(1, 'Vui lòng nhập tên'),
   middleName: z.string().optional(),
   lastName: z.string().min(1, 'Vui lòng nhập họ'),
