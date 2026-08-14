@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, type SyntheticEvent } from 'react'; 
-import { useRouter } from 'next/navigation';
 import { User, Lock } from 'lucide-react';
-import { useLogin } from '../hooks/useLogin';
+import { useLogin } from '../hooks/useAuthMutations';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter();
   
   const { mutate, isPending, error } = useLogin();
 
@@ -16,7 +14,6 @@ export function LoginForm() {
     e.preventDefault();
     mutate(
       { email, password },
-      { onSuccess: () => router.push('/dashboard') },
     );
   };
 

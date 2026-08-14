@@ -163,22 +163,22 @@ apiClient.interceptors.response.use(
   }
 );
 
-export async function apiPost<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
-  const response = await apiClient.post<TResponse>(path, body);
-  return response as unknown as TResponse;
+function unwrap<T>(promise: Promise<unknown>): Promise<T> {
+  return promise as Promise<T>;
 }
-
-export async function apiGet<TResponse>(path: string): Promise<TResponse> {
-  const response = await apiClient.get<TResponse>(path);
-  return response as unknown as TResponse;
+ 
+export function apiGet<TResponse>(path: string): Promise<TResponse> {
+  return unwrap<TResponse>(apiClient.get(path));
 }
-
-export async function apiPatch<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
-  const response = await apiClient.patch<TResponse>(path, body);
-  return response as unknown as TResponse;
+ 
+export function apiPost<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+  return unwrap<TResponse>(apiClient.post(path, body));
 }
-
-export async function apiDelete<TResponse>(path: string): Promise<TResponse> {
-  const response = await apiClient.delete<TResponse>(path);
-  return response as unknown as TResponse;
+ 
+export function apiPatch<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+  return unwrap<TResponse>(apiClient.patch(path, body));
+}
+ 
+export function apiDelete<TResponse>(path: string): Promise<TResponse> {
+  return unwrap<TResponse>(apiClient.delete(path));
 }

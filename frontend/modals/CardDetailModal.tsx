@@ -80,7 +80,7 @@ export function CardDetailModal({
         </div>
       ) : data ? (
         <div className="space-y-5">
-          <VirtualCardVisual card={data} />
+          <VirtualCardVisual card={data} revealFull />
 
           {isEditing ? (
             <>

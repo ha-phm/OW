@@ -2,7 +2,7 @@
 
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useSignup } from '../hooks/useAuthMutations'; // Trỏ về file Hook chứa Sonner
+import { useSignup } from '../hooks/useAuthMutations'; 
 import { signupSchema, SignupFormValues } from '../schema/client.schema';
 
 type SignupFormProps = {
@@ -108,7 +108,7 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
             <select {...register('salutationCode')} className={selectClass}>
               <option value="MR">Ông (MR)</option>
               <option value="MRS">Bà (MRS)</option>
-              <option value="MS">Cô (MS)</option>
+              <option value="MS">Cô (MISS)</option>
             </select>
           </div>
         </div>

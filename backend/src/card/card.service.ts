@@ -141,7 +141,7 @@ export class CardService {
     const result = this.extractCreateCardResult(rawResult);
 
     return {
-      cardNumber: String(result.CardNumber),
+      cardNumber: String(result.CardNumber!),
       expiryDate: String(result.ExpiryDate ?? ''),
       sequenceNumber: String(result.SequenceNumber ?? ''),
     };
@@ -161,7 +161,8 @@ export class CardService {
       );
     }
 
-    if (!data.CardNumber) {
+    const cardNumber = toComparableString(data.CardNumber);
+    if (cardNumber === undefined) {
       this.logger.error('CreateCardV3 không trả về CardNumber', data);
       throw new InternalServerErrorException(
         'WAY4 không trả về số thẻ sau khi tạo.',
@@ -169,10 +170,8 @@ export class CardService {
     }
 
     return {
-      CreatedCard:
-        typeof data.CreatedCard === 'string' ? data.CreatedCard : undefined,
-      CardNumber:
-        typeof data.CardNumber === 'string' ? data.CardNumber : undefined,
+      CreatedCard: toComparableString(data.CreatedCard),
+      CardNumber: cardNumber,
       ExpiryDate: toComparableString(data.ExpiryDate),
       SequenceNumber: toComparableString(data.SequenceNumber),
     };
