@@ -1,7 +1,6 @@
 'use client';
 
 import { LogOut } from 'lucide-react';
-import { ThemeSwitcher } from './ThemeSwitcher';
 import { useLogout } from '../hooks/useAuthMutations'; 
 
 type TopbarProps = {
@@ -30,7 +29,6 @@ export function Topbar({ userName = 'Khách hàng', companyName }: TopbarProps) 
       <div />
       <div className="flex items-center gap-4">
         
-        <ThemeSwitcher />
         
         <div className="h-5 w-px bg-slate-200" />
         
