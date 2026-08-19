@@ -12,19 +12,12 @@ import {
 import { Role } from '@prisma/client';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import {
-  ContractService,
-  ContractResponse,
-  CardApplicationResponse,
-  ContractTreeLiability,
-  PaginatedResult,
-} from './contract.service';
-import { CreateLiabilityDto } from './dto/create-liability.dto';
-import { AddIssuingDto } from './dto/add-issuing.dto';
-import { CreateCardApplicationDto } from './dto/create-card-application.dto';
-import { GetContractDetailDto } from './dto/get-contract-detail.dto';
+import { ContractService, CardApplicationResponse } from './contract.service';
+import { GetContractDetailDto } from './interfaces/contract-detail.interface';
 import { GetContractTreeQueryDto } from './dto/get-contract-tree-query.dto';
-
+import { QuickOpenCardDto } from './dto/quick-open-card.dto';
+import { ContractTreeLiability } from './contract-tree.service';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 interface RequestWithUser {
   user: {
     userId: number;
@@ -64,6 +57,21 @@ export class ContractController {
     );
   }
 
+  @Post('quick-open')
+  quickOpenCard(
+    @Request() req: RequestWithUser,
+    @Body() dto: QuickOpenCardDto,
+  ): Promise<CardApplicationResponse> {
+    if (!req.user.clientId) {
+      throw new BadRequestException('Bạn cần tạo hồ sơ khách hàng trước.');
+    }
+    return this.contractService.quickOpenCard(
+      req.user.userId,
+      req.user.clientId,
+      dto,
+    );
+  }
+
   // LƯU Ý: route ':contractNumber' phải luôn đứng SAU mọi route tĩnh 1-segment
   // khác trong controller này (như 'me' ở trên) — nếu không route tĩnh sẽ bị
   // route động này "nuốt" mất tuỳ theo thứ tự khai báo.
@@ -88,7 +96,7 @@ export class ContractController {
   ): Promise<ContractTreeLiability[]> {
     return this.contractService.getContractTreeByClientNumber(clientNumber);
   }
-
+  /*
   @Post()
   createLiability(
     @Request() req: RequestWithUser,
@@ -129,4 +137,5 @@ export class ContractController {
       dto,
     );
   }
+    */
 }

@@ -16,6 +16,7 @@ export default function Navbar() {
 
       {/* Desktop Menu Links */}
       <div className="hidden lg:flex items-center gap-8 text-sm text-gray-300">
+        <Link href="/" className="hover:text-white transition">Home</Link>
         <Link href="#" className="hover:text-white transition">Why Us</Link>
         <Link href="#" className="hover:text-white transition">Services</Link>
         <Link href="#" className="hover:text-white transition">Our Process</Link>

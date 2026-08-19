@@ -47,13 +47,13 @@ export default function SignupPage() {
             <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mt-4 w-full sm:w-auto">
               <Link 
                 href="/login" 
-                className="w-full sm:w-auto justify-center px-8 py-3.5 bg-green-500 text-black font-semibold rounded-full hover:bg-green-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+                className="w-full sm:w-auto justify-center px-8 py-3.5 bg-transparent border border-green-500 text-green-500 font-semibold rounded-full hover:bg-green-500 hover:text-black transition-all flex items-center gap-2"
               >
                 Login 
               </Link>
               <Link 
                 href="/signup" 
-                className="w-full sm:w-auto justify-center px-8 py-3.5 bg-transparent border border-green-500 text-green-500 font-semibold rounded-full hover:bg-green-500 hover:text-black transition-all flex items-center gap-2"
+                className="w-full sm:w-auto justify-center px-8 py-3.5 border bg-green-500 text-black font-semibold rounded-full hover:bg-green-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
               >
                 Sign Up 
               </Link>

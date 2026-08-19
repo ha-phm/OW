@@ -1,9 +1,18 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-brand-bg: #f1f0f6;
+  --color-brand-dark: #0e9088;
+  --color-brand: #2fd3ac;
+  --color-brand-light: #6eefd1;
+  --color-brand-mint: #ecfdf9;
+  --color-ink: #1e293b;
+}
+
 input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus, 
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
   -webkit-text-fill-color: white !important;
   transition: background-color 9999s ease-in-out 0s;

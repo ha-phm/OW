@@ -1,16 +1,10 @@
 'use client';
-
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, FileText, CreditCard, UserCog, FileStack, Landmark, LucideIcon } from 'lucide-react'; 
+import { LayoutDashboard, Users, FileText, CreditCard, UserCog, LucideIcon, Leaf, Headset, X } from 'lucide-react';
 import { useAuthMe } from '../hooks/useAuthMe';
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  adminOnly?: boolean;
-};
+type NavItem = { href: string; label: string; icon: LucideIcon; adminOnly?: boolean };
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
@@ -18,53 +12,76 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/contracts', label: 'Hợp đồng', icon: FileText },
   { href: '/cards', label: 'Thẻ', icon: CreditCard },
   { href: '/users', label: 'Người dùng', icon: UserCog, adminOnly: true },
-  { href: '/contracts-admin', label: 'Quản lý hợp đồng', icon: FileStack, adminOnly: true },
-  { href: '/cards-admin', label: 'Quản lý thẻ', icon: Landmark, adminOnly: true },
 ];
 
-export function Sidebar() {
+type SidebarProps = {
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { data: me } = useAuthMe();
-   const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || me?.role === 'ADMIN');
+  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || me?.role === 'ADMIN');
 
   return (
-    <aside className="flex w-64 flex-col border-r border-slate-200 bg-white shadow-sm z-10">
-      <div className="flex items-center gap-3 px-6 py-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 shadow-lg shadow-emerald-500/20">
-          <CreditCard className="h-5 w-5 text-white" />
-        </div>
-        <span className="text-xl font-bold text-slate-900 tracking-tight">Openway</span>
-      </div>
+    <>
+      {/* Lớp phủ mờ (Overlay) khi mở menu trên Mobile */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity"
+          onClick={onClose}
+        />
+      )}
 
-      <nav className="flex flex-1 flex-col gap-1.5 px-4 mt-2">
-        {visibleItems.map(({ href, label, icon: Icon }) => {
+      {/* Sidebar chính */}
+      <aside 
+        className={`fixed inset-y-0 left-0 z-50 m-4 flex w-48 shrink-0 flex-col rounded-3xl bg-white shadow-lg transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+          isOpen ? 'translate-x-0' : 'translate-x-[-120%]'
+        }`}
+      >
+        <div className="flex items-center justify-between px-6 py-6">
+          <div className="flex items-center gap-2">
+            <Leaf className="h-5 w-5 text-brand" />
+            <span className="text-lg font-bold tracking-tight text-ink">Openway</span>
+          </div>
           
-          const isActive = href === '/dashboard' 
-            ? pathname === href
-            : pathname === href || pathname.startsWith(`${href}/`);
-
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-all ${
-                isActive
-                  ? 'bg-emerald-50 text-emerald-600'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
-      
-      <div className="p-4 border-t border-slate-100">
-        <div className="text-xs font-medium text-slate-400 text-center">
-          Phiên bản 1.0.0
+          {/* Nút đóng Sidebar trên Mobile */}
+          <button onClick={onClose} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden">
+            <X className="h-5 w-5" />
+          </button>
         </div>
-      </div>
-    </aside>
+
+        <nav className="flex flex-1 flex-col gap-1.5 px-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] scrollbar-none">
+          {visibleItems.map(({ href, label, icon: Icon }) => {
+            const isActive = href === '/dashboard' ? pathname === href : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={onClose} // Tự động đóng menu trên đt khi click vào link
+                className={`flex items-center gap-3 rounded-full px-4 py-3 text-sm font-semibold transition-colors ${
+                  isActive ? 'bg-brand text-white shadow-md shadow-brand/30' : 'text-slate-400 hover:bg-slate-50 hover:text-ink'
+                }`}
+              >
+                <Icon className="h-4.5 w-4.5" />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="m-4 rounded-2xl border border-brand-light/40 bg-brand-mint p-4">
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-brand-dark shadow-sm">
+            <Headset className="h-4 w-4" />
+          </div>
+          <p className="text-xs font-semibold text-ink">Có vấn đề hoặc góp ý?</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">Liên hệ bộ phận hỗ trợ</p>
+          <button className="mt-4 w-full rounded-full bg-brand py-2 text-xs font-semibold text-white shadow-sm shadow-brand/30 transition hover:bg-brand-dark">
+            Contact Us
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
