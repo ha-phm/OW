@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CreditCard, Loader2, AlertCircle } from 'lucide-react';
+import { CreditCard, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { ModalShell } from '../components/ModalShell';
 import { ModalField } from '../components/ModalField';
 import { quickOpenCard, QuickOpenCardPayload } from '../api/contracts';
@@ -15,7 +15,10 @@ export function QuickOpenCardModal({
   onClose: () => void;
   onSuccess: (cardPan: string) => void;
 }) {
-  const [step, setStep] = useState<1 | 2>(1);
+  // Thêm step 3 cho màn hình Success
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [createdCardPan, setCreatedCardPan] = useState<string | null>(null);
+
   const [cardCategory, setCardCategory] = useState<CardCategory>(CardCategory.TRAVEL);
   const [embossedFirstName, setEmbossedFirstName] = useState('');
   const [embossedLastName, setEmbossedLastName] = useState('');
@@ -46,13 +49,45 @@ export function QuickOpenCardModal({
       };
       
       const result = await quickOpenCard(payload);
-      onSuccess(result.cardPan);
+      
+      // Chuyển sang màn hình chúc mừng mượt mà
+      setCreatedCardPan(result.cardPan);
+      setStep(3); 
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Lỗi hệ thống. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // MÀN HÌNH CHÚC MỪNG (BƯỚC 3)
+  if (step === 3) {
+    return (
+      <ModalShell title="Mở thẻ thành công" icon={<CheckCircle2 className="h-4 w-4" />} onClose={onClose}>
+        <div className="flex flex-col items-center gap-3 py-4 text-center animate-in zoom-in duration-300">
+          <div className="rounded-full bg-emerald-100 p-4">
+            <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+          </div>
+          <p className="text-lg font-semibold text-slate-800">Chúc mừng bạn!</p>
+          <p className="text-sm text-slate-500">Thẻ của bạn đã được phát hành thành công.</p>
+          
+          <div className="mt-2 w-full rounded-xl border border-slate-100 bg-slate-50 p-4">
+            <p className="text-xs text-slate-400">Số thẻ (PAN)</p>
+            <p className="mt-1 font-mono text-xl font-bold tracking-widest text-emerald-700">
+              {createdCardPan}
+            </p>
+          </div>
+          
+          <button
+            onClick={() => onSuccess(createdCardPan!)}
+            className="mt-6 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700"
+          >
+            Khám phá thẻ ngay
+          </button>
+        </div>
+      </ModalShell>
+    );
+  }
 
   return (
     <ModalShell title="Mở thẻ thông minh" icon={<CreditCard className="h-4 w-4" />} onClose={onClose}>
@@ -63,7 +98,7 @@ export function QuickOpenCardModal({
       )}
 
       {step === 1 ? (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in slide-in-from-left-2 duration-200">
           <p className="text-sm font-medium text-slate-700">1. Chọn loại thẻ bạn muốn mở</p>
           <div className="grid grid-cols-2 gap-3">
             {[
@@ -76,44 +111,44 @@ export function QuickOpenCardModal({
                 key={cat.id}
                 onClick={() => setCardCategory(cat.id)}
                 className={`flex flex-col items-start gap-2 rounded-xl border p-4 transition-all ${
-                  cardCategory === cat.id ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500' : 'border-slate-200 hover:border-emerald-300'
+                  cardCategory === cat.id ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500 shadow-sm' : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'
                 }`}
               >
-                <div className={`h-8 w-12 rounded-md ${cat.color} opacity-80`} />
+                <div className={`h-8 w-12 rounded-md ${cat.color} opacity-90 shadow-inner`} />
                 <span className="text-sm font-semibold text-slate-800">{cat.label}</span>
               </button>
             ))}
           </div>
           <button
             onClick={() => setStep(2)}
-            className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+            className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-slate-800 transition-colors"
           >
             Tiếp tục
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in slide-in-from-right-2 duration-200">
           <p className="text-sm font-medium text-slate-700">2. Thông tin in nổi & Thanh toán</p>
           <div className="grid grid-cols-2 gap-3">
-            <ModalField label="Tên (First Name)" value={embossedFirstName} onChange={setEmbossedFirstName} />
-            <ModalField label="Họ (Last Name)" value={embossedLastName} onChange={setEmbossedLastName} />
+            <ModalField label="Tên (First Name)" value={embossedFirstName} onChange={setEmbossedFirstName} placeholder="VD: VAN A" />
+            <ModalField label="Họ (Last Name)" value={embossedLastName} onChange={setEmbossedLastName} placeholder="VD: NGUYEN" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <ModalField label="Ngân hàng thanh toán" value={bank} onChange={setBank} placeholder="VD: VCB" />
-            <ModalField label="Số tài khoản" value={account} onChange={setAccount} />
+            <ModalField label="Số tài khoản" value={account} onChange={setAccount} placeholder="VD: 0123456789" />
           </div>
           <div className="flex gap-3 pt-2">
             <button
               onClick={() => setStep(1)}
               disabled={isSubmitting}
-              className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
             >
               Quay lại
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 disabled:opacity-60"
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Xác nhận mở thẻ

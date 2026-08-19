@@ -1,4 +1,5 @@
 'use client';
+
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Loader2, AlertCircle, Pencil, Save, X } from 'lucide-react';
@@ -56,6 +57,7 @@ export function CardDetailModal({
       ? error.message
       : 'Không thể tải chi tiết thẻ.'
     : null;
+    
   const mutationError = mutation.error
     ? mutation.error instanceof ApiError
       ? mutation.error.message
@@ -69,16 +71,22 @@ export function CardDetailModal({
       onClose={onClose}
     >
       {isLoading && !data ? (
-        <div className="flex items-center justify-center py-10">
-          <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+        // Khung xương (Skeleton) mượt mà chống giật Layout
+        <div className="space-y-5 animate-pulse">
+          <div className="flex aspect-[1.586/1] w-full max-w-sm items-center justify-center rounded-2xl bg-slate-100">
+             <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
+          </div>
+          <div className="h-32 rounded-xl bg-slate-100"></div>
         </div>
       ) : errorMessage ? (
         <div className="flex items-center gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0" /> {errorMessage}
         </div>
       ) : data ? (
-        <div className="space-y-5">
-          <VirtualCardVisual card={data} revealFull />
+        <div className="space-y-5 animate-in fade-in duration-300">
+          <div className="flex justify-center">
+            <VirtualCardVisual card={data} revealFull />
+          </div>
 
           {isEditing ? (
             <>
@@ -88,7 +96,7 @@ export function CardDetailModal({
                 </div>
               )}
               <div className="space-y-3">
-                <ModalField label="Tên gợi nhớ thẻ" value={cardName} onChange={setCardName} optional />
+                <ModalField label="Tên gợi nhớ thẻ (Tùy chọn)" value={cardName} onChange={setCardName} optional />
                 <div className="grid grid-cols-2 gap-3">
                   <ModalField
                     label="Tên khắc nổi"
@@ -132,7 +140,7 @@ export function CardDetailModal({
             </>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-xl bg-slate-50 p-4 text-xs sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-xl bg-slate-50 p-4 text-xs sm:grid-cols-3 border border-slate-100">
                 <DetailRow label="Sản phẩm" value={data.productName} />
                 <DetailRow
                   label="Hạn mức"
@@ -158,7 +166,7 @@ export function CardDetailModal({
 
               <button
                 onClick={startEditing}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100/50"
               >
                 <Pencil className="h-4 w-4" />
                 Sửa thông tin thẻ
@@ -175,7 +183,7 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
     <div>
-      <span className="block text-slate-400">{label}</span>
+      <span className="block text-slate-400 mb-0.5">{label}</span>
       <span className="font-medium text-slate-700">{value}</span>
     </div>
   );
