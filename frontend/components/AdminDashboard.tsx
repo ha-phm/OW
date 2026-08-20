@@ -79,23 +79,24 @@ export function AdminDashboard({ }: AdminDashboardProps) {
   const avgCards = totalUsersCount > 0 ? (totalCardsCount / totalUsersCount).toFixed(1) : '0';
 
   return (
-    <div className="mx-auto w-full max-w-6xl rounded-3xl bg-white p-6 sm:p-8 text-slate-900 shadow-xl border border-slate-100 min-h-[80vh]">
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-8">Tổng quan hệ thống</h1>
+    <div className="mx-auto w-full max-w-6xl rounded-3xl bg-white p-4 sm:p-6 lg:p-8 text-slate-900 shadow-xl border border-slate-100 min-h-[80vh]">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-6 sm:mb-8">Tổng quan hệ thống</h1>
 
-      {/* 2. Thống kê */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-10">
-        <StatCard icon={<Users className="h-5 w-5" />} label="Khách hàng" value={String(totalUsersCount)} />
-        <StatCard icon={<FileText className="h-5 w-5" />} label="Hợp đồng" value={String(totalContractsCount)} />
-        <StatCard icon={<CreditCard className="h-5 w-5" />} label="Thẻ đã phát hành" value={String(totalCardsCount)} />
-        <StatCard icon={<BarChart2 className="h-5 w-5" />} label="TB thẻ/khách hàng" value={String(avgCards)} />
+      {/* 2. Thống kê — 2 cột trên mobile thay vì xếp dọc chiếm hết màn hình */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4 mb-8 sm:mb-10">
+        <StatCard icon={<Users className="h-4 w-4 sm:h-5 sm:w-5" />} label="Khách hàng" value={String(totalUsersCount)} />
+        <StatCard icon={<FileText className="h-4 w-4 sm:h-5 sm:w-5" />} label="Hợp đồng" value={String(totalContractsCount)} />
+        <StatCard icon={<CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />} label="Thẻ đã phát hành" value={String(totalCardsCount)} />
+        <StatCard icon={<BarChart2 className="h-4 w-4 sm:h-5 sm:w-5" />} label="TB thẻ/khách hàng" value={String(avgCards)} />
       </div>
 
       {/* 3. Tabs & Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="flex bg-slate-100 p-1.5 rounded-xl w-max">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
+        {/* Mobile: grid 3 cột chia đều vừa khít màn hình. Desktop: giữ nguyên flex w-max như cũ */}
+        <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1.5 rounded-xl w-full sm:flex sm:w-max sm:gap-0">
           <button
             onClick={() => { setActiveTab('USERS'); setPage(1); setSearch(''); }}
-            className={`px-6 py-2.5 text-sm rounded-lg transition-all ${
+            className={`px-2 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm rounded-lg transition-all truncate ${
               activeTab === 'USERS' 
                 ? 'bg-white text-emerald-600 font-bold shadow-sm' 
                 : 'text-slate-500 font-medium hover:text-slate-700 hover:bg-slate-200/50'
@@ -105,7 +106,7 @@ export function AdminDashboard({ }: AdminDashboardProps) {
           </button>
           <button
             onClick={() => { setActiveTab('CONTRACTS'); setPage(1); setSearch(''); }}
-            className={`px-6 py-2.5 text-sm rounded-lg transition-all ${
+            className={`px-2 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm rounded-lg transition-all truncate ${
               activeTab === 'CONTRACTS' 
                 ? 'bg-white text-emerald-600 font-bold shadow-sm' 
                 : 'text-slate-500 font-medium hover:text-slate-700 hover:bg-slate-200/50'
@@ -115,7 +116,7 @@ export function AdminDashboard({ }: AdminDashboardProps) {
           </button>
           <button
             onClick={() => { setActiveTab('CARDS'); setPage(1); setSearch(''); }}
-            className={`px-6 py-2.5 text-sm rounded-lg transition-all ${
+            className={`px-2 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm rounded-lg transition-all truncate ${
               activeTab === 'CARDS' 
                 ? 'bg-white text-emerald-600 font-bold shadow-sm' 
                 : 'text-slate-500 font-medium hover:text-slate-700 hover:bg-slate-200/50'
@@ -200,14 +201,14 @@ export function AdminDashboard({ }: AdminDashboardProps) {
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-linear-to-br from-emerald-50/50 to-teal-50/30 p-5 shadow-sm transition-transform hover:-translate-y-1">
-      <div className="flex items-center gap-2 text-emerald-600">
-        <div className="rounded-lg bg-emerald-100/80 p-1.5">
+    <div className="flex flex-col gap-2 sm:gap-3 rounded-2xl border border-emerald-100 bg-linear-to-br from-emerald-50/50 to-teal-50/30 p-3 sm:p-5 shadow-sm transition-transform hover:-translate-y-1">
+      <div className="flex items-center gap-1.5 sm:gap-2 text-emerald-600">
+        <div className="rounded-lg bg-emerald-100/80 p-1 sm:p-1.5">
           {icon}
         </div>
-        <span className="text-sm font-semibold text-slate-600">{label}</span>
+        <span className="text-xs sm:text-sm font-semibold text-slate-600 truncate">{label}</span>
       </div>
-      <div className="text-3xl font-bold tracking-tight text-slate-800">{value}</div>
+      <div className="text-xl sm:text-3xl font-bold tracking-tight text-slate-800">{value}</div>
     </div>
   );
 }
