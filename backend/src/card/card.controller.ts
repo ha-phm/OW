@@ -6,6 +6,7 @@ import {
   Param,
   Query,
   Request,
+  Post,
 } from '@nestjs/common';
 import {
   CardService,
@@ -16,6 +17,7 @@ import {
 import { EditCardDto } from './dto/edit-card.dto';
 import { GetCardsQueryDto } from './dto/get-cards-query.dto';
 import { ClientService } from '../client/client.service';
+import { CreateSupplementaryCardDto } from './dto/create-supplymentary-card.dto';
 
 interface RequestWithUser {
   user: {
@@ -77,6 +79,14 @@ export class CardController {
     @Param('cardNumber') cardNumber: string,
   ): Promise<CardDetail> {
     return this.cardService.getCardDetailForUser(req.user.userId, cardNumber);
+  }
+
+  @Post(':cardNumber/supplementary')
+  async createSupplementary(
+    @Param('cardNumber') cardNumber: string,
+    @Body() dto: CreateSupplementaryCardDto,
+  ) {
+    return this.cardService.createSupplementaryCard(cardNumber, dto);
   }
 
   @Patch(':cardNumber')

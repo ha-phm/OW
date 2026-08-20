@@ -22,6 +22,7 @@ export default function CardsPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  
   const { data, isLoading, isFetching, isError, error } = useCards(search, page);
 
   const cards = data?.data ?? [];

@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { Card } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -11,9 +16,12 @@ import { GetCardsQueryDto } from './dto/get-cards-query.dto';
 import { splitWay4Field } from '../common/way4.util';
 import {
   asRecord,
+  toComparableString,
   toNumberOrUndefined,
 } from '../common/utils/way4-response.util';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { CreateSupplementaryCardDto } from './dto/create-supplymentary-card.dto';
+
 export type { PaginatedResult };
 export type { CardContractResponse };
 export interface CardListItem {
@@ -69,6 +77,85 @@ export class CardService {
     private readonly way4Service: CardWay4Service,
   ) {}
 
+  async createSupplementaryCard(
+    mainCardNumber: string,
+    dto: CreateSupplementaryCardDto,
+  ) {
+    const mainCard = await this.prisma.card.findUnique({
+      where: { cardNumber: mainCardNumber },
+      include: { issuingContract: true },
+    });
+
+    if (!mainCard) {
+      throw new NotFoundException(
+        'Không tìm thấy thông tin thẻ chính trong hệ thống',
+      );
+    }
+
+    const clientNumber = mainCard.issuingContract?.clientNumber;
+    if (!clientNumber) {
+      throw new InternalServerErrorException(
+        'Không lấy được mã khách hàng từ hợp đồng.',
+      );
+    }
+
+    const issuingContractNumber = mainCard.issuingContract.contractNumber;
+    const safeProductCode = mainCard.productCode ?? '';
+
+    // Nếu người dùng không nhập cardName, để mặc định là "Supplementary Card"
+    const safeCardName = dto.cardName || 'Supplementary Card';
+
+    // 1. Gọi WAY4
+    const rawResult: unknown =
+      await this.way4Service.callCreateSupplementaryCard(
+        clientNumber,
+        issuingContractNumber,
+        safeProductCode,
+        safeCardName,
+        dto.embossedFirstName,
+        dto.embossedLastName,
+      );
+
+    // 2. BÓC TÁCH DỮ LIỆU WAY4
+    const envelope = asRecord(rawResult) ?? {};
+    // Đề phòng WAY4 bọc kết quả trong CreateSupplementaryCardV2Result
+    const data = asRecord(envelope.CreateSupplementaryCardV2Result) ?? envelope;
+
+    const retCode = toComparableString(data.RetCode);
+    if (retCode !== '0') {
+      this.logger.error('Lỗi tạo thẻ phụ:', data);
+      throw new InternalServerErrorException(
+        typeof data.RetMsg === 'string'
+          ? data.RetMsg
+          : 'WAY4 từ chối phát hành thẻ phụ.',
+      );
+    }
+
+    const newCardPan = toComparableString(data.CardNumber);
+    if (!newCardPan) {
+      throw new InternalServerErrorException(
+        'WAY4 không trả về số thẻ sau khi tạo.',
+      );
+    }
+
+    // 3. LƯU DATABASE VỚI SỐ THẬT
+    const newCard = await this.prisma.card.create({
+      data: {
+        cardNumber: String(newCardPan),
+        cardName: safeCardName,
+        expiryDate: data.ExpiryDate ? String(data.ExpiryDate) : null,
+        sequenceNumber: data.SequenceNumber
+          ? String(data.SequenceNumber)
+          : null,
+        productCode: safeProductCode,
+        embossedFirstName: dto.embossedFirstName,
+        embossedLastName: dto.embossedLastName,
+        issuingContractId: mainCard.issuingContractId,
+      },
+    });
+
+    return newCard;
+  }
   // Forwarding request cho ContractService sử dụng khi mở thẻ nhanh
   async createCardContract(
     params: CreateCardParams,

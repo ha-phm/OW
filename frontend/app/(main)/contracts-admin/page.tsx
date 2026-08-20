@@ -9,12 +9,11 @@ import { useAdminContracts } from '../../../hooks/useAdminContracts';
 import { AdminContractItem, ContractType } from '../../../types/admin-tables';
 import { AdminDataTable } from '../../../components/AdminDataTable';
 
-const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300; 
 
 const TYPE_LABEL: Record<ContractType, string> = {
-  LIABILITY: 'Hạn mức (Liability)',
-  ISSUING: 'Phát hành (Issuing)',
+  LIABILITY: 'Liability',
+  ISSUING: 'Issuing',
 };
 
 export default function AdminContractsPage() {
@@ -25,7 +24,7 @@ export default function AdminContractsPage() {
   const [search, setSearch] = useState('');
   const [type, setType] = useState<ContractType | ''>('');
   const [page, setPage] = useState(1);
-
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -45,7 +44,7 @@ export default function AdminContractsPage() {
     search,
     type: type || undefined,
     page,
-    pageSize: PAGE_SIZE,
+    pageSize,
   });
 
   if (meLoading || me?.role !== 'ADMIN') {
@@ -123,7 +122,9 @@ export default function AdminContractsPage() {
         page={data?.meta.page ?? page}
         totalPages={data?.meta.totalPages ?? 1}
         total={data?.meta.total ?? 0}
+        pageSize={pageSize}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
         isLoading={isLoading}
         isFetching={isFetching}
         emptyMessage="Không tìm thấy hợp đồng nào."

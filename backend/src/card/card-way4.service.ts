@@ -146,4 +146,38 @@ export class CardWay4Service {
       );
     }
   }
+
+  async callCreateSupplementaryCard(
+    clientNumber: string,
+    mainContractNumber: string,
+    productCode: string,
+    cardName: string,
+    embossedFirstName: string,
+    embossedLastName: string,
+  ): Promise<any> {
+    const xmlPayload = `
+      <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
+        <soapenv:Header>
+          <wsin:SessionContextStr>?</wsin:SessionContextStr>
+          <wsin:UserInfo>officer="WX_ADMIN"</wsin:UserInfo>
+        </soapenv:Header>
+        <soapenv:Body>
+          <wsin:CreateSupplementaryCardV2>
+            <wsin:ClientSearchMethod>CLIENT_NUMBER</wsin:ClientSearchMethod>
+            <wsin:ClientIdentifier>${clientNumber}</wsin:ClientIdentifier>
+            <wsin:ContractSearchMethod>CONTRACT_NUMBER</wsin:ContractSearchMethod>
+            <wsin:ContractIdentifier>${mainContractNumber}</wsin:ContractIdentifier>
+            <wsin:ProductCode>${productCode}</wsin:ProductCode>
+            <wsin:InObject>
+              <wsin:CardName>${cardName}</wsin:CardName> 
+              <wsin:EmbossedFirstName>${embossedFirstName}</wsin:EmbossedFirstName>
+              <wsin:EmbossedLastName>${embossedLastName}</wsin:EmbossedLastName>
+            </wsin:InObject>
+          </wsin:CreateSupplementaryCardV2>
+        </soapenv:Body>
+      </soapenv:Envelope>
+    `.trim();
+
+    return this.soap.sendRaw('CreateSupplementaryCardV2', xmlPayload);
+  }
 }

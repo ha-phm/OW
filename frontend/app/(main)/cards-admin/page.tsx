@@ -9,8 +9,6 @@ import { useAdminCards } from '../../../hooks/useAdminCards';
 import { AdminCardItem } from '../../../types/admin-tables';
 import { AdminDataTable } from '../../../components/AdminDataTable';
 
-const PAGE_SIZE = 9;
-
 export default function AdminCardsPage() {
   const router = useRouter();
   const { data: me, isLoading: meLoading } = useAuthMe();
@@ -18,6 +16,7 @@ export default function AdminCardsPage() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -36,7 +35,7 @@ export default function AdminCardsPage() {
   const { data, isLoading, isFetching } = useAdminCards({
     search,
     page,
-    pageSize: PAGE_SIZE,
+    pageSize,
   });
 
   if (meLoading || me?.role !== 'ADMIN') {
@@ -94,7 +93,9 @@ export default function AdminCardsPage() {
         page={data?.meta.page ?? page}
         totalPages={data?.meta.totalPages ?? 1}
         total={data?.meta.total ?? 0}
+        pageSize={pageSize}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
         isLoading={isLoading}
         isFetching={isFetching}
         emptyMessage="Không tìm thấy thẻ nào."

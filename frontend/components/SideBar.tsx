@@ -4,13 +4,23 @@ import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, FileText, CreditCard, UserCog, LucideIcon, Leaf, Headset, X } from 'lucide-react';
 import { useAuthMe } from '../hooks/useAuthMe';
 
-type NavItem = { href: string; label: string; icon: LucideIcon; adminOnly?: boolean };
+// 1. Thêm thuộc tính userOnly vào Type
+type NavItem = { 
+  href: string; 
+  label: string; 
+  icon: LucideIcon; 
+  adminOnly?: boolean;
+  userOnly?: boolean; // Thêm dòng này
+};
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { href: '/clients', label: 'Khách hàng', icon: Users },
-  { href: '/contracts', label: 'Hợp đồng', icon: FileText },
-  { href: '/cards', label: 'Thẻ', icon: CreditCard },
+  // 2. Gắn cờ userOnly: true cho tab Khách hàng
+  { href: '/clients', label: 'Khách hàng', icon: Users, userOnly: true },
+  { href: '/contracts-admin', label: 'Hợp đồng', icon: FileText, adminOnly: true },
+  // Nếu Thẻ cũng chỉ dành cho User, bạn có thể thêm userOnly: true vào đây
+  { href: '/cards', label: 'Thẻ', icon: CreditCard, userOnly: true }, 
+  { href: '/cards-admin', label: 'Thẻ', icon: CreditCard, adminOnly: true},
   { href: '/users', label: 'Người dùng', icon: UserCog, adminOnly: true },
 ];
 
@@ -22,7 +32,13 @@ type SidebarProps = {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { data: me } = useAuthMe();
-  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || me?.role === 'ADMIN');
+
+  // 3. Nâng cấp logic lọc: Giấu menu Admin khỏi User, và giấu menu User khỏi Admin
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly && me?.role !== 'ADMIN') return false;
+    if (item.userOnly && me?.role === 'ADMIN') return false;
+    return true;
+  });
 
   return (
     <>

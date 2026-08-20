@@ -68,7 +68,7 @@ apiClient.interceptors.request.use(
                 localStorage.setItem('access_token', access_token);
                 localStorage.setItem('refresh_token', new_refresh_token);
                 
-                token = access_token; // Cập nhật token mới
+                token = access_token; 
                 processQueue(null, access_token);
               } catch (err) {
                 processQueue(err, null);

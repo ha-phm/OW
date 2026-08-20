@@ -19,7 +19,6 @@ import { GetContractTreeQueryDto } from './dto/get-contract-tree-query.dto';
 import {
   CARD_CATEGORY_PRODUCT_CODE,
   CARD_CATEGORY_LABEL,
-  MAX_CARDS_PER_ISSUING,
   splitWay4Field,
 } from './contract.constants';
 import {
@@ -357,12 +356,12 @@ export class ContractService {
     }
 
     const productCode = CARD_CATEGORY_PRODUCT_CODE[dto.cardCategory];
-    if (issuing.cards.some((c) => c.productCode === productCode)) {
-      throw new BadRequestException(`Bạn đã mở loại thẻ này rồi.`);
-    }
-    if (issuing.cards.length >= MAX_CARDS_PER_ISSUING) {
-      throw new BadRequestException(`Đã đạt giới hạn tối đa thẻ.`);
-    }
+    //if (issuing.cards.some((c) => c.productCode === productCode)) {
+    // throw new BadRequestException(`Bạn đã mở loại thẻ này rồi.`);
+    //}
+    //if (issuing.cards.length >= MAX_CARDS_PER_ISSUING) {
+    //  throw new BadRequestException(`Đã đạt giới hạn tối đa thẻ.`);
+    //}
 
     const cardResult: CardContractResponse =
       await this.cardService.createCardContract({
@@ -397,7 +396,6 @@ export class ContractService {
     };
   }
 
-  // Orchestrator: Gom 3 bước trên lại
   async quickOpenCard(
     userId: number,
     clientId: string,
@@ -413,7 +411,6 @@ export class ContractService {
 
     const clientNumber = String(profile.ClientNumber);
 
-    // B1: Đảm bảo có Liability
     let liability = await this.prisma.contract.findFirst({
       where: { userId, type: 'LIABILITY' },
     });
@@ -424,7 +421,6 @@ export class ContractService {
       });
     }
 
-    // B2: Đảm bảo có Issuing
     let issuing = await this.prisma.contract.findFirst({
       where: { parentContractId: liability!.id, type: 'ISSUING' },
     });
@@ -439,7 +435,6 @@ export class ContractService {
       });
     }
 
-    // B3: Tạo Card
     return this.addCardUnderIssuing(userId, issuing!.contractNumber, dto);
   }
 }

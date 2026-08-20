@@ -32,3 +32,42 @@ export function quickOpenCard(
     payload,
   );
 }
+
+export interface CreateSupplementaryCardPayload {
+  cardName?: string;
+  embossedFirstName: string;
+  embossedLastName: string;
+}
+
+export interface CreateSupplementaryCardPayload {
+  cardName?: string;
+  embossedFirstName: string;
+  embossedLastName: string;
+}
+
+// 1. Định nghĩa Interface chuẩn xác thay cho 'any'
+export interface SupplementaryCardResponse {
+  id: number;
+  issuingContractId: number;
+  cardNumber: string;
+  expiryDate: string | null;
+  sequenceNumber: string | null;
+  cardName: string | null;
+  embossedFirstName: string;
+  embossedLastName: string;
+  status: string;
+  productCode: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 2. Ép kiểu rõ ràng cho Promise và apiPost
+export function createSupplementaryCard(
+  mainCardNumber: string,
+  payload: CreateSupplementaryCardPayload,
+): Promise<SupplementaryCardResponse> {
+  return apiPost<SupplementaryCardResponse, CreateSupplementaryCardPayload>(
+    `/cards/${mainCardNumber}/supplementary`,
+    payload,
+  );
+}
