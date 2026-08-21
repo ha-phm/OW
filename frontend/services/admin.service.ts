@@ -7,6 +7,13 @@ import {
   GetAdminCardsParams,
 } from '../types/admin-tables';
 
+export interface AdminDashboardStats {
+  totalUsers: number;
+  totalContracts: number;
+  totalCards: number;
+  avgCardsPerUser: number;
+}
+
 export const adminService = {
   getUsers: () => apiGet<AdminUser[]>('/admin/users'),
 
@@ -76,4 +83,6 @@ export const adminService = {
     
     return apiGet<PaginatedAdminCards>(`/admin/cards?${query.toString()}`);
   },
+
+  getStats: () => apiGet<AdminDashboardStats>('/admin/stats'),
 };

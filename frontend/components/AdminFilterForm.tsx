@@ -64,8 +64,8 @@ export function AdminFilterForm({ defaultValues, onFilterChange, showTypeFilter 
           className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
         >
           <option value="">Tất cả loại</option>
-          <option value="LIABILITY">Hạn mức (Liability)</option>
-          <option value="ISSUING">Phát hành (Issuing)</option>
+          <option value="LIABILITY">Liability</option>
+          <option value="ISSUING">Issuing</option>
         </select>
       )}
       <div className="relative w-full lg:w-96">

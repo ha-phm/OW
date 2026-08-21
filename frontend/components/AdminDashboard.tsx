@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Users, FileText, CreditCard, Search, BarChart2, Activity } from 'lucide-react';
+import { Search, BarChart2, Activity, Users, FileText, CreditCard, BarChart } from 'lucide-react';
 import { AuthMe } from '@/types/user';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminContracts } from '../hooks/useAdminContracts';
@@ -12,6 +12,7 @@ import { ColumnDef, ColumnFiltersState } from '@tanstack/react-table';
 import { AdminContractItem, AdminCardItem } from '@/types/admin-tables';
 import { AdminUser } from '@/types/user';
 import { useAdminStore } from '../hooks/useAdminStore'; 
+import { useAdminStats } from '../hooks/useAdminStats';
 
 interface AdminDashboardProps {
   authData: AuthMe;
@@ -121,6 +122,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
   const avgCards = totalUsersCount > 0 ? (totalCardsCount / totalUsersCount).toFixed(1) : '0';
   
   const adminName = authData?.email?.split('@')[0] || 'Quản trị viên';
+  const { data: stats, isLoading: statsLoading } = useAdminStats();
 
   return (
     <div className="mx-auto w-full max-w-6xl rounded-3xl bg-white p-4 sm:p-6 lg:p-8 text-slate-900 shadow-xl border border-slate-100 min-h-[80vh] flex flex-col gap-6 sm:gap-8">
@@ -148,11 +150,30 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
       </div>
 
       {/* THỐNG KÊ */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-        <StatCard icon={<Users className="h-4 w-4 sm:h-5 sm:w-5" />} label="Khách hàng" value={String(totalUsersCount)} />
-        <StatCard icon={<FileText className="h-4 w-4 sm:h-5 sm:w-5" />} label="Hợp đồng" value={String(totalContractsCount)} />
-        <StatCard icon={<CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />} label="Thẻ đã phát hành" value={String(totalCardsCount)} />
-        <StatCard icon={<BarChart2 className="h-4 w-4 sm:h-5 sm:w-5" />} label="TB thẻ/khách hàng" value={String(avgCards)} />
+      <div className="grid grid-cols-4 gap-4">
+        <StatCard 
+          icon={<Users className="h-6 w-6" />} // Dùng đúng icon bạn đang có
+          label="Khách hàng" 
+          value={statsLoading ? '...' : String(stats?.totalUsers ?? 0)} 
+        />
+        
+        <StatCard 
+          icon={<FileText className="h-6 w-6" />} // Dùng đúng icon bạn đang có
+          label="Hợp đồng" 
+          value={statsLoading ? '...' : String(stats?.totalContracts ?? 0)} 
+        />
+        
+        <StatCard 
+          icon={<CreditCard className="h-6 w-6" />} // Dùng đúng icon bạn đang có
+          label="Thẻ đã phát hành" 
+          value={statsLoading ? '...' : String(stats?.totalCards ?? 0)} 
+        />
+        
+        <StatCard 
+          icon={<BarChart className="h-6 w-6" />} // Dùng đúng icon bạn đang có
+          label="TB thẻ/khách hàng" 
+          value={statsLoading ? '...' : String(stats?.avgCardsPerUser ?? '0.0')} 
+        />
       </div>
 
       {/* TABS & SEARCH */}
@@ -233,8 +254,9 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
             total={totalContractsCount}
             onPageChange={(page) => setContractsParams({ page })}
             onPageSizeChange={(pageSize) => setContractsParams({ pageSize, page: 1 })}
-            columnFilters={contractsParams.columnFilters}
-            onColumnFiltersChange={(filters) => setContractsParams({ columnFilters: filters })}
+            //columnFilters={contractsParams.columnFilters}
+            //onColumnFiltersChange={(filters) => setContractsParams({ columnFilters: filters })}
+            showColumnFilters={false}
             isLoading={isContractsLoading}
             isFetching={isContractsFetching}
           />
@@ -250,8 +272,9 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
             total={totalCardsCount}
             onPageChange={(page) => setCardsParams({ page })}
             onPageSizeChange={(pageSize) => setCardsParams({ pageSize, page: 1 })}
-            columnFilters={cardsParams.columnFilters}
-            onColumnFiltersChange={(filters) => setCardsParams({ columnFilters: filters })}
+            //columnFilters={cardsParams.columnFilters}
+            //onColumnFiltersChange={(filters) => setCardsParams({ columnFilters: filters })}
+            showColumnFilters={false}
             isLoading={isCardsLoading}
             isFetching={isCardsFetching}
           />

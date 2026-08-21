@@ -178,10 +178,10 @@ export function AdminDataTable<TData>({
       </div>
 
       {/* KHU VỰC ĐIỀU KHIỂN PHÂN TRANG */}
-      <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center sm:justify-between gap-4 text-sm text-slate-600 bg-white p-3 rounded-xl border border-slate-100 shadow-sm mt-4">
         
-        {/* Chọn số dòng hiển thị */}
-        <div className="flex items-center gap-2 pl-2">
+        {/* Tầng 1 (Mobile) / Khối trái (PC): Chọn số dòng hiển thị */}
+        <div className="flex items-center gap-2 whitespace-nowrap">
           <span className="font-medium text-slate-500">Hiển thị</span>
           <select
             value={pageSize}
@@ -195,17 +195,17 @@ export function AdminDataTable<TData>({
           <span className="text-slate-500">dòng / trang</span>
         </div>
 
-        {/* Thông tin kết quả & Nhảy trang */}
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
+        {/* Tầng 2 (Mobile) / Khối giữa (PC): Thông tin kết quả & Nhảy trang */}
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-2 whitespace-nowrap">
             <span className="text-slate-500">Tổng cộng:</span>
             <strong className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
               {total}
             </strong>
-            <span className="text-slate-500">kết quả {isFetching && '(Đang cập nhật...)'}</span>
+            <span className="text-slate-500">kết quả {isFetching && '(Đang tải...)'}</span>
           </div>
           
-          <div className="flex items-center gap-2 border-l border-slate-200 pl-6">
+          <div className="flex items-center gap-2 sm:border-l sm:border-slate-200 sm:pl-6 whitespace-nowrap">
             <span className="text-slate-500 font-medium">Trang:</span>
             <input
               type="number"
@@ -223,8 +223,8 @@ export function AdminDataTable<TData>({
           </div>
         </div>
 
-        {/* Nút Next/Prev */}
-        <div className="flex items-center gap-1.5 pr-2">
+        {/* Tầng 3 (Mobile) / Khối phải (PC): Nút Next/Prev */}
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
           <button
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page <= 1}

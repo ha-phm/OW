@@ -248,4 +248,25 @@ export class AdminService {
 
     return paginate(filtered, query.page, query.pageSize);
   }
+
+  // Thêm hàm này vào class AdminService
+  async getDashboardStats() {
+    // Dùng Promise.all để chạy 3 lệnh đếm song song -> Tốc độ x3
+    const [totalUsers, totalContracts, totalCards] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.contract.count(),
+      this.prisma.card.count(),
+    ]);
+
+    // Tính trung bình thẻ / khách hàng
+    const avgCardsPerUser =
+      totalUsers > 0 ? (totalCards / totalUsers).toFixed(1) : '0.0';
+
+    return {
+      totalUsers,
+      totalContracts,
+      totalCards,
+      avgCardsPerUser: parseFloat(avgCardsPerUser),
+    };
+  }
 }

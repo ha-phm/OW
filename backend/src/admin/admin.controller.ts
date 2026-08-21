@@ -16,16 +16,21 @@ import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 
 @UseGuards(RolesGuard)
 @Roles(Role.ADMIN)
-@Controller('admin/users')
+@Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Get()
+  @Get('stats')
+  getDashboardStats() {
+    return this.adminService.getDashboardStats();
+  }
+
+  @Get('users')
   findAll() {
     return this.adminService.findAllUsers();
   }
 
-  @Patch(':id/role')
+  @Patch('users/:id/role')
   updateRole(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUserRoleDto,
@@ -33,7 +38,7 @@ export class AdminController {
     return this.adminService.updateUserRole(id, dto.role);
   }
 
-  @Delete(':id')
+  @Delete('users/:id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.deleteUser(id);
   }
