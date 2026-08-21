@@ -26,3 +26,15 @@ export const signupSchema = z.object({
 });
 
 export type SignupFormValues = z.infer<typeof signupSchema>;
+
+export const profileEditSchema = signupSchema
+  .omit({
+    password: true,       // Bỏ bắt buộc mật khẩu
+    salutationCode: true, // Bỏ danh xưng
+    branch: true,         // Bỏ chi nhánh
+  })
+  .extend({
+    citizenship: z.string().min(1, 'Vui lòng nhập quốc tịch'), // Thêm trường mới
+  });
+  
+export type EditFormData = z.infer<typeof profileEditSchema>;

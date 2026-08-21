@@ -1,5 +1,4 @@
 'use client';
-"use no memo";
 
 import {
   ColumnDef,
@@ -9,7 +8,7 @@ import {
   ColumnFiltersState,
 } from '@tanstack/react-table';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 interface AdminDataTableProps<TData> {
   columns: ColumnDef<TData, unknown>[];
@@ -24,7 +23,6 @@ interface AdminDataTableProps<TData> {
   isFetching?: boolean;
   emptyMessage?: string;
   showColumnFilters?: boolean;
-  // Hai props mới để đồng bộ bộ lọc với Zustand
   columnFilters?: ColumnFiltersState;
   onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
 }
@@ -46,44 +44,47 @@ export function AdminDataTable<TData>({
   onColumnFiltersChange,
 }: AdminDataTableProps<TData>) {
   
-  // Local state để gõ mượt mà (chưa gọi API ngay)
   const [localFilters, setLocalFilters] = useState<ColumnFiltersState>(columnFilters || []);
+  const [jumpPage, setJumpPage] = useState(page.toString());
 
-  // 1. Đồng bộ nếu bộ lọc thay đổi từ bên ngoài (từ Zustand)
+  
+  const propFiltersString = JSON.stringify(columnFilters || []);
+  const localFiltersString = JSON.stringify(localFilters);
+
+  // 2. Đồng bộ nếu bộ lọc thay đổi từ bên ngoài (từ Zustand)
   useEffect(() => {
-    // Chỉ cập nhật state cục bộ nếu nội dung thực sự khác nhau
-    if (JSON.stringify(localFilters) !== JSON.stringify(columnFilters || [])) {
-      setLocalFilters(columnFilters || []);
+    if (localFiltersString !== propFiltersString) {
+      setLocalFilters(JSON.parse(propFiltersString));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(columnFilters)]); // Dùng chuỗi JSON ở dependency để tránh re-render do mảng mới
+  }, [propFiltersString, localFiltersString]); 
 
-  // 2. Debounce (Delay 400ms) trước khi đẩy dữ liệu lọc lên Store để gọi API
+  
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Chỉ bắn lên Store (gọi API) nếu người dùng vừa thực sự thay đổi ô lọc
-      if (JSON.stringify(localFilters) !== JSON.stringify(columnFilters || [])) {
-        onColumnFiltersChange?.(localFilters);
+      if (localFiltersString !== propFiltersString) {
+        onColumnFiltersChange?.(JSON.parse(localFiltersString));
       }
     }, 400);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localFilters, onColumnFiltersChange]);
+  }, [localFiltersString, propFiltersString, onColumnFiltersChange]);
+
+  // 4. MEMOIZE DATA VÀ COLUMNS ĐỂ TRIỆT TIÊU CẢNH BÁO CỦA TANSTACK TABLE
+  // Khi Component cha truyền `data={data ?? []}`, mảng [] mới liên tục được tạo ra làm Table giật lag.
+  const tableData = useMemo(() => data, [data]);
+  const tableColumns = useMemo(() => columns, [columns]);
 
   const table = useReactTable({
-    data,
-    columns,
+    data: tableData,
+    columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
-    manualFiltering: true, // QUAN TRỌNG: Bật cờ này để báo TanStack biết Server sẽ lo việc lọc
+    manualFiltering: true,
     pageCount: totalPages,
     state: {
       columnFilters: localFilters,
     },
     onColumnFiltersChange: setLocalFilters,
   });
-
-  const [jumpPage, setJumpPage] = useState(page.toString());
 
   useEffect(() => {
     setJumpPage(page.toString());
@@ -100,7 +101,7 @@ export function AdminDataTable<TData>({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* KHU VỰC BẢNG DỮ LIỆU */}
+      
       <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-lg shadow-emerald-900/5 transition-all">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -114,12 +115,12 @@ export function AdminDataTable<TData>({
                     >
                       {header.isPlaceholder ? null : (
                         <div className="flex flex-col gap-2.5">
-                          {/* Tiêu đề cột */}
+                         
                           <div className="flex items-center gap-1.5">
                             {flexRender(header.column.columnDef.header, header.getContext())}
                           </div>
                           
-                          {/* Ô input Lọc theo cột */}
+                          
                           {showColumnFilters && header.column.getCanFilter() && (
                             <div className="relative flex items-center mt-1">
                               <Filter className="absolute left-2 h-3 w-3 text-emerald-400" />
@@ -177,10 +178,10 @@ export function AdminDataTable<TData>({
         </div>
       </div>
 
-      {/* KHU VỰC ĐIỀU KHIỂN PHÂN TRANG */}
+      
       <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center sm:justify-between gap-4 text-sm text-slate-600 bg-white p-3 rounded-xl border border-slate-100 shadow-sm mt-4">
         
-        {/* Tầng 1 (Mobile) / Khối trái (PC): Chọn số dòng hiển thị */}
+        
         <div className="flex items-center gap-2 whitespace-nowrap">
           <span className="font-medium text-slate-500">Hiển thị</span>
           <select
@@ -195,7 +196,7 @@ export function AdminDataTable<TData>({
           <span className="text-slate-500">dòng / trang</span>
         </div>
 
-        {/* Tầng 2 (Mobile) / Khối giữa (PC): Thông tin kết quả & Nhảy trang */}
+        
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
           <div className="flex items-center gap-2 whitespace-nowrap">
             <span className="text-slate-500">Tổng cộng:</span>
@@ -223,7 +224,7 @@ export function AdminDataTable<TData>({
           </div>
         </div>
 
-        {/* Tầng 3 (Mobile) / Khối phải (PC): Nút Next/Prev */}
+        
         <div className="flex items-center gap-1.5 whitespace-nowrap">
           <button
             onClick={() => onPageChange(Math.max(1, page - 1))}

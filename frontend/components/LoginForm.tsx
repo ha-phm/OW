@@ -1,25 +1,38 @@
 'use client';
 
-import { useState, type SyntheticEvent } from 'react'; 
+import { useForm } from 'react-hook-form';
 import { User, Lock } from 'lucide-react';
 import { useLogin } from '../hooks/useAuthMutations';
 
-export function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  
-  const { mutate, isPending, error } = useLogin();
+// 1. Khai báo kiểu dữ liệu cho các trường
+interface LoginFormData {
+  email: string;
+  password: string;
+}
 
-  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    mutate(
-      { email, password },
-    );
+export function LoginForm() {
+  const { mutate, isPending, error: apiError } = useLogin();
+
+  // 2. Khởi tạo form
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm<LoginFormData>({
+    defaultValues: {
+      email: '',
+      password: '',
+    }
+  });
+
+  // 3. Hàm submit gọn gàng, tự động nhận data đã được kiểm tra
+  const onSubmit = (data: LoginFormData) => {
+    mutate(data);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      {error && <p className="text-red-400 text-sm text-center">{error.message}</p>}
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+      {apiError && <p className="text-red-400 text-sm text-center">{apiError.message}</p>}
 
       {/* Input Email */}
       <div className="relative">
@@ -27,15 +40,15 @@ export function LoginForm() {
         <div className="relative">
           <input
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
             placeholder="Nhập địa chỉ email"
-            required
             autoComplete="email"
+            {...register('email', { required: 'Vui lòng nhập email' })}
             className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-6 pr-12 text-white placeholder:text-white/70 focus:outline-none focus:border-white/50 transition-colors"
           />
           <User className="absolute right-5 top-1/2 -translate-y-1/2 text-white/70" size={20} />
         </div>
+        {/* Hiển thị lỗi nếu người dùng bỏ trống */}
+        {errors.email && <p className="text-red-400 text-xs mt-1 absolute">{errors.email.message}</p>}
       </div>
 
       {/* Input Password */}
@@ -44,15 +57,15 @@ export function LoginForm() {
         <div className="relative">
           <input
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             placeholder="Nhập mật khẩu"
-            required
-            autoComplete="curent-password"
+            autoComplete="current-password"
+            {...register('password', { required: 'Vui lòng nhập mật khẩu' })}
             className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-6 pr-12 text-white placeholder:text-white/70 focus:outline-none focus:border-white/50 transition-colors"
           />
           <Lock className="absolute right-5 top-1/2 -translate-y-1/2 text-white/70" size={20} />
         </div>
+        {/* Hiển thị lỗi nếu người dùng bỏ trống */}
+        {errors.password && <p className="text-red-400 text-xs mt-1 absolute">{errors.password.message}</p>}
       </div>
 
       <button

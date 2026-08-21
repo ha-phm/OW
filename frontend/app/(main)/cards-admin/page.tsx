@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
+import { useForm, useWatch } from 'react-hook-form';
 import { Landmark, Filter, Search } from 'lucide-react';
 import { useAuthMe } from '../../../hooks/useAuthMe';
 import { useAdminCards } from '../../../hooks/useAdminCards';
@@ -12,8 +13,13 @@ import { useAdminStore } from '../../../hooks/useAdminStore';
 
 const SEARCH_DEBOUNCE_MS = 300; 
 
-// Các cột cho phép lọc bên trang Thẻ
 type FilterField = 'search' | 'cardNumber' | 'cardName' | 'userEmail';
+
+// Khai báo type cho Form Lọc
+interface FilterFormValues {
+  filterField: FilterField;
+  inputValue: string;
+}
 
 export default function AdminCardsPage() {
   const router = useRouter();
@@ -21,25 +27,30 @@ export default function AdminCardsPage() {
 
   const { cardsParams, setCardsParams } = useAdminStore();
   
-  const [filterField, setFilterField] = useState<FilterField>('search');
-  const [inputValue, setInputValue] = useState('');
+  // 1. ÁP DỤNG REACT HOOK FORM CHO THANH TÌM KIẾM
+  const { register, control, setValue } = useForm<FilterFormValues>({
+    defaultValues: {
+      filterField: 'search',
+      inputValue: cardsParams.search || '',
+    }
+  });
 
-  // ------------------------------------------------------------
-  // HÀM TIỆN ÍCH: Lấy giá trị từ mảng columnFilters của Zustand
-  // ------------------------------------------------------------
-  const getStoreValue = (field: FilterField) => {
+  const filterField = useWatch({ control, name: 'filterField' });
+  const inputValue = useWatch({ control, name: 'inputValue' });
+
+  // 2. DÙNG useCallback ĐỂ ESLINT HẾT BÁO LỖI EXHAUSTIVE DEPS
+  const getStoreValue = useCallback((field: FilterField) => {
     if (field === 'search') return cardsParams.search || '';
     const filterObj = cardsParams.columnFilters?.find(f => f.id === field);
     return (filterObj?.value as string) || '';
-  };
+  }, [cardsParams.search, cardsParams.columnFilters]);
 
-  // 1. Đồng bộ giao diện input khi đổi cột lọc
+  // 3. Đồng bộ giao diện input khi đổi cột lọc (Code sạch, không cần comment disable)
   useEffect(() => {
-    setInputValue(getStoreValue(filterField));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterField]);
+    setValue('inputValue', getStoreValue(filterField));
+  }, [filterField, getStoreValue, setValue]);
 
-  // 2. Debounce: Đẩy dữ liệu vào mảng columnFilters của Zustand
+  // 4. Debounce: Đẩy dữ liệu vào mảng columnFilters của Zustand
   useEffect(() => {
     const timer = setTimeout(() => {
       const currentValueInStore = getStoreValue(filterField);
@@ -63,8 +74,7 @@ export default function AdminCardsPage() {
       }
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputValue, filterField, cardsParams, setCardsParams]);
+  }, [inputValue, filterField, getStoreValue, cardsParams.columnFilters, setCardsParams]);
 
   useEffect(() => {
     if (!meLoading && me?.role !== 'ADMIN') {
@@ -72,9 +82,7 @@ export default function AdminCardsPage() {
     }
   }, [meLoading, me, router]);
 
-  // ------------------------------------------------------------
-  // 3. CHUYỂN ĐỔI: Dàn phẳng columnFilters thành Object cho API
-  // ------------------------------------------------------------
+  // Dàn phẳng columnFilters thành Object cho API
   const filterObject = (cardsParams.columnFilters || []).reduce((acc, filter) => {
     acc[filter.id] = filter.value as string;
     return acc;
@@ -135,9 +143,9 @@ export default function AdminCardsPage() {
           
           <div className="flex items-center gap-2 px-3 bg-white rounded-xl border border-slate-200 shrink-0">
             <Filter className="w-4 h-4 text-emerald-500" />
+            {/* THAY THẾ SELECT THỦ CÔNG BẰNG REGISTER */}
             <select
-              value={filterField}
-              onChange={(e) => setFilterField(e.target.value as FilterField)}
+              {...register('filterField')}
               className="bg-transparent py-2.5 text-sm focus:outline-none text-slate-700 font-medium cursor-pointer w-full sm:w-auto appearance-none pr-4"
             >
               <option value="search">Tìm kiếm chung</option>
@@ -151,9 +159,9 @@ export default function AdminCardsPage() {
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <Search className="h-4 w-4 text-slate-400" />
             </div>
+            {/* THAY THẾ INPUT THỦ CÔNG BẰNG REGISTER */}
             <input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              {...register('inputValue')}
               placeholder={
                 filterField === 'search' ? 'Nhập từ khóa...' :
                 filterField === 'userEmail' ? 'Nhập email...' : 'Nhập thông tin lọc...'
@@ -177,7 +185,7 @@ export default function AdminCardsPage() {
         isLoading={isLoading}
         isFetching={isFetching}
         emptyMessage="Không tìm thấy thẻ nào."
-        showColumnFilters={false} // Giấu các phễu lọc thừa
+        showColumnFilters={false}
       />
     </div>
   );

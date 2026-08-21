@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, Control, useWatch } from 'react-hook-form';
 import { CreditCard, Loader2, AlertCircle, CheckCircle2, Users } from 'lucide-react';
 import { ModalShell } from '../components/ModalShell';
 import { ModalField } from '../components/ModalField';
 import { quickOpenCard, createSupplementaryCard } from '../api/contracts';
 import { ApiError } from '../api/api';
 import { CardCategory } from '../constants/cardCategories';
-
 
 interface QuickOpenCardModalProps {
   existingCards?: { cardNumber: string; productName?: string; cardName?: string }[];
@@ -28,14 +27,46 @@ interface FormValues {
   suppLastName: string;
 }
 
+// 1. ĐƯA FormField RA NGOÀI ĐỂ KHÔNG BỊ RE-RENDER MẤT FOCUS KHI GÕ
+const FormField = ({
+  name,
+  control, // Nhận control từ Component cha truyền xuống
+  label,
+  placeholder,
+  required = false,
+}: {
+  name: keyof FormValues;
+  control: Control<FormValues>;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+}) => (
+  <Controller
+    name={name}
+    control={control}
+    rules={{ required: required ? 'Vui lòng điền thông tin này' : false }}
+    render={({ field, fieldState: { error } }) => (
+      <div>
+        <ModalField
+          label={label}
+          value={field.value as string}
+          onChange={(val) => field.onChange(val.toUpperCase())}
+          placeholder={placeholder}
+          error={error?.message} // Truyền thẳng lỗi xuống ModalField
+        />
+      </div>
+    )}
+  />
+);
+
 export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: QuickOpenCardModalProps) {
   const [tab, setTab] = useState<'MAIN' | 'SUPPLEMENTARY'>('MAIN');
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [createdCardPan, setCreatedCardPan] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  
-  const { control, handleSubmit, watch, setValue, formState: { isSubmitting, errors } } = useForm<FormValues>({
+  // 2. LẤY THÊM HÀM `reset` ĐỂ XÓA DỮ LIỆU KHI CHUYỂN TAB
+  const { control, handleSubmit, setValue, reset, formState: { isSubmitting, errors } } = useForm<FormValues>({
     defaultValues: {
       cardCategory: CardCategory.TRAVEL,
       embossedFirstName: '',
@@ -46,10 +77,13 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
       suppCardName: '',
       suppFirstName: '',
       suppLastName: '',
-    }
+    },
   });
 
-  const cardCategory = watch('cardCategory');
+  const cardCategory = useWatch({
+    control,
+    name: 'cardCategory',
+  });
 
   const onSubmitForm = async (data: FormValues) => {
     setApiError(null);
@@ -77,26 +111,6 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
       setApiError(err instanceof ApiError ? err.message : 'Lỗi hệ thống. Vui lòng thử lại.');
     }
   };
-
-
-  const FormField = ({ name, label, placeholder, required = false }: { name: keyof FormValues; label: string; placeholder?: string; required?: boolean }) => (
-    <Controller
-      name={name}
-      control={control}
-      rules={{ required: required ? 'Vui lòng điền thông tin này' : false }}
-      render={({ field }) => (
-        <div>
-          <ModalField 
-            label={label} 
-            value={field.value as string} 
-            onChange={(val) => field.onChange(val.toUpperCase())} 
-            placeholder={placeholder} 
-          />
-          {errors[name] && <span className="text-xs text-red-500 mt-1">{errors[name]?.message}</span>}
-        </div>
-      )}
-    />
-  );
 
   if (step === 3) {
     return (
@@ -133,7 +147,12 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
       <div className="mb-6 flex rounded-xl bg-slate-100 p-1">
         <button
           type="button"
-          onClick={() => { setTab('MAIN'); setStep(1); setApiError(null); }}
+          onClick={() => { 
+            setTab('MAIN'); 
+            setStep(1); 
+            setApiError(null); 
+            reset(); // 3. RESET FORM KHI CHUYỂN TAB
+          }}
           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
             tab === 'MAIN' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-700'
           }`}
@@ -142,7 +161,12 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
         </button>
         <button
           type="button"
-          onClick={() => { setTab('SUPPLEMENTARY'); setStep(1); setApiError(null); }}
+          onClick={() => { 
+            setTab('SUPPLEMENTARY'); 
+            setStep(1); 
+            setApiError(null); 
+            reset(); // 3. RESET FORM KHI CHUYỂN TAB
+          }}
           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
             tab === 'SUPPLEMENTARY' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-700'
           }`}
@@ -197,12 +221,13 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
               <div className="space-y-4 animate-in slide-in-from-right-2 duration-200">
                 <p className="text-sm font-medium text-slate-700">2. Thông tin in nổi & Thanh toán</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <FormField name="embossedFirstName" label="Tên (First Name) *" placeholder="VD: VAN A" required />
-                  <FormField name="embossedLastName" label="Họ (Last Name) *" placeholder="VD: NGUYEN" required />
+                  {/* 4. BỔ SUNG control={control} VÀO TẤT CẢ FormField */}
+                  <FormField name="embossedFirstName" control={control} label="Tên (First Name) *" placeholder="VD: VAN A" required />
+                  <FormField name="embossedLastName" control={control} label="Họ (Last Name) *" placeholder="VD: NGUYEN" required />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <FormField name="bank" label="Ngân hàng thanh toán *" placeholder="VD: VCB" required />
-                  <FormField name="account" label="Số tài khoản *" placeholder="VD: 0123456789" required />
+                  <FormField name="bank" control={control} label="Ngân hàng thanh toán *" placeholder="VD: VCB" required />
+                  <FormField name="account" control={control} label="Số tài khoản *" placeholder="VD: 0123456789" required />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button 
@@ -259,11 +284,11 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
               )}
             </div>
             
-            <FormField name="suppCardName" label="Tên gọi nhớ thẻ (Không bắt buộc)" placeholder="VD: Thẻ tiêu vặt cho con..." />
+            <FormField name="suppCardName" control={control} label="Tên gọi nhớ thẻ (Không bắt buộc)" placeholder="VD: Thẻ tiêu vặt cho con..." />
             
             <div className="grid grid-cols-2 gap-3">
-              <FormField name="suppFirstName" label="Tên người thân *" placeholder="VD: VAN A" required />
-              <FormField name="suppLastName" label="Họ người thân *" placeholder="VD: NGUYEN" required />
+              <FormField name="suppFirstName" control={control} label="Tên người thân *" placeholder="VD: VAN A" required />
+              <FormField name="suppLastName" control={control} label="Họ người thân *" placeholder="VD: NGUYEN" required />
             </div>
             
             <button 

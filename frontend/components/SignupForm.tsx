@@ -10,7 +10,6 @@ type SignupFormProps = {
   onSuccess: () => void;
 };
 
-// Khai báo các field cho từng step để dễ dàng validate
 const STEPS = [
   { id: 1, title: 'Đăng nhập', fields: ['email', 'password'] },
   { id: 2, title: 'Cá nhân', fields: ['lastName', 'middleName', 'firstName', 'birthDate', 'gender', 'maritalStatusCode', 'salutationCode'] },
@@ -25,7 +24,7 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
   const {
     register,
     handleSubmit,
-    trigger, // Dùng trigger để validate thủ công từng bước
+    trigger, 
     formState: { errors },
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),

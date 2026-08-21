@@ -1,11 +1,17 @@
+'use client';
+
 import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form'; // Đổi sang dùng useWatch
 import { Search } from 'lucide-react';
 
-function debounce<T extends (...args: any[]) => void>(fn: T, delay: number) {
+// 1. SỬA LỖI TỪ CHỐI ANY CỦA TYPESCRIPT BẰNG GENERIC TYPE (unknown[])
+function debounce<Args extends unknown[]>(
+  fn: (...args: Args) => void,
+  delay: number
+) {
   let timeout: ReturnType<typeof setTimeout> | undefined;
 
-  const debounced = (...args: Parameters<T>) => {
+  const debounced = (...args: Args) => {
     if (timeout) {
       clearTimeout(timeout);
     }
@@ -37,21 +43,23 @@ interface AdminFilterFormProps {
 }
 
 export function AdminFilterForm({ defaultValues, onFilterChange, showTypeFilter }: AdminFilterFormProps) {
-  const { register, watch } = useForm<FilterFormValues>({
+  // 2. CHUYỂN QUA DÙNG CONTROL
+  const { register, control } = useForm<FilterFormValues>({
     defaultValues,
   });
 
-  // Theo dõi sự thay đổi của form
-  const formValues = watch();
+  // 3. DÙNG useWatch ĐỂ LẤY DỮ LIỆU MÀ KHÔNG GÂY RE-RENDER COMPONENT
+  const formValues = useWatch({ control });
 
-  // Debounce function để tránh gọi state liên tục
+  // Debounce function để tránh gọi API/state liên tục
   const debouncedFilter = useMemo(
     () => debounce((values: FilterFormValues) => onFilterChange(values), 400),
     [onFilterChange]
   );
 
   useEffect(() => {
-    debouncedFilter(formValues);
+    // Ép kiểu (as FilterFormValues) vì useWatch có thể trả về giá trị undefined ban đầu
+    debouncedFilter(formValues as FilterFormValues);
     return () => debouncedFilter.cancel();
   }, [formValues, debouncedFilter]);
 
@@ -60,7 +68,7 @@ export function AdminFilterForm({ defaultValues, onFilterChange, showTypeFilter 
       {showTypeFilter && (
         <select
           {...register('type')}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none cursor-pointer"
         >
           <option value="">Tất cả loại</option>
           <option value="LIABILITY">Liability</option>

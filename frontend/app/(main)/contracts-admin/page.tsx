@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
+import { useForm, useWatch } from 'react-hook-form';
 import { FileStack, Filter, Search } from 'lucide-react';
 import { useAuthMe } from '../../../hooks/useAuthMe';
 import { useAdminContracts } from '../../../hooks/useAdminContracts';
@@ -19,37 +20,46 @@ const TYPE_LABEL: Record<ContractType, string> = {
 
 type FilterField = 'search' | 'contractNumber' | 'contractName' | 'userEmail' | 'type';
 
+// Khai báo type cho Form Lọc
+interface FilterFormValues {
+  filterField: FilterField;
+  inputValue: string;
+}
+
 export default function AdminContractsPage() {
   const router = useRouter();
   const { data: me, isLoading: meLoading } = useAuthMe();
 
   const { contractsParams, setContractsParams } = useAdminStore();
   
-  // State cho Bộ lọc thông minh
-  const [filterField, setFilterField] = useState<FilterField>('search');
-  const [inputValue, setInputValue] = useState('');
+  // 1. ÁP DỤNG REACT HOOK FORM CHO THANH TÌM KIẾM
+  const { register, control, setValue } = useForm<FilterFormValues>({
+    defaultValues: {
+      filterField: 'search',
+      inputValue: contractsParams.search || '',
+    }
+  });
 
-  // ------------------------------------------------------------
-  // HÀM TIỆN ÍCH: "Móc" dữ liệu từ Zustand ra dựa vào cột đang chọn
-  // ------------------------------------------------------------
-  const getStoreValue = (field: FilterField) => {
+  const filterField = useWatch({ control, name: 'filterField' });
+  const inputValue = useWatch({ control, name: 'inputValue' });
+
+  // 2. DÙNG useCallback ĐỂ ESLINT HẾT BÁO LỖI EXHAUSTIVE DEPS
+  const getStoreValue = useCallback((field: FilterField) => {
     if (field === 'search') return contractsParams.search || '';
     if (field === 'type') return contractsParams.type || '';
     
-    // Nếu là các cột khác, lùng sục bên trong mảng columnFilters
     const filterObj = contractsParams.columnFilters?.find(f => f.id === field);
     return (filterObj?.value as string) || '';
-  };
+  }, [contractsParams.search, contractsParams.type, contractsParams.columnFilters]);
 
-  // 1. Đồng bộ ô input khi người dùng đổi cột lọc
+  // 3. Đồng bộ ô input khi người dùng đổi cột lọc (Không cần comment ép tắt lỗi nữa)
   useEffect(() => {
     if (filterField !== 'type') {
-      setInputValue(getStoreValue(filterField));
+      setValue('inputValue', getStoreValue(filterField));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterField]);
+  }, [filterField, getStoreValue, setValue]);
 
-  // 2. Debounce: Lưu giá trị người dùng gõ vào Zustand
+  // 4. Debounce: Lưu giá trị người dùng gõ vào Zustand
   useEffect(() => {
     const timer = setTimeout(() => {
       if (filterField !== 'type') {
@@ -59,16 +69,12 @@ export default function AdminContractsPage() {
           if (filterField === 'search') {
             setContractsParams({ search: inputValue, page: 1 });
           } else {
-            // Xử lý cập nhật mảng columnFilters cho các cột cụ thể
             const currentFilters = contractsParams.columnFilters || [];
-            // Lọc bỏ filter cũ của cột này (nếu có)
             const otherFilters = currentFilters.filter(f => f.id !== filterField);
             
             if (inputValue.trim() === '') {
-              // Xóa luôn nếu input rỗng
               setContractsParams({ columnFilters: otherFilters, page: 1 });
             } else {
-              // Thêm mới/Ghi đè filter
               setContractsParams({ 
                 columnFilters: [...otherFilters, { id: filterField, value: inputValue }],
                 page: 1 
@@ -79,8 +85,7 @@ export default function AdminContractsPage() {
       }
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputValue, filterField, contractsParams, setContractsParams]);
+  }, [inputValue, filterField, getStoreValue, contractsParams.columnFilters, setContractsParams]);
 
   useEffect(() => {
     if (!meLoading && me?.role !== 'ADMIN') {
@@ -88,9 +93,7 @@ export default function AdminContractsPage() {
     }
   }, [meLoading, me, router]);
 
-  // ------------------------------------------------------------
-  // 3. CHUYỂN ĐỔI: Dàn phẳng mảng columnFilters ra để API dễ đọc
-  // ------------------------------------------------------------
+  // Dàn phẳng mảng columnFilters ra để API dễ đọc
   const filterObject = (contractsParams.columnFilters || []).reduce((acc, filter) => {
     acc[filter.id] = filter.value as string;
     return acc;
@@ -161,8 +164,7 @@ export default function AdminContractsPage() {
           <div className="flex items-center gap-2 px-3 bg-white rounded-xl border border-slate-200 shrink-0">
             <Filter className="w-4 h-4 text-emerald-500" />
             <select
-              value={filterField}
-              onChange={(e) => setFilterField(e.target.value as FilterField)}
+              {...register('filterField')}
               className="bg-transparent py-2.5 text-sm focus:outline-none text-slate-700 font-medium cursor-pointer w-full sm:w-auto appearance-none pr-4"
             >
               <option value="search">Tìm kiếm chung</option>
@@ -190,8 +192,7 @@ export default function AdminContractsPage() {
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
               <input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                {...register('inputValue')}
                 placeholder={
                   filterField === 'search' ? 'Nhập từ khóa...' :
                   filterField === 'userEmail' ? 'Nhập email...' : 'Nhập thông tin lọc...'

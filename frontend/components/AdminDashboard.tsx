@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form'; // 1. IMPORT THÊM useWatch
 import { Search, BarChart2, Activity, Users, FileText, CreditCard, BarChart } from 'lucide-react';
 import { AuthMe } from '@/types/user';
 import { useAdminUsers } from '../hooks/useAdminUsers';
@@ -18,7 +18,6 @@ interface AdminDashboardProps {
   authData: AuthMe;
 }
 
-// Hàm tiện ích chuyển đổi mảng filter của TanStack Table thành Object để gửi API
 const convertFiltersToObject = (filters: ColumnFiltersState) => {
   return filters.reduce((acc, filter) => {
     acc[filter.id] = filter.value as string;
@@ -55,11 +54,16 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     enabled: activeTab === 'CARDS'
   });
 
-  const { register, watch, setValue } = useForm({
+  // 2. LẤY `control` THAY VÌ `watch` TỪ useForm
+  const { register, control, setValue } = useForm({
     defaultValues: { searchInput: '' }
   });
   
-  const searchInput = watch('searchInput');
+  // 3. DÙNG `useWatch` ĐỂ THEO DÕI GIÁ TRỊ NHẬP VÀO
+  const searchInput = useWatch({
+    control,
+    name: 'searchInput',
+  });
 
   useEffect(() => {
     if (activeTab === 'CONTRACTS') setValue('searchInput', contractsParams.search);
@@ -119,7 +123,6 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
   const totalUsersCount = Array.isArray(usersData) ? usersData.length : 0;
   const totalContractsCount = contractsData?.meta?.total || 0;
   const totalCardsCount = cardsData?.meta?.total || 0;
-  const avgCards = totalUsersCount > 0 ? (totalCardsCount / totalUsersCount).toFixed(1) : '0';
   
   const adminName = authData?.email?.split('@')[0] || 'Quản trị viên';
   const { data: stats, isLoading: statsLoading } = useAdminStats();
@@ -152,25 +155,25 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
       {/* THỐNG KÊ */}
       <div className="grid grid-cols-4 gap-4">
         <StatCard 
-          icon={<Users className="h-6 w-6" />} // Dùng đúng icon bạn đang có
+          icon={<Users className="h-6 w-6" />}
           label="Khách hàng" 
           value={statsLoading ? '...' : String(stats?.totalUsers ?? 0)} 
         />
         
         <StatCard 
-          icon={<FileText className="h-6 w-6" />} // Dùng đúng icon bạn đang có
+          icon={<FileText className="h-6 w-6" />}
           label="Hợp đồng" 
           value={statsLoading ? '...' : String(stats?.totalContracts ?? 0)} 
         />
         
         <StatCard 
-          icon={<CreditCard className="h-6 w-6" />} // Dùng đúng icon bạn đang có
+          icon={<CreditCard className="h-6 w-6" />}
           label="Thẻ đã phát hành" 
           value={statsLoading ? '...' : String(stats?.totalCards ?? 0)} 
         />
         
         <StatCard 
-          icon={<BarChart className="h-6 w-6" />} // Dùng đúng icon bạn đang có
+          icon={<BarChart className="h-6 w-6" />}
           label="TB thẻ/khách hàng" 
           value={statsLoading ? '...' : String(stats?.avgCardsPerUser ?? '0.0')} 
         />
@@ -240,7 +243,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
             onPageSizeChange={() => {}}
             isLoading={isUsersLoading}
             isFetching={isUsersFetching}
-            showColumnFilters={false} // Users chưa có API filter server-side
+            showColumnFilters={false} 
           />
         )}
         
@@ -254,8 +257,6 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
             total={totalContractsCount}
             onPageChange={(page) => setContractsParams({ page })}
             onPageSizeChange={(pageSize) => setContractsParams({ pageSize, page: 1 })}
-            //columnFilters={contractsParams.columnFilters}
-            //onColumnFiltersChange={(filters) => setContractsParams({ columnFilters: filters })}
             showColumnFilters={false}
             isLoading={isContractsLoading}
             isFetching={isContractsFetching}
@@ -272,8 +273,6 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
             total={totalCardsCount}
             onPageChange={(page) => setCardsParams({ page })}
             onPageSizeChange={(pageSize) => setCardsParams({ pageSize, page: 1 })}
-            //columnFilters={cardsParams.columnFilters}
-            //onColumnFiltersChange={(filters) => setCardsParams({ columnFilters: filters })}
             showColumnFilters={false}
             isLoading={isCardsLoading}
             isFetching={isCardsFetching}

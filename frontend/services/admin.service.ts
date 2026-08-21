@@ -24,29 +24,35 @@ export const adminService = {
     apiDelete<{ message: string }>(`/admin/users/${id}`),
 
   listContracts: (
-    params: GetAdminContractsParams & Record<string, any>,
+    // THAY ĐỔI: Dùng unknown thay vì any để vượt qua ESLint
+    params: GetAdminContractsParams & Record<string, unknown>,
   ): Promise<PaginatedAdminContracts> => {
     const query = new URLSearchParams({
       page: String(params.page),
       pageSize: String(params.pageSize),
     });
     
-    if (params.search?.trim()) query.set('search', params.search.trim());
-    if (params.type) query.set('type', params.type);
+    if (params.search && typeof params.search === 'string') {
+      query.set('search', params.search.trim());
+    }
+    if (params.type && typeof params.type === 'string') {
+      query.set('type', params.type);
+    }
 
     // 1. Quét toàn bộ các biến lọc dạng phẳng (flat) từ Zustand
-    // Đã thêm 'columnFilters' vào danh sách đen để NestJS không báo lỗi 400
     const excludeKeys = ['page', 'pageSize', 'search', 'type', 'filters', 'columnFilters'];
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== '' && !excludeKeys.includes(key)) {
+      if (value !== undefined && value !== null && value !== '' && !excludeKeys.includes(key)) {
         query.set(key, String(value));
       }
     });
 
     // 2. Vẫn giữ lại params.filters đề phòng trường hợp dùng ở nơi khác
-    if (params.filters) {
-      Object.entries(params.filters).forEach(([key, value]) => {
-        if (value) query.set(key, String(value));
+    if (params.filters && typeof params.filters === 'object') {
+      Object.entries(params.filters as Record<string, unknown>).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          query.set(key, String(value));
+        }
       });
     }
 
@@ -56,28 +62,32 @@ export const adminService = {
   },
 
   listCards: (
-    params: GetAdminCardsParams & Record<string, any>
+    // THAY ĐỔI: Dùng unknown thay vì any để vượt qua ESLint
+    params: GetAdminCardsParams & Record<string, unknown>
   ): Promise<PaginatedAdminCards> => {
     const query = new URLSearchParams({
       page: String(params.page),
       pageSize: String(params.pageSize),
     });
     
-    if (params.search?.trim()) query.set('search', params.search.trim());
+    if (params.search && typeof params.search === 'string') {
+      query.set('search', params.search.trim());
+    }
 
     // 1. Quét toàn bộ các biến lọc dạng phẳng (flat) từ Zustand
-    // Đã thêm 'columnFilters' vào danh sách đen để NestJS không báo lỗi 400
     const excludeKeys = ['page', 'pageSize', 'search', 'filters', 'columnFilters'];
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== '' && !excludeKeys.includes(key)) {
+      if (value !== undefined && value !== null && value !== '' && !excludeKeys.includes(key)) {
         query.set(key, String(value));
       }
     });
 
     // 2. Vẫn giữ lại params.filters 
-    if (params.filters) {
-      Object.entries(params.filters).forEach(([key, value]) => {
-        if (value) query.set(key, String(value));
+    if (params.filters && typeof params.filters === 'object') {
+      Object.entries(params.filters as Record<string, unknown>).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          query.set(key, String(value));
+        }
       });
     }
     
