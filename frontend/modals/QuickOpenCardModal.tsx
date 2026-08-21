@@ -1,88 +1,103 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { CreditCard, Loader2, AlertCircle, CheckCircle2, Users } from 'lucide-react';
 import { ModalShell } from '../components/ModalShell';
 import { ModalField } from '../components/ModalField';
-import { quickOpenCard, createSupplementaryCard, QuickOpenCardPayload } from '../api/contracts';
+import { quickOpenCard, createSupplementaryCard } from '../api/contracts';
 import { ApiError } from '../api/api';
 import { CardCategory } from '../constants/cardCategories';
 
-export function QuickOpenCardModal({
-  existingCards = [], // Nhận danh sách thẻ hiện có để làm nguồn mở thẻ phụ
-  onClose,
-  onSuccess,
-}: {
+
+interface QuickOpenCardModalProps {
   existingCards?: { cardNumber: string; productName?: string; cardName?: string }[];
   onClose: () => void;
   onSuccess: (cardPan: string) => void;
-}) {
-  // --- STATE CHUNG ---
+}
+
+interface FormValues {
+  cardCategory: CardCategory;
+  embossedFirstName: string;
+  embossedLastName: string;
+  bank: string;
+  account: string;
+  selectedMainCard: string;
+  suppCardName: string;
+  suppFirstName: string;
+  suppLastName: string;
+}
+
+export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: QuickOpenCardModalProps) {
   const [tab, setTab] = useState<'MAIN' | 'SUPPLEMENTARY'>('MAIN');
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [createdCardPan, setCreatedCardPan] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  // --- STATE THẺ CHÍNH ---
-  const [cardCategory, setCardCategory] = useState<CardCategory>(CardCategory.TRAVEL);
-  const [embossedFirstName, setEmbossedFirstName] = useState('');
-  const [embossedLastName, setEmbossedLastName] = useState('');
-  const [bank, setBank] = useState('');
-  const [account, setAccount] = useState('');
-  const [paymentOption] = useState('FULL_PAYMENT');
+  
+  const { control, handleSubmit, watch, setValue, formState: { isSubmitting, errors } } = useForm<FormValues>({
+    defaultValues: {
+      cardCategory: CardCategory.TRAVEL,
+      embossedFirstName: '',
+      embossedLastName: '',
+      bank: '',
+      account: '',
+      selectedMainCard: '',
+      suppCardName: '',
+      suppFirstName: '',
+      suppLastName: '',
+    }
+  });
 
-  // --- STATE THẺ PHỤ ---
-  const [selectedMainCard, setSelectedMainCard] = useState('');
-  const [suppCardName, setSuppCardName] = useState('');
-  const [suppFirstName, setSuppFirstName] = useState('');
-  const [suppLastName, setSuppLastName] = useState('');
+  const cardCategory = watch('cardCategory');
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setError(null);
-
+  const onSubmitForm = async (data: FormValues) => {
+    setApiError(null);
     try {
       if (tab === 'MAIN') {
-        if (!embossedFirstName || !embossedLastName || !bank || !account) {
-          setError('Vui lòng điền đầy đủ các thông tin bắt buộc.');
-          setIsSubmitting(false);
-          return;
-        }
-        const payload: QuickOpenCardPayload = {
-          cardCategory,
-          embossedFirstName,
-          embossedLastName,
-          bank,
-          account,
-          paymentOption,
-        };
-        const result = await quickOpenCard(payload);
+        const result = await quickOpenCard({
+          cardCategory: data.cardCategory,
+          embossedFirstName: data.embossedFirstName,
+          embossedLastName: data.embossedLastName,
+          bank: data.bank,
+          account: data.account,
+          paymentOption: 'FULL_PAYMENT',
+        });
         setCreatedCardPan(result.cardPan);
       } else {
-        // XỬ LÝ GỌI API THẺ PHỤ
-        if (!selectedMainCard || !suppFirstName || !suppLastName) {
-          setError('Vui lòng chọn thẻ chính và điền đủ họ tên in nổi.');
-          setIsSubmitting(false);
-          return;
-        }
-        const result = await createSupplementaryCard(selectedMainCard, {
-          cardName: suppCardName,
-          embossedFirstName: suppFirstName,
-          embossedLastName: suppLastName,
+        const result = await createSupplementaryCard(data.selectedMainCard, {
+          cardName: data.suppCardName,
+          embossedFirstName: data.suppFirstName,
+          embossedLastName: data.suppLastName,
         });
-        setCreatedCardPan(result.cardNumber); // Từ API Supplementary trả về cardNumber
+        setCreatedCardPan(result.cardNumber);
       }
-
-      setStep(3); // Chuyển sang màn hình chúc mừng
+      setStep(3);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Lỗi hệ thống. Vui lòng thử lại.');
-    } finally {
-      setIsSubmitting(false);
+      setApiError(err instanceof ApiError ? err.message : 'Lỗi hệ thống. Vui lòng thử lại.');
     }
   };
 
-  // MÀN HÌNH CHÚC MỪNG (BƯỚC 3)
+
+  const FormField = ({ name, label, placeholder, required = false }: { name: keyof FormValues; label: string; placeholder?: string; required?: boolean }) => (
+    <Controller
+      name={name}
+      control={control}
+      rules={{ required: required ? 'Vui lòng điền thông tin này' : false }}
+      render={({ field }) => (
+        <div>
+          <ModalField 
+            label={label} 
+            value={field.value as string} 
+            onChange={(val) => field.onChange(val.toUpperCase())} 
+            placeholder={placeholder} 
+          />
+          {errors[name] && <span className="text-xs text-red-500 mt-1">{errors[name]?.message}</span>}
+        </div>
+      )}
+    />
+  );
+
   if (step === 3) {
     return (
       <ModalShell title="Mở thẻ thành công" icon={<CheckCircle2 className="h-4 w-4" />} onClose={onClose}>
@@ -115,10 +130,10 @@ export function QuickOpenCardModal({
 
   return (
     <ModalShell title="Mở thẻ thông minh" icon={<CreditCard className="h-4 w-4" />} onClose={onClose}>
-      {/* SEGMENTED TABS (Chỉ hiện khi chưa thành công) */}
       <div className="mb-6 flex rounded-xl bg-slate-100 p-1">
         <button
-          onClick={() => { setTab('MAIN'); setStep(1); setError(null); }}
+          type="button"
+          onClick={() => { setTab('MAIN'); setStep(1); setApiError(null); }}
           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
             tab === 'MAIN' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-700'
           }`}
@@ -126,7 +141,8 @@ export function QuickOpenCardModal({
           <CreditCard className="h-4 w-4" /> Thẻ chính
         </button>
         <button
-          onClick={() => { setTab('SUPPLEMENTARY'); setStep(1); setError(null); }}
+          type="button"
+          onClick={() => { setTab('SUPPLEMENTARY'); setStep(1); setApiError(null); }}
           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
             tab === 'SUPPLEMENTARY' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-700'
           }`}
@@ -135,124 +151,131 @@ export function QuickOpenCardModal({
         </button>
       </div>
 
-      {error && (
+      {(apiError || Object.keys(errors).length > 0) && (
         <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <AlertCircle className="h-4 w-4 shrink-0" /> {error}
+          <AlertCircle className="h-4 w-4 shrink-0" /> 
+          {apiError || 'Vui lòng điền đầy đủ các trường bắt buộc.'}
         </div>
       )}
 
-      {/* --- FORM THẺ CHÍNH (Giữ nguyên cấu trúc Step 1 & 2 của bạn) --- */}
-      {tab === 'MAIN' && (
-        <>
-          {step === 1 ? (
-            <div className="space-y-4 animate-in slide-in-from-left-2 duration-200">
-              <p className="text-sm font-medium text-slate-700">1. Chọn loại thẻ bạn muốn mở</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { id: CardCategory.TRAVEL, label: 'Du lịch', color: 'bg-blue-500' },
-                  { id: CardCategory.ECOMMERCE, label: 'Thương mại điện tử', color: 'bg-orange-500' },
-                  { id: CardCategory.VISA, label: 'Thẻ Visa', color: 'bg-emerald-500' },
-                  { id: CardCategory.CREDIT, label: 'Thẻ Credit', color: 'bg-purple-500' },
-                ].map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setCardCategory(cat.id)}
-                    className={`flex flex-col items-start gap-2 rounded-xl border p-4 transition-all ${
-                      cardCategory === cat.id ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500 shadow-sm' : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className={`h-8 w-12 rounded-md ${cat.color} opacity-90 shadow-inner`} />
-                    <span className="text-sm font-semibold text-slate-800">{cat.label}</span>
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setStep(2)}
-                className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-slate-800 transition-colors"
-              >
-                Tiếp tục
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4 animate-in slide-in-from-right-2 duration-200">
-              <p className="text-sm font-medium text-slate-700">2. Thông tin in nổi & Thanh toán</p>
-              <div className="grid grid-cols-2 gap-3">
-                <ModalField label="Tên (First Name) *" value={embossedFirstName} onChange={(val) => setEmbossedFirstName(val.toUpperCase())} placeholder="VD: VAN A" />
-                <ModalField label="Họ (Last Name) *" value={embossedLastName} onChange={(val) => setEmbossedLastName(val.toUpperCase())} placeholder="VD: NGUYEN" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <ModalField label="Ngân hàng thanh toán *" value={bank} onChange={setBank} placeholder="VD: VCB" />
-                <ModalField label="Số tài khoản *" value={account} onChange={setAccount} placeholder="VD: 0123456789" />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setStep(1)}
-                  disabled={isSubmitting}
-                  className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+      <form onSubmit={handleSubmit(onSubmitForm)}>
+        
+        {tab === 'MAIN' && (
+          <>
+            {step === 1 ? (
+              <div className="space-y-4 animate-in slide-in-from-left-2 duration-200">
+                <p className="text-sm font-medium text-slate-700">1. Chọn loại thẻ bạn muốn mở</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: CardCategory.TRAVEL, label: 'Du lịch', color: 'bg-blue-500' },
+                    { id: CardCategory.ECOMMERCE, label: 'Thương mại điện tử', color: 'bg-orange-500' },
+                    { id: CardCategory.VISA, label: 'Thẻ Visa', color: 'bg-emerald-500' },
+                    { id: CardCategory.CREDIT, label: 'Thẻ Credit', color: 'bg-purple-500' },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id} 
+                      type="button"
+                      onClick={() => setValue('cardCategory', cat.id)}
+                      className={`flex flex-col items-start gap-2 rounded-xl border p-4 transition-all ${
+                        cardCategory === cat.id ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500 shadow-sm' : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className={`h-8 w-12 rounded-md ${cat.color} opacity-90 shadow-inner`} />
+                      <span className="text-sm font-semibold text-slate-800">{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setStep(2)} 
+                  className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-slate-800 transition-colors"
                 >
-                  Quay lại
+                  Tiếp tục
                 </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 disabled:opacity-60"
-                >
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Xác nhận mở thẻ
-                </button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* --- FORM THẺ PHỤ (Chỉ có 1 Step) --- */}
-      {tab === 'SUPPLEMENTARY' && (
-        <div className="space-y-4 animate-in fade-in duration-200">
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-900">Chọn Thẻ chính để liên kết *</label>
-            {existingCards.length === 0 ? (
-              <div className="rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm text-orange-700">
-                Bạn chưa có Thẻ chính nào. Vui lòng quay lại tab Thẻ chính để mở trước.
               </div>
             ) : (
-              <select
-                value={selectedMainCard}
-                onChange={(e) => setSelectedMainCard(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-500"
-              >
-                <option value="" disabled>-- Bấm để chọn thẻ --</option>
-                {existingCards.map(card => (
-                  <option key={card.cardNumber} value={card.cardNumber}>
-                    {card.productName || 'Thẻ'} - {card.cardNumber.slice(-4)} {card.cardName ? `(${card.cardName})` : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-4 animate-in slide-in-from-right-2 duration-200">
+                <p className="text-sm font-medium text-slate-700">2. Thông tin in nổi & Thanh toán</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField name="embossedFirstName" label="Tên (First Name) *" placeholder="VD: VAN A" required />
+                  <FormField name="embossedLastName" label="Họ (Last Name) *" placeholder="VD: NGUYEN" required />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField name="bank" label="Ngân hàng thanh toán *" placeholder="VD: VCB" required />
+                  <FormField name="account" label="Số tài khoản *" placeholder="VD: 0123456789" required />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setStep(1)} 
+                    disabled={isSubmitting}
+                    className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                  >
+                    Quay lại
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Xác nhận
+                  </button>
+                </div>
+              </div>
             )}
+          </>
+        )}
+
+        {tab === 'SUPPLEMENTARY' && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-900">Chọn Thẻ chính để liên kết *</label>
+              {existingCards.length === 0 ? (
+                <div className="rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm text-orange-700">
+                  Bạn chưa có Thẻ chính nào. Vui lòng quay lại tab Thẻ chính để mở trước.
+                </div>
+              ) : (
+                <Controller
+                  name="selectedMainCard" 
+                  control={control} 
+                  rules={{ required: 'Vui lòng chọn thẻ chính' }}
+                  render={({ field }) => (
+                    <>
+                      <select 
+                        {...field} 
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-500"
+                      >
+                        <option value="">-- Bấm để chọn thẻ --</option>
+                        {existingCards.map(c => (
+                          <option key={c.cardNumber} value={c.cardNumber}>
+                            {c.productName || 'Thẻ'} - {c.cardNumber.slice(-4)} {c.cardName ? `(${c.cardName})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.selectedMainCard && <span className="text-xs text-red-500 mt-1">{errors.selectedMainCard.message}</span>}
+                    </>
+                  )}
+                />
+              )}
+            </div>
+            
+            <FormField name="suppCardName" label="Tên gọi nhớ thẻ (Không bắt buộc)" placeholder="VD: Thẻ tiêu vặt cho con..." />
+            
+            <div className="grid grid-cols-2 gap-3">
+              <FormField name="suppFirstName" label="Tên người thân *" placeholder="VD: VAN A" required />
+              <FormField name="suppLastName" label="Họ người thân *" placeholder="VD: NGUYEN" required />
+            </div>
+            
+            <button 
+              type="submit" 
+              disabled={isSubmitting || existingCards.length === 0} 
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 disabled:opacity-60"
+            >
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Phát hành thẻ phụ
+            </button>
           </div>
-
-          <ModalField 
-            label="Tên gọi nhớ thẻ (Không bắt buộc)" 
-            value={suppCardName} 
-            onChange={setSuppCardName} 
-            placeholder="VD: Thẻ tiêu vặt cho con..." 
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <ModalField label="Tên người thân *" value={suppFirstName} onChange={(val) => setSuppFirstName(val.toUpperCase())} placeholder="VD: VAN A" />
-            <ModalField label="Họ người thân *" value={suppLastName} onChange={(val) => setSuppLastName(val.toUpperCase())} placeholder="VD: NGUYEN" />
-          </div>
-
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || existingCards.length === 0}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 disabled:opacity-60"
-          >
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Phát hành thẻ phụ
-          </button>
-        </div>
-      )}
+        )}
+      </form>
     </ModalShell>
   );
 }
