@@ -1,26 +1,24 @@
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
-export class GetAdminContractsQueryDto {
+export class GetAdminContractsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
-  search?: string;
-
-  // Lọc theo loại hợp đồng. Để trống = lấy tất cả.
-  @IsOptional()
-  @IsIn(['LIABILITY', 'ISSUING'])
-  type?: 'LIABILITY' | 'ISSUING';
+  contractNumber?: string;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page: number = 1;
+  @IsString()
+  contractName?: string;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  pageSize: number = 10;
+  @IsString()
+  productCode?: string;
+
+  @IsOptional()
+  @IsString()
+  userEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  type?: string;
 }

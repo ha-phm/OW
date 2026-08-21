@@ -160,10 +160,7 @@ export class ContractService {
           })),
       }));
 
-    const filtered = this.treeService.filterContractTree(
-      sortedTree,
-      query.search,
-    );
+    const filtered = this.treeService.filterContractTree(sortedTree, query);
 
     const { page, pageSize } = query;
     const total = filtered.length;

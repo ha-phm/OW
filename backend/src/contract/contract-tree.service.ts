@@ -30,7 +30,7 @@ export interface ContractTreeLiability {
 
 @Injectable()
 export class ContractTreeService {
-  // Thuật toán nhào nặn mảng phẳng thành Cây
+  // 1. Thuật toán nhào nặn mảng phẳng thành Cây
   buildContractTree(records: Way4ContractRecord[]): ContractTreeLiability[] {
     interface FlatNode {
       contractNumber: string;
@@ -43,7 +43,6 @@ export class ContractTreeService {
       balance: number;
       openDate: string;
     }
-
     const flat: FlatNode[] = records.map((r) => ({
       contractNumber: String(r.ContractNumber ?? ''),
       contractName: String(r.ContractName ?? ''),
@@ -57,7 +56,6 @@ export class ContractTreeService {
       balance: Number(r.Balance ?? 0),
       openDate: String(r.OpenDate ?? ''),
     }));
-
     const liabilities = flat.filter(
       (n) => n.category === 'A' && !n.parentContractNumber,
     );
@@ -65,7 +63,6 @@ export class ContractTreeService {
       (n) => n.category === 'A' && n.parentContractNumber,
     );
     const cards = flat.filter((n) => n.category === 'C');
-
     return liabilities.map((liab) => ({
       contractNumber: liab.contractNumber,
       contractName: liab.contractName,
@@ -93,36 +90,78 @@ export class ContractTreeService {
     }));
   }
 
-  // Thuật toán tìm kiếm
+  // 2. Thuật toán tìm kiếm & lọc theo cột (Bản mới)
   filterContractTree(
     tree: ContractTreeLiability[],
-    search?: string,
+    query: {
+      search?: string;
+      contractNumber?: string;
+      contractName?: string;
+      productCode?: string;
+      type?: string;
+    },
   ): ContractTreeLiability[] {
-    const q = search?.trim().toLowerCase();
-    if (!q) return tree;
+    let filtered = tree;
 
-    const matches = (s?: string): boolean =>
-      (s ?? '').toLowerCase().includes(q);
+    // Lọc bằng thanh Tìm kiếm tổng hợp
+    if (query.search) {
+      const q = query.search.trim().toLowerCase();
+      const matches = (s?: string): boolean =>
+        (s ?? '').toLowerCase().includes(q);
 
-    return tree.filter((liability) => {
-      if (matches(liability.contractNumber) || matches(liability.contractName))
-        return true;
-      return liability.issuings.some((issuing) => {
-        if (matches(issuing.contractNumber) || matches(issuing.contractName))
+      filtered = filtered.filter((liability: ContractTreeLiability) => {
+        if (
+          matches(liability.contractNumber) ||
+          matches(liability.contractName)
+        )
           return true;
-        return issuing.cards.some((card) => matches(card.contractNumber));
+
+        return liability.issuings.some((issuing: ContractTreeIssuing) => {
+          if (matches(issuing.contractNumber) || matches(issuing.contractName))
+            return true;
+
+          return issuing.cards.some((card: ContractTreeCard) =>
+            matches(card.contractNumber),
+          );
+        });
       });
-    });
+    }
+
+    // Lọc theo cột: Số hợp đồng
+    if (query.contractNumber) {
+      const q = query.contractNumber.trim().toLowerCase();
+      filtered = filtered.filter((liability: ContractTreeLiability) =>
+        (liability.contractNumber || '').toLowerCase().includes(q),
+      );
+    }
+
+    // Lọc theo cột: Tên hợp đồng
+    if (query.contractName) {
+      const q = query.contractName.trim().toLowerCase();
+      filtered = filtered.filter((liability: ContractTreeLiability) =>
+        (liability.contractName || '').toLowerCase().includes(q),
+      );
+    }
+
+    // Lọc theo cột: Sản phẩm
+    if (query.productCode) {
+      const q = query.productCode.trim().toLowerCase();
+      filtered = filtered.filter((liability: ContractTreeLiability) =>
+        (liability.productCode || '').toLowerCase().includes(q),
+      );
+    }
+
+    return filtered;
   }
 
-  // Thuật toán tính toán độ ưu tiên (Recency)
+  // 3. Thuật toán tính toán độ ưu tiên (Recency) - Đã được phục hồi
   buildRecencyRank(rows: { key: string }[]): Map<string, number> {
     const rank = new Map<string, number>();
     rows.forEach((row, idx) => rank.set(row.key, idx));
     return rank;
   }
 
-  // Thuật toán sắp xếp
+  // 4. Thuật toán sắp xếp - Đã được phục hồi
   sortByRecency<T extends { contractNumber: string }>(
     items: T[],
     rank: Map<string, number>,

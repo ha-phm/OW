@@ -1,40 +1,82 @@
 'use client';
 
-import { useState } from 'react';
-import { Users, FileText, CreditCard, Search, BarChart2 } from 'lucide-react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { Users, FileText, CreditCard, Search, BarChart2, Activity } from 'lucide-react';
 import { AuthMe } from '@/types/user';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminContracts } from '../hooks/useAdminContracts';
 import { useAdminCards } from '../hooks/useAdminCards';
 import { AdminDataTable } from '@/components/AdminDataTable';
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, ColumnFiltersState } from '@tanstack/react-table';
 import { AdminContractItem, AdminCardItem } from '@/types/admin-tables';
 import { AdminUser } from '@/types/user';
+import { useAdminStore } from '../hooks/useAdminStore'; 
 
 interface AdminDashboardProps {
   authData: AuthMe;
 }
 
-export function AdminDashboard({ }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'USERS' | 'CONTRACTS' | 'CARDS'>('USERS');
-  
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+// Hàm tiện ích chuyển đổi mảng filter của TanStack Table thành Object để gửi API
+const convertFiltersToObject = (filters: ColumnFiltersState) => {
+  return filters.reduce((acc, filter) => {
+    acc[filter.id] = filter.value as string;
+    return acc;
+  }, {} as Record<string, string>);
+};
 
-  const { data: usersData, isLoading: isUsersLoading, isFetching: isUsersFetching } = useAdminUsers();
+export function AdminDashboard({ authData }: AdminDashboardProps) {
+  const { 
+    activeTab, setActiveTab, 
+    contractsParams, setContractsParams,
+    cardsParams, setCardsParams 
+  } = useAdminStore();
+
+  const { data: usersData, isLoading: isUsersLoading, isFetching: isUsersFetching } = useAdminUsers({
+    enabled: activeTab === 'USERS'
+  });
   
   const { data: contractsData, isLoading: isContractsLoading, isFetching: isContractsFetching } = useAdminContracts({
-    search,
-    page,
-    pageSize,
+    search: contractsParams.search,
+    page: contractsParams.page,
+    pageSize: contractsParams.pageSize,
+    filters: convertFiltersToObject(contractsParams.columnFilters || []),
+  }, {
+    enabled: activeTab === 'CONTRACTS'
   });
 
   const { data: cardsData, isLoading: isCardsLoading, isFetching: isCardsFetching } = useAdminCards({
-    search,
-    page,
-    pageSize,
+    search: cardsParams.search,
+    page: cardsParams.page,
+    pageSize: cardsParams.pageSize,
+    filters: convertFiltersToObject(cardsParams.columnFilters || []),
+  }, {
+    enabled: activeTab === 'CARDS'
   });
+
+  const { register, watch, setValue } = useForm({
+    defaultValues: { searchInput: '' }
+  });
+  
+  const searchInput = watch('searchInput');
+
+  useEffect(() => {
+    if (activeTab === 'CONTRACTS') setValue('searchInput', contractsParams.search);
+    else if (activeTab === 'CARDS') setValue('searchInput', cardsParams.search);
+    else setValue('searchInput', '');
+  }, [activeTab, contractsParams.search, cardsParams.search, setValue]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (activeTab === 'CONTRACTS' && searchInput !== contractsParams.search) {
+        setContractsParams({ search: searchInput });
+      }
+      if (activeTab === 'CARDS' && searchInput !== cardsParams.search) {
+        setCardsParams({ search: searchInput });
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput, activeTab, setContractsParams, setCardsParams, contractsParams.search, cardsParams.search]);
 
   const contractColumns: ColumnDef<AdminContractItem, unknown>[] = [
     { accessorKey: 'contractNumber', header: 'Số hợp đồng' },
@@ -42,8 +84,8 @@ export function AdminDashboard({ }: AdminDashboardProps) {
     { accessorKey: 'type', header: 'Loại' },
     { accessorKey: 'productCode', header: 'Sản phẩm' },
     { accessorKey: 'userEmail', header: 'Email chủ sở hữu' },
-    { 
-      accessorKey: 'createdAt', 
+    {
+      accessorKey: 'createdAt',
       header: 'Ngày tạo',
       cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('vi-VN')
     },
@@ -55,8 +97,8 @@ export function AdminDashboard({ }: AdminDashboardProps) {
     { accessorKey: 'embossedFirstName', header: 'Tên in nổi' },
     { accessorKey: 'embossedLastName', header: 'Họ in nổi' },
     { accessorKey: 'userEmail', header: 'Email chủ sở hữu' },
-    { 
-      accessorKey: 'createdAt', 
+    {
+      accessorKey: 'createdAt',
       header: 'Ngày tạo',
       cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('vi-VN')
     },
@@ -66,8 +108,8 @@ export function AdminDashboard({ }: AdminDashboardProps) {
     { accessorKey: 'email', header: 'Email' },
     { accessorKey: 'clientNumber', header: 'Số khách hàng', cell: ({ row }) => row.original.clientNumber || '—' },
     { accessorKey: 'role', header: 'Vai trò' },
-    { 
-      accessorKey: 'createdAt', 
+    {
+      accessorKey: 'createdAt',
       header: 'Ngày tạo',
       cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('vi-VN')
     },
@@ -77,48 +119,70 @@ export function AdminDashboard({ }: AdminDashboardProps) {
   const totalContractsCount = contractsData?.meta?.total || 0;
   const totalCardsCount = cardsData?.meta?.total || 0;
   const avgCards = totalUsersCount > 0 ? (totalCardsCount / totalUsersCount).toFixed(1) : '0';
+  
+  const adminName = authData?.email?.split('@')[0] || 'Quản trị viên';
 
   return (
-    <div className="mx-auto w-full max-w-6xl rounded-3xl bg-white p-4 sm:p-6 lg:p-8 text-slate-900 shadow-xl border border-slate-100 min-h-[80vh]">
-      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-6 sm:mb-8">Tổng quan hệ thống</h1>
+    <div className="mx-auto w-full max-w-6xl rounded-3xl bg-white p-4 sm:p-6 lg:p-8 text-slate-900 shadow-xl border border-slate-100 min-h-[80vh] flex flex-col gap-6 sm:gap-8">
+      
+      {/* WELCOME BANNER */}
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-linear-to-br from-emerald-500 to-teal-700 p-6 sm:p-8 lg:p-10 shadow-lg shadow-teal-900/10">
+        <div className="relative z-10 flex flex-col gap-2 md:w-2/3">
+          <div className="flex items-center gap-2 text-teal-100 mb-1">
+            <Activity className="h-4 w-4" />
+            <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Hệ thống đang hoạt động tốt</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
+            Xin chào, {adminName}! 👋
+          </h1>
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base text-teal-50">
+            Hôm nay hệ thống đang quản lý <strong>{totalContractsCount}</strong> hợp đồng và phát hành thành công <strong>{totalCardsCount}</strong> thẻ.
+            Dưới đây là công cụ để bạn kiểm soát toàn bộ luồng dữ liệu.
+          </p>
+        </div>
+        <div className="absolute -right-12 -top-12 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+        <div className="absolute right-20 -bottom-20 h-48 w-48 rounded-full bg-teal-900/20 blur-2xl pointer-events-none" />
+        <div className="hidden md:flex absolute right-12 top-1/2 -translate-y-1/2 opacity-20 pointer-events-none mix-blend-overlay">
+          <BarChart2 className="w-32 h-32 lg:w-40 lg:h-40 text-white" />
+        </div>
+      </div>
 
-      {/* 2. Thống kê — 2 cột trên mobile thay vì xếp dọc chiếm hết màn hình */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4 mb-8 sm:mb-10">
+      {/* THỐNG KÊ */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         <StatCard icon={<Users className="h-4 w-4 sm:h-5 sm:w-5" />} label="Khách hàng" value={String(totalUsersCount)} />
         <StatCard icon={<FileText className="h-4 w-4 sm:h-5 sm:w-5" />} label="Hợp đồng" value={String(totalContractsCount)} />
         <StatCard icon={<CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />} label="Thẻ đã phát hành" value={String(totalCardsCount)} />
         <StatCard icon={<BarChart2 className="h-4 w-4 sm:h-5 sm:w-5" />} label="TB thẻ/khách hàng" value={String(avgCards)} />
       </div>
 
-      {/* 3. Tabs & Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
-        {/* Mobile: grid 3 cột chia đều vừa khít màn hình. Desktop: giữ nguyên flex w-max như cũ */}
-        <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1.5 rounded-xl w-full sm:flex sm:w-max sm:gap-0">
+      {/* TABS & SEARCH */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1.5 rounded-xl w-full lg:flex lg:w-max lg:gap-0">
           <button
-            onClick={() => { setActiveTab('USERS'); setPage(1); setSearch(''); }}
+            onClick={() => setActiveTab('USERS')}
             className={`px-2 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm rounded-lg transition-all truncate ${
-              activeTab === 'USERS' 
-                ? 'bg-white text-emerald-600 font-bold shadow-sm' 
+              activeTab === 'USERS'
+                ? 'bg-white text-emerald-600 font-bold shadow-sm'
                 : 'text-slate-500 font-medium hover:text-slate-700 hover:bg-slate-200/50'
             }`}
           >
             Người dùng
           </button>
           <button
-            onClick={() => { setActiveTab('CONTRACTS'); setPage(1); setSearch(''); }}
+            onClick={() => setActiveTab('CONTRACTS')}
             className={`px-2 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm rounded-lg transition-all truncate ${
-              activeTab === 'CONTRACTS' 
-                ? 'bg-white text-emerald-600 font-bold shadow-sm' 
+              activeTab === 'CONTRACTS'
+                ? 'bg-white text-emerald-600 font-bold shadow-sm'
                 : 'text-slate-500 font-medium hover:text-slate-700 hover:bg-slate-200/50'
             }`}
           >
             Hợp đồng
           </button>
           <button
-            onClick={() => { setActiveTab('CARDS'); setPage(1); setSearch(''); }}
+            onClick={() => setActiveTab('CARDS')}
             className={`px-2 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm rounded-lg transition-all truncate ${
-              activeTab === 'CARDS' 
-                ? 'bg-white text-emerald-600 font-bold shadow-sm' 
+              activeTab === 'CARDS'
+                ? 'bg-white text-emerald-600 font-bold shadow-sm'
                 : 'text-slate-500 font-medium hover:text-slate-700 hover:bg-slate-200/50'
             }`}
           >
@@ -127,23 +191,22 @@ export function AdminDashboard({ }: AdminDashboardProps) {
         </div>
 
         {activeTab !== 'USERS' && (
-          <div className="relative w-full sm:w-96">
+          <div className="relative w-full lg:w-96 shrink-0">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
               <Search className="h-4 w-4 text-slate-400" />
             </div>
             <input
+              {...register('searchInput')}
               type="text"
-              placeholder="Tìm kiếm dữ liệu hệ thống..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Tìm kiếm tổng hợp hệ thống..."
               className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-shadow"
             />
           </div>
         )}
       </div>
 
-      {/* 4. Render Tables */}
-      <div className="bg-white rounded-2xl">
+      {/* RENDER BẢNG (TABLES) */}
+      <div className="bg-white rounded-2xl w-full">
         {activeTab === 'USERS' && (
           <AdminDataTable
             columns={userColumns}
@@ -156,40 +219,39 @@ export function AdminDashboard({ }: AdminDashboardProps) {
             onPageSizeChange={() => {}}
             isLoading={isUsersLoading}
             isFetching={isUsersFetching}
+            showColumnFilters={false} // Users chưa có API filter server-side
           />
         )}
-
+        
         {activeTab === 'CONTRACTS' && (
           <AdminDataTable
             columns={contractColumns}
             data={contractsData?.data || []}
-            page={page}
-            pageSize={pageSize}
+            page={contractsParams.page}
+            pageSize={contractsParams.pageSize}
             totalPages={contractsData?.meta?.totalPages || 1}
             total={totalContractsCount}
-            onPageChange={(newPage) => setPage(newPage)}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setPage(1);
-            }}
+            onPageChange={(page) => setContractsParams({ page })}
+            onPageSizeChange={(pageSize) => setContractsParams({ pageSize, page: 1 })}
+            columnFilters={contractsParams.columnFilters}
+            onColumnFiltersChange={(filters) => setContractsParams({ columnFilters: filters })}
             isLoading={isContractsLoading}
             isFetching={isContractsFetching}
           />
         )}
-
+        
         {activeTab === 'CARDS' && (
           <AdminDataTable
             columns={cardColumns}
             data={cardsData?.data || []}
-            page={page}
-            pageSize={pageSize}
+            page={cardsParams.page}
+            pageSize={cardsParams.pageSize}
             totalPages={cardsData?.meta?.totalPages || 1}
             total={totalCardsCount}
-            onPageChange={(newPage) => setPage(newPage)}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setPage(1);
-            }}
+            onPageChange={(page) => setCardsParams({ page })}
+            onPageSizeChange={(pageSize) => setCardsParams({ pageSize, page: 1 })}
+            columnFilters={cardsParams.columnFilters}
+            onColumnFiltersChange={(filters) => setCardsParams({ columnFilters: filters })}
             isLoading={isCardsLoading}
             isFetching={isCardsFetching}
           />
@@ -203,12 +265,12 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
   return (
     <div className="flex flex-col gap-2 sm:gap-3 rounded-2xl border border-emerald-100 bg-linear-to-br from-emerald-50/50 to-teal-50/30 p-3 sm:p-5 shadow-sm transition-transform hover:-translate-y-1">
       <div className="flex items-center gap-1.5 sm:gap-2 text-emerald-600">
-        <div className="rounded-lg bg-emerald-100/80 p-1 sm:p-1.5">
+        <div className="rounded-lg bg-emerald-100/80 p-1 sm:p-1.5 shrink-0">
           {icon}
         </div>
         <span className="text-xs sm:text-sm font-semibold text-slate-600 truncate">{label}</span>
       </div>
-      <div className="text-xl sm:text-3xl font-bold tracking-tight text-slate-800">{value}</div>
+      <div className="text-xl sm:text-3xl font-bold tracking-tight text-slate-800 truncate">{value}</div>
     </div>
   );
 }

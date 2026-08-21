@@ -8,6 +8,7 @@ import { useAuthMe } from '../../../hooks/useAuthMe';
 import { useAdminContracts } from '../../../hooks/useAdminContracts';
 import { AdminContractItem, ContractType } from '../../../types/admin-tables';
 import { AdminDataTable } from '../../../components/AdminDataTable';
+import { useAdminStore } from '../../../hooks/useAdminStore'; // <-- Thêm dòng này
 
 const SEARCH_DEBOUNCE_MS = 300; 
 
@@ -20,19 +21,18 @@ export default function AdminContractsPage() {
   const router = useRouter();
   const { data: me, isLoading: meLoading } = useAuthMe();
 
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [type, setType] = useState<ContractType | ''>('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // Dùng Zustand thay cho useState cục bộ
+  const { contractsParams, setContractsParams } = useAdminStore();
+  const [searchInput, setSearchInput] = useState(contractsParams.search);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSearch(searchInput);
-      setPage(1);
+      if (searchInput !== contractsParams.search) {
+        setContractsParams({ search: searchInput });
+      }
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, contractsParams.search, setContractsParams]);
 
   useEffect(() => {
     if (!meLoading && me?.role !== 'ADMIN') {
@@ -41,10 +41,8 @@ export default function AdminContractsPage() {
   }, [meLoading, me, router]);
 
   const { data, isLoading, isFetching } = useAdminContracts({
-    search,
-    type: type || undefined,
-    page,
-    pageSize,
+    ...contractsParams,
+    type: contractsParams.type || undefined,
   });
 
   if (meLoading || me?.role !== 'ADMIN') {
@@ -96,11 +94,8 @@ export default function AdminContractsPage() {
 
         <div className="flex items-center gap-2">
           <select
-            value={type}
-            onChange={(e) => {
-              setType(e.target.value as ContractType | '');
-              setPage(1);
-            }}
+            value={contractsParams.type}
+            onChange={(e) => setContractsParams({ type: e.target.value as ContractType | '' })} // Tự động về trang 1
             className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
           >
             <option value="">Tất cả loại</option>
@@ -119,15 +114,34 @@ export default function AdminContractsPage() {
       <AdminDataTable
         columns={columns}
         data={data?.data ?? []}
-        page={data?.meta.page ?? page}
+        page={data?.meta.page ?? contractsParams.page}
         totalPages={data?.meta.totalPages ?? 1}
         total={data?.meta.total ?? 0}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
+        pageSize={contractsParams.pageSize}
+        onPageChange={(page) => setContractsParams({ page })}
+        onPageSizeChange={(pageSize) => setContractsParams({ pageSize, page: 1 })} // Sửa lỗi phân trang ở đây
         isLoading={isLoading}
         isFetching={isFetching}
         emptyMessage="Không tìm thấy hợp đồng nào."
+        // ---- DÀNH RIÊNG CHO TRANG HỢP ĐỒNG (CONTRACTS) ----
+        columnFilters={Object.entries(contractsParams)
+          .filter(([key, val]) => val && !['page', 'pageSize', 'search', 'type'].includes(key))
+          .map(([id, value]) => ({ id, value: value as string }))}
+        onColumnFiltersChange={(filters) => {
+          // Định nghĩa kiểu dữ liệu chặt chẽ thay vì dùng 'any'
+          const parsed = filters.reduce<Record<string, string>>((acc, f) => {
+            acc[f.id] = f.value as string;
+            return acc;
+          }, {});
+          
+          setContractsParams({
+            contractNumber: parsed.contractNumber || '',
+            contractName: parsed.contractName || '',
+            productCode: parsed.productCode || '',
+            userEmail: parsed.userEmail || '',
+            page: 1, 
+          });
+        }}
       />
     </div>
   );

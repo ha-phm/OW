@@ -17,25 +17,63 @@ export const adminService = {
     apiDelete<{ message: string }>(`/admin/users/${id}`),
 
   listContracts: (
-    params: GetAdminContractsParams,
+    params: GetAdminContractsParams & Record<string, any>,
   ): Promise<PaginatedAdminContracts> => {
     const query = new URLSearchParams({
       page: String(params.page),
       pageSize: String(params.pageSize),
     });
+    
     if (params.search?.trim()) query.set('search', params.search.trim());
     if (params.type) query.set('type', params.type);
+
+    // 1. Quét toàn bộ các biến lọc dạng phẳng (flat) từ Zustand
+    // Đã thêm 'columnFilters' vào danh sách đen để NestJS không báo lỗi 400
+    const excludeKeys = ['page', 'pageSize', 'search', 'type', 'filters', 'columnFilters'];
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '' && !excludeKeys.includes(key)) {
+        query.set(key, String(value));
+      }
+    });
+
+    // 2. Vẫn giữ lại params.filters đề phòng trường hợp dùng ở nơi khác
+    if (params.filters) {
+      Object.entries(params.filters).forEach(([key, value]) => {
+        if (value) query.set(key, String(value));
+      });
+    }
+
     return apiGet<PaginatedAdminContracts>(
       `/admin/contracts?${query.toString()}`,
     );
   },
 
-  listCards: (params: GetAdminCardsParams): Promise<PaginatedAdminCards> => {
+  listCards: (
+    params: GetAdminCardsParams & Record<string, any>
+  ): Promise<PaginatedAdminCards> => {
     const query = new URLSearchParams({
       page: String(params.page),
       pageSize: String(params.pageSize),
     });
+    
     if (params.search?.trim()) query.set('search', params.search.trim());
+
+    // 1. Quét toàn bộ các biến lọc dạng phẳng (flat) từ Zustand
+    // Đã thêm 'columnFilters' vào danh sách đen để NestJS không báo lỗi 400
+    const excludeKeys = ['page', 'pageSize', 'search', 'filters', 'columnFilters'];
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '' && !excludeKeys.includes(key)) {
+        query.set(key, String(value));
+      }
+    });
+
+    // 2. Vẫn giữ lại params.filters 
+    if (params.filters) {
+      Object.entries(params.filters).forEach(([key, value]) => {
+        if (value) query.set(key, String(value));
+      });
+    }
+    
     return apiGet<PaginatedAdminCards>(`/admin/cards?${query.toString()}`);
   },
 };

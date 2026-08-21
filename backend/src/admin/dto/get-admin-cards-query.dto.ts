@@ -1,21 +1,17 @@
-import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto'; // Sửa lại đường dẫn này nếu cần
 
-export class GetAdminCardsQueryDto {
+export class GetAdminCardsQueryDto extends PaginationQueryDto {
+  // Thêm các trường này vào để NestJS không chặn request nữa
   @IsOptional()
   @IsString()
-  search?: string;
+  cardNumber?: string;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page: number = 1;
+  @IsString()
+  cardName?: string;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  pageSize: number = 9;
+  @IsString()
+  userEmail?: string;
 }

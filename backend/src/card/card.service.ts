@@ -139,14 +139,17 @@ export class CardService {
     }
 
     // 3. LƯU DATABASE VỚI SỐ THẬT
+    // 3. LƯU DATABASE VỚI SỐ THẬT
+    // Dùng toComparableString để bóc tách an toàn, tránh lỗi [object Object]
+    const rawExpiry = toComparableString(data.ExpiryDate);
+    const rawSeq = toComparableString(data.SequenceNumber);
+
     const newCard = await this.prisma.card.create({
       data: {
         cardNumber: String(newCardPan),
         cardName: safeCardName,
-        expiryDate: data.ExpiryDate ? String(data.ExpiryDate) : null,
-        sequenceNumber: data.SequenceNumber
-          ? String(data.SequenceNumber)
-          : null,
+        expiryDate: rawExpiry ? String(rawExpiry) : null,
+        sequenceNumber: rawSeq ? String(rawSeq) : null,
         productCode: safeProductCode,
         embossedFirstName: dto.embossedFirstName,
         embossedLastName: dto.embossedLastName,
@@ -185,18 +188,43 @@ export class CardService {
     return str;
   }
 
-  private filterCards(items: CardListItem[], search?: string): CardListItem[] {
-    const q = search?.trim().toLowerCase();
-    if (!q) return items;
-    const matches = (s?: string): boolean =>
-      (s ?? '').toLowerCase().includes(q);
-    return items.filter(
-      (c) =>
-        matches(c.cardNumber) ||
-        matches(c.cardName) ||
-        matches(c.embossedFirstName) ||
-        matches(c.embossedLastName),
-    );
+  private filterCards(
+    items: CardListItem[],
+    query: GetCardsQueryDto,
+  ): CardListItem[] {
+    let filtered = items;
+
+    // Lọc bằng thanh Tìm kiếm tổng hợp
+    if (query.search) {
+      const q = query.search.trim().toLowerCase();
+      const matches = (s?: string): boolean =>
+        (s ?? '').toLowerCase().includes(q);
+      filtered = filtered.filter(
+        (c: CardListItem) =>
+          matches(c.cardNumber) ||
+          matches(c.cardName) ||
+          matches(c.embossedFirstName) ||
+          matches(c.embossedLastName),
+      );
+    }
+
+    // Lọc theo cột: Số thẻ
+    if (query.cardNumber) {
+      const q = query.cardNumber.trim().toLowerCase();
+      filtered = filtered.filter((c: CardListItem) =>
+        (c.cardNumber || '').toLowerCase().includes(q),
+      );
+    }
+
+    // Lọc theo cột: Tên thẻ
+    if (query.cardName) {
+      const q = query.cardName.trim().toLowerCase();
+      filtered = filtered.filter((c: CardListItem) =>
+        (c.cardName || '').toLowerCase().includes(q),
+      );
+    }
+
+    return filtered;
   }
 
   async listCardsForUser(
@@ -245,7 +273,7 @@ export class CardService {
       };
     });
 
-    const filtered = this.filterCards(mapped, query.search);
+    const filtered = this.filterCards(mapped, query);
     const { page, pageSize } = query;
     const total = filtered.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));

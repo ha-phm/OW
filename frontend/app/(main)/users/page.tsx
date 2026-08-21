@@ -7,6 +7,7 @@ import { useAuthMe } from '../../../hooks/useAuthMe';
 import { Role } from '../../../types/user';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useAdminStore } from '../../../hooks/useAdminStore'; // <-- Thêm dòng này
 
 export default function UsersPage() {
   const router = useRouter();
@@ -14,7 +15,19 @@ export default function UsersPage() {
   const { data: users, isLoading } = useAdminUsers();
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
-  const [search, setSearch] = useState('');
+  
+  // Dùng Zustand cho Search
+  const { usersParams, setUsersParams } = useAdminStore();
+  const [searchInput, setSearchInput] = useState(usersParams.search);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== usersParams.search) {
+        setUsersParams({ search: searchInput });
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput, usersParams.search, setUsersParams]);
 
   useEffect(() => {
     if (!meLoading && me?.role !== 'ADMIN') {
@@ -29,7 +42,7 @@ export default function UsersPage() {
   if (isLoading) return <div className="p-8 text-center">Đang tải danh sách người dùng...</div>;
 
   const filtered = (users ?? []).filter((u) =>
-    u.email.toLowerCase().includes(search.toLowerCase()),
+    u.email.toLowerCase().includes(usersParams.search.toLowerCase()),
   );
 
   const handleRoleChange = (userId: number, userEmail: string, newRole: Role) => {
@@ -76,8 +89,8 @@ export default function UsersPage() {
           <h1 className="text-2xl font-semibold text-slate-900">Quản lý người dùng</h1>
         </div>
         <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           placeholder="Tìm theo email..."
           className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-emerald-400 focus:outline-none"
         />

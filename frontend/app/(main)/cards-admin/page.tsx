@@ -8,23 +8,25 @@ import { useAuthMe } from '../../../hooks/useAuthMe';
 import { useAdminCards } from '../../../hooks/useAdminCards';
 import { AdminCardItem } from '../../../types/admin-tables';
 import { AdminDataTable } from '../../../components/AdminDataTable';
+import { useAdminStore } from '../../../hooks/useAdminStore'; // <-- Thêm dòng này
 
 export default function AdminCardsPage() {
   const router = useRouter();
   const { data: me, isLoading: meLoading } = useAuthMe();
+  
+  // Dùng Zustand thay cho useState cục bộ
+  const { cardsParams, setCardsParams } = useAdminStore();
+  const [searchInput, setSearchInput] = useState(cardsParams.search);
 
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(9);
-
+  // Debounce tìm kiếm
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSearch(searchInput);
-      setPage(1);
+      if (searchInput !== cardsParams.search) {
+        setCardsParams({ search: searchInput }); 
+      }
     }, 350);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, cardsParams.search, setCardsParams]);
 
   useEffect(() => {
     if (!meLoading && me?.role !== 'ADMIN') {
@@ -33,9 +35,7 @@ export default function AdminCardsPage() {
   }, [meLoading, me, router]);
 
   const { data, isLoading, isFetching } = useAdminCards({
-    search,
-    page,
-    pageSize,
+    ...cardsParams,
   });
 
   if (meLoading || me?.role !== 'ADMIN') {
@@ -90,15 +90,30 @@ export default function AdminCardsPage() {
       <AdminDataTable
         columns={columns}
         data={data?.data ?? []}
-        page={data?.meta.page ?? page}
+        page={data?.meta.page ?? cardsParams.page}
         totalPages={data?.meta.totalPages ?? 1}
         total={data?.meta.total ?? 0}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
+        pageSize={cardsParams.pageSize}
+        onPageChange={(page) => setCardsParams({ page })}
+        onPageSizeChange={(pageSize) => setCardsParams({ pageSize, page: 1 })} // Sửa lỗi phân trang ở đây
         isLoading={isLoading}
         isFetching={isFetching}
         emptyMessage="Không tìm thấy thẻ nào."
+        // ---- THÊM 2 PROPS NÀY ĐỂ KẾT NỐI VỚI ZUSTAND ----
+        columnFilters={Object.entries(cardsParams)
+          .filter(([key, val]) => val && !['page', 'pageSize', 'search'].includes(key))
+          .map(([id, value]) => ({ id, value: value as string }))}
+        onColumnFiltersChange={(filters) => {
+          // Biến mảng của TanStack thành Object cho Zustand
+          const parsed = filters.reduce((acc, f) => ({ ...acc, [f.id]: f.value }), {} as any);
+          
+          setCardsParams({
+            cardNumber: parsed.cardNumber || '',
+            cardName: parsed.cardName || '',
+            userEmail: parsed.userEmail || '',
+            page: 1, // Tự động nhảy về trang 1 khi lọc
+          });
+        }}
       />
     </div>
   );

@@ -95,13 +95,15 @@ export class AdminService {
   }
 
   // ---------------------------------------------------------------------
-  // QUẢN LÝ HỢP ĐỒNG (ADMIN) — danh sách phẳng TOÀN BỘ hợp đồng của mọi
-  // khách hàng, có tìm kiếm + lọc loại + phân trang. Đọc từ DB nội bộ
-  // (không gọi WAY4) để tránh phải gọi SOAP riêng cho từng client khi
-  // liệt kê hàng trăm/nghìn hợp đồng cùng lúc.
+  // QUẢN LÝ HỢP ĐỒNG (ADMIN)
   // ---------------------------------------------------------------------
   async listAllContracts(
-    query: GetAdminContractsQueryDto,
+    query: GetAdminContractsQueryDto & {
+      contractNumber?: string;
+      contractName?: string;
+      productCode?: string;
+      userEmail?: string;
+    },
   ): Promise<PaginatedResult<AdminContractItem>> {
     const contracts = await this.prisma.contract.findMany({
       include: { user: { select: { email: true } } },
@@ -119,27 +121,68 @@ export class AdminService {
       createdAt: c.createdAt,
     }));
 
-    const q = query.search?.trim().toLowerCase();
     const filtered = mapped.filter((c) => {
+      // 1. Lọc theo Loại (Type)
       if (query.type && c.type !== query.type) return false;
-      if (!q) return true;
-      return (
-        c.contractNumber.toLowerCase().includes(q) ||
-        c.contractName.toLowerCase().includes(q) ||
-        c.clientNumber.toLowerCase().includes(q) ||
-        c.userEmail.toLowerCase().includes(q)
-      );
+
+      // 2. Lọc bằng thanh Search tổng hợp
+      if (query.search) {
+        const q = query.search.trim().toLowerCase();
+        if (!(
+          c.contractNumber.toLowerCase().includes(q) ||
+          c.contractName.toLowerCase().includes(q) ||
+          c.clientNumber.toLowerCase().includes(q) ||
+          c.userEmail.toLowerCase().includes(q)
+        )) {
+          return false;
+        }
+      }
+
+      // 3. Lọc theo từng cột (Column Filters)
+      if (
+        query.contractNumber &&
+        !c.contractNumber
+          .toLowerCase()
+          .includes(query.contractNumber.trim().toLowerCase())
+      )
+        return false;
+      if (
+        query.contractName &&
+        !c.contractName
+          .toLowerCase()
+          .includes(query.contractName.trim().toLowerCase())
+      )
+        return false;
+      if (
+        query.productCode &&
+        !c.productCode
+          .toLowerCase()
+          .includes(query.productCode.trim().toLowerCase())
+      )
+        return false;
+      if (
+        query.userEmail &&
+        !c.userEmail
+          .toLowerCase()
+          .includes(query.userEmail.trim().toLowerCase())
+      )
+        return false;
+
+      return true; // Giữ lại nếu thoả mãn mọi điều kiện
     });
 
     return paginate(filtered, query.page, query.pageSize);
   }
 
   // ---------------------------------------------------------------------
-  // QUẢN LÝ THẺ (ADMIN) — tương tự, danh sách phẳng toàn bộ thẻ của mọi
-  // khách hàng, kèm email chủ sở hữu và số hợp đồng phát hành.
+  // QUẢN LÝ THẺ (ADMIN)
   // ---------------------------------------------------------------------
   async listAllCards(
-    query: GetAdminCardsQueryDto,
+    query: GetAdminCardsQueryDto & {
+      cardNumber?: string;
+      cardName?: string;
+      userEmail?: string;
+    },
   ): Promise<PaginatedResult<AdminCardItem>> {
     const cards = await this.prisma.card.findMany({
       include: {
@@ -163,18 +206,45 @@ export class AdminService {
       createdAt: card.createdAt,
     }));
 
-    const q = query.search?.trim().toLowerCase();
-    const filtered = q
-      ? mapped.filter(
-          (c) =>
-            c.cardNumber.toLowerCase().includes(q) ||
-            c.cardName.toLowerCase().includes(q) ||
-            c.embossedFirstName.toLowerCase().includes(q) ||
-            c.embossedLastName.toLowerCase().includes(q) ||
-            c.userEmail.toLowerCase().includes(q) ||
-            c.issuingContractNumber.toLowerCase().includes(q),
-        )
-      : mapped;
+    const filtered = mapped.filter((c) => {
+      // 1. Lọc bằng thanh Search tổng hợp
+      if (query.search) {
+        const q = query.search.trim().toLowerCase();
+        if (!(
+          c.cardNumber.toLowerCase().includes(q) ||
+          c.cardName.toLowerCase().includes(q) ||
+          c.embossedFirstName.toLowerCase().includes(q) ||
+          c.embossedLastName.toLowerCase().includes(q) ||
+          c.userEmail.toLowerCase().includes(q) ||
+          c.issuingContractNumber.toLowerCase().includes(q)
+        )) {
+          return false;
+        }
+      }
+
+      // 2. Lọc theo từng cột (Column Filters)
+      if (
+        query.cardNumber &&
+        !c.cardNumber
+          .toLowerCase()
+          .includes(query.cardNumber.trim().toLowerCase())
+      )
+        return false;
+      if (
+        query.cardName &&
+        !c.cardName.toLowerCase().includes(query.cardName.trim().toLowerCase())
+      )
+        return false;
+      if (
+        query.userEmail &&
+        !c.userEmail
+          .toLowerCase()
+          .includes(query.userEmail.trim().toLowerCase())
+      )
+        return false;
+
+      return true; // Giữ lại nếu thoả mãn mọi điều kiện
+    });
 
     return paginate(filtered, query.page, query.pageSize);
   }

@@ -46,10 +46,12 @@ export type GetAdminContractsParams = {
   type?: ContractType;
   page: number;
   pageSize: number;
+  filters?: Record<string, string>;
 };
 
 export type GetAdminCardsParams = {
   search?: string;
   page: number;
   pageSize: number;
+  filters?: Record<string, string>;
 };

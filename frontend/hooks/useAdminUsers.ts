@@ -3,8 +3,12 @@ import { adminService } from '@/services/admin.service';
 import { Role } from '@/types/user';
 import { toast } from 'sonner';
 
-export function useAdminUsers() {
-  return useQuery({ queryKey: ['admin', 'users'], queryFn: adminService.getUsers });
+export function useAdminUsers(options?: { enabled?: boolean }) {
+  return useQuery({ 
+    queryKey: ['admin', 'users'], 
+    queryFn: adminService.getUsers,
+    enabled: options?.enabled, // Bổ sung cờ enabled
+  });
 }
 
 export function useUpdateUserRole() {
