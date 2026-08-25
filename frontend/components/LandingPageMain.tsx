@@ -4,13 +4,13 @@ export default function Hero() {
   return (
     <div className="flex flex-col lg:flex-row items-center justify-between gap-16 lg:gap-12 relative z-10 flex-1 py-8 lg:py-0">
       
-      {/* Cột trái: Nội dung text */}
+      
       <div className="w-full lg:w-1/2 flex flex-col gap-6 lg:gap-8 items-center lg:items-start text-center lg:text-left">
         <h1 className="text-4xl sm:text-5xl md:text-[64px] font-bold leading-[1.2] lg:leading-[1.1] text-white">
           Discover the Perfect <br className="hidden sm:block" />
           <span className="relative inline-block mt-2 lg:mt-4">
             Credit Card
-            {/* SVG underline tự scale theo chữ */}
+            
             <svg 
               className="absolute -bottom-2 sm:-bottom-4 left-0 w-full h-8 sm:h-10 text-green-500 scale-110" 
               viewBox="0 0 200 40" fill="none" preserveAspectRatio="none"
@@ -25,7 +25,7 @@ export default function Hero() {
           Discover the power of our secure and rewarding credit cards. Explore our range of credit cards and take control of your finances today.
         </p>
 
-        {/* Nút bấm và Users */}
+
         <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mt-4 w-full sm:w-auto">
           <Link 
             href="/login" 
@@ -54,17 +54,17 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Cột phải: Đồ hoạ thẻ tín dụng */}
+      
       <div className="w-full lg:w-1/2 relative min-h-75 sm:min-h-100 flex justify-center items-center mt-10 lg:mt-0">
         
-        {/* Hình tròn xanh lá background - scale nhỏ lại trên mobile để không tràn */}
+        
         <div className="absolute right-0 bottom-0 w-50 h-50 sm:w-75 sm:h-75 lg:w-112.5 lg:h-112.5 bg-green-500 rounded-full opacity-90 lg:translate-x-12 lg:translate-y-12"></div>
 
-        {/* Các ngôi sao trang trí */}
+        
         <div className="absolute top-0 sm:top-12 left-4 sm:left-10 text-green-500 text-xl sm:text-2xl animate-pulse">✦</div>
         <div className="absolute bottom-4 sm:bottom-10 right-10 sm:right-24 text-green-500 text-xl sm:text-2xl animate-pulse">✦</div>
 
-        {/* Khối thẻ tín dụng (Dùng % width để tự scale) */}
+        
         <div className="relative z-10 w-[90%] max-w-105 aspect-[1.6/1] bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl md:rounded-3xl p-5 md:p-8 flex flex-col justify-between shadow-2xl transform -rotate-12 hover:rotate-0 transition-transform duration-500 ease-out">
           
           <div className="flex justify-between items-start">

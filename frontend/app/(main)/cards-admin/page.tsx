@@ -9,7 +9,7 @@ import { useAuthMe } from '../../../hooks/useAuthMe';
 import { useAdminCards } from '../../../hooks/useAdminCards';
 import { AdminCardItem } from '../../../types/admin-tables';
 import { AdminDataTable } from '../../../components/AdminDataTable';
-import { useAdminStore } from '../../../hooks/useAdminStore'; 
+import { useAdminStore } from '../../../store/useAdminStore'; 
 
 const SEARCH_DEBOUNCE_MS = 300; 
 

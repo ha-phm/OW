@@ -7,7 +7,7 @@ import { useAuthMe } from '../../../hooks/useAuthMe';
 import { Role } from '../../../types/user';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { useAdminStore } from '../../../hooks/useAdminStore'; // <-- Thêm dòng này
+import { useAdminStore } from '../../../store/useAdminStore'; // <-- Thêm dòng này
 
 export default function UsersPage() {
   const router = useRouter();

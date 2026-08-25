@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useForm, useWatch } from 'react-hook-form'; // Đổi sang dùng useWatch
+import { useForm, useWatch } from 'react-hook-form'; 
 import { Search } from 'lucide-react';
 
-// 1. SỬA LỖI TỪ CHỐI ANY CỦA TYPESCRIPT BẰNG GENERIC TYPE (unknown[])
 function debounce<Args extends unknown[]>(
   fn: (...args: Args) => void,
   delay: number
@@ -43,22 +42,20 @@ interface AdminFilterFormProps {
 }
 
 export function AdminFilterForm({ defaultValues, onFilterChange, showTypeFilter }: AdminFilterFormProps) {
-  // 2. CHUYỂN QUA DÙNG CONTROL
+
   const { register, control } = useForm<FilterFormValues>({
     defaultValues,
   });
 
-  // 3. DÙNG useWatch ĐỂ LẤY DỮ LIỆU MÀ KHÔNG GÂY RE-RENDER COMPONENT
+  // DÙNG useWatch ĐỂ LẤY DỮ LIỆU MÀ KHÔNG GÂY RE-RENDER COMPONENT
   const formValues = useWatch({ control });
 
-  // Debounce function để tránh gọi API/state liên tục
   const debouncedFilter = useMemo(
     () => debounce((values: FilterFormValues) => onFilterChange(values), 400),
     [onFilterChange]
   );
 
   useEffect(() => {
-    // Ép kiểu (as FilterFormValues) vì useWatch có thể trả về giá trị undefined ban đầu
     debouncedFilter(formValues as FilterFormValues);
     return () => debouncedFilter.cancel();
   }, [formValues, debouncedFilter]);

@@ -37,7 +37,6 @@ export const useAdminStore = create<AdminState>((set) => ({
       contractsParams: { 
         ...state.contractsParams, 
         ...newParams, 
-        // Bất cứ khi nào search, type, hoặc columnFilters đổi -> Về trang 1
         page: (newParams.search !== undefined || newParams.type !== undefined || newParams.columnFilters !== undefined) ? 1 : (newParams.page ?? state.contractsParams.page) 
       }
     })),

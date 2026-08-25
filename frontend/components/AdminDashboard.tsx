@@ -11,7 +11,7 @@ import { AdminDataTable } from '@/components/AdminDataTable';
 import { ColumnDef, ColumnFiltersState } from '@tanstack/react-table';
 import { AdminContractItem, AdminCardItem } from '@/types/admin-tables';
 import { AdminUser } from '@/types/user';
-import { useAdminStore } from '../hooks/useAdminStore'; 
+import { useAdminStore } from '../store/useAdminStore'; 
 import { useAdminStats } from '../hooks/useAdminStats';
 
 interface AdminDashboardProps {

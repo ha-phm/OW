@@ -51,7 +51,6 @@ export function AdminDataTable<TData>({
   const propFiltersString = JSON.stringify(columnFilters || []);
   const localFiltersString = JSON.stringify(localFilters);
 
-  // 2. Đồng bộ nếu bộ lọc thay đổi từ bên ngoài (từ Zustand)
   useEffect(() => {
     if (localFiltersString !== propFiltersString) {
       setLocalFilters(JSON.parse(propFiltersString));
@@ -68,7 +67,7 @@ export function AdminDataTable<TData>({
     return () => clearTimeout(timer);
   }, [localFiltersString, propFiltersString, onColumnFiltersChange]);
 
-  // 4. MEMOIZE DATA VÀ COLUMNS ĐỂ TRIỆT TIÊU CẢNH BÁO CỦA TANSTACK TABLE
+  // MEMOIZE DATA VÀ COLUMNS ĐỂ TRIỆT TIÊU CẢNH BÁO CỦA TANSTACK TABLE
   // Khi Component cha truyền `data={data ?? []}`, mảng [] mới liên tục được tạo ra làm Table giật lag.
   const tableData = useMemo(() => data, [data]);
   const tableColumns = useMemo(() => columns, [columns]);

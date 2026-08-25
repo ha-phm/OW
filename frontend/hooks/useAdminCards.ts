@@ -7,6 +7,6 @@ export function useAdminCards(params: GetAdminCardsParams, options?: { enabled?:
     queryKey: ['admin', 'cards', params],
     queryFn: () => adminService.listCards(params),
     placeholderData: keepPreviousData,
-    enabled: options?.enabled, // Bổ sung cờ enabled
+    enabled: options?.enabled,
   });
 }

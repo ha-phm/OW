@@ -9,7 +9,7 @@ import { useAuthMe } from '../../../hooks/useAuthMe';
 import { useAdminContracts } from '../../../hooks/useAdminContracts';
 import { AdminContractItem, ContractType } from '../../../types/admin-tables';
 import { AdminDataTable } from '../../../components/AdminDataTable';
-import { useAdminStore } from '../../../hooks/useAdminStore'; 
+import { useAdminStore } from '../../../store/useAdminStore'; 
 
 const SEARCH_DEBOUNCE_MS = 300; 
 

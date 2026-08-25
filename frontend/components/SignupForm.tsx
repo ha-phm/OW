@@ -45,11 +45,8 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
     });
   };
 
-  // Hàm chuyển Next Step
   const nextStep = async () => {
-    // Chỉ lấy tên các field của bước hiện tại
     const fieldsToValidate = STEPS[currentStep - 1].fields as (keyof SignupFormValues)[];
-    // Kích hoạt kiểm tra lỗi. Nếu hợp lệ (true) thì mới cho qua bước tiếp theo
     const isValid = await trigger(fieldsToValidate);
     
     if (isValid && currentStep < STEPS.length) {
@@ -63,7 +60,6 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
     }
   };
 
-  // CSS classes
   const inputClass = 'w-full p-2.5 rounded-xl bg-white/5 border border-white/20 text-white outline-none focus:border-[#4ade80] placeholder:text-white/40 transition-colors text-sm';
   const selectClass = 'w-full p-2.5 rounded-xl bg-white/5 border border-white/20 text-white outline-none focus:border-[#4ade80] transition-colors text-sm [&>option]:bg-slate-800';
   const labelClass = 'block text-white/80 font-medium text-xs mb-1 ml-1';
@@ -74,7 +70,6 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
       <div className="mb-4 text-center">
         <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-white">Đăng Ký Tài Khoản</h2>
         
-        {/* Progress Bar & Tiêu đề bước */}
         <div className="flex justify-between items-center mt-4">
           {STEPS.map((step) => (
             <div key={step.id} className="flex flex-col items-center gap-2 flex-1">
@@ -89,7 +84,7 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
             </div>
           ))}
         </div>
-        {/* Line kết nối (chạy dưới các cục tròn) */}
+        
         <div className="relative -mt-7 sm:-mt-9 mx-8 h-0.5 bg-white/10 -z-10">
           <div 
             className="absolute top-0 left-0 h-full bg-green-500 transition-all duration-300"
@@ -231,7 +226,7 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
               Quay lại
             </button>
           ) : (
-            <div></div> /* Thẻ rỗng để căn phải nút Tiếp tục */
+            <div></div> 
           )}
 
           {currentStep < STEPS.length ? (

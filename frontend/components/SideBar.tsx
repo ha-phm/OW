@@ -4,21 +4,19 @@ import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, FileText, CreditCard, UserCog, LucideIcon, Leaf, Headset, X } from 'lucide-react';
 import { useAuthMe } from '../hooks/useAuthMe';
 
-// 1. Thêm thuộc tính userOnly vào Type
+
 type NavItem = { 
   href: string; 
   label: string; 
   icon: LucideIcon; 
   adminOnly?: boolean;
-  userOnly?: boolean; // Thêm dòng này
+  userOnly?: boolean; 
 };
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  // 2. Gắn cờ userOnly: true cho tab Khách hàng
   { href: '/clients', label: 'Khách hàng', icon: Users, userOnly: true },
   { href: '/contracts-admin', label: 'Hợp đồng', icon: FileText, adminOnly: true },
-  // Nếu Thẻ cũng chỉ dành cho User, bạn có thể thêm userOnly: true vào đây
   { href: '/cards', label: 'Thẻ', icon: CreditCard, userOnly: true }, 
   { href: '/cards-admin', label: 'Thẻ', icon: CreditCard, adminOnly: true},
   { href: '/users', label: 'Người dùng', icon: UserCog, adminOnly: true },
@@ -33,7 +31,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { data: me } = useAuthMe();
 
-  // 3. Nâng cấp logic lọc: Giấu menu Admin khỏi User, và giấu menu User khỏi Admin
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly && me?.role !== 'ADMIN') return false;
     if (item.userOnly && me?.role === 'ADMIN') return false;
@@ -42,7 +39,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Lớp phủ mờ (Overlay) khi mở menu trên Mobile */}
       {isOpen && (
         <div 
           className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity"
@@ -50,7 +46,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar chính */}
       <aside 
         className={`fixed inset-y-0 left-0 z-50 m-4 flex w-48 shrink-0 flex-col rounded-3xl bg-white shadow-lg transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : 'translate-x-[-120%]'
@@ -62,7 +57,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <span className="text-lg font-bold tracking-tight text-ink">Openway</span>
           </div>
           
-          {/* Nút đóng Sidebar trên Mobile */}
           <button onClick={onClose} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden">
             <X className="h-5 w-5" />
           </button>
@@ -75,7 +69,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <Link
                 key={href}
                 href={href}
-                onClick={onClose} // Tự động đóng menu trên đt khi click vào link
+                onClick={onClose}
                 className={`flex items-center gap-3 rounded-full px-4 py-3 text-sm font-semibold transition-colors ${
                   isActive ? 'bg-brand text-white shadow-md shadow-brand/30' : 'text-slate-400 hover:bg-slate-50 hover:text-ink'
                 }`}
