@@ -1,8 +1,7 @@
-import { IsOptional, IsString } from 'class-validator';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto'; // Sửa lại đường dẫn này nếu cần
+import { IsIn, IsOptional, IsString } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export class GetAdminCardsQueryDto extends PaginationQueryDto {
-  // Thêm các trường này vào để NestJS không chặn request nữa
   @IsOptional()
   @IsString()
   cardNumber?: string;
@@ -14,4 +13,19 @@ export class GetAdminCardsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   userEmail?: string;
+
+  @IsOptional()
+  @IsIn([
+    'cardNumber',
+    'cardName',
+    'issuingContractNumber',
+    'userEmail',
+    'expiryDate',
+    'createdAt',
+  ])
+  sortBy?: string;
+
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  sortOrder?: 'asc' | 'desc';
 }

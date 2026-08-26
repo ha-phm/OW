@@ -2,16 +2,16 @@
 
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useForm, useWatch } from 'react-hook-form';
 import { Landmark, Filter, Search } from 'lucide-react';
 import { useAuthMe } from '../../../hooks/useAuthMe';
 import { useAdminCards } from '../../../hooks/useAdminCards';
 import { AdminCardItem } from '../../../types/admin-tables';
-import { AdminDataTable } from '../../../components/AdminDataTable';
-import { useAdminStore } from '../../../store/useAdminStore'; 
+import { AdminDataTable, type AppFeatures } from '../../../components/AdminDataTable';
+import { useAdminStore } from '../../../store/useAdminStore';
 
-const SEARCH_DEBOUNCE_MS = 300; 
+const SEARCH_DEBOUNCE_MS = 300;
 
 type FilterField = 'search' | 'cardNumber' | 'cardName' | 'userEmail';
 
@@ -21,12 +21,21 @@ interface FilterFormValues {
   inputValue: string;
 }
 
+// Mới: chuyển SortingState (v9) -> { sortBy, sortOrder } cho API.
+const convertSortingToParams = (sorting: SortingState) => {
+  const [first] = sorting;
+  if (!first) return {};
+  return {
+    sortBy: first.id,
+    sortOrder: first.desc ? ('desc' as const) : ('asc' as const),
+  };
+};
+
 export default function AdminCardsPage() {
   const router = useRouter();
   const { data: me, isLoading: meLoading } = useAuthMe();
-
   const { cardsParams, setCardsParams } = useAdminStore();
-  
+
   // 1. ÁP DỤNG REACT HOOK FORM CHO THANH TÌM KIẾM
   const { register, control, setValue } = useForm<FilterFormValues>({
     defaultValues: {
@@ -54,20 +63,18 @@ export default function AdminCardsPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       const currentValueInStore = getStoreValue(filterField);
-      
       if (inputValue !== currentValueInStore) {
         if (filterField === 'search') {
           setCardsParams({ search: inputValue, page: 1 });
         } else {
           const currentFilters = cardsParams.columnFilters || [];
           const otherFilters = currentFilters.filter(f => f.id !== filterField);
-          
           if (inputValue.trim() === '') {
             setCardsParams({ columnFilters: otherFilters, page: 1 });
           } else {
-            setCardsParams({ 
+            setCardsParams({
               columnFilters: [...otherFilters, { id: filterField, value: inputValue }],
-              page: 1 
+              page: 1
             });
           }
         }
@@ -92,44 +99,50 @@ export default function AdminCardsPage() {
     search: cardsParams.search,
     page: cardsParams.page,
     pageSize: cardsParams.pageSize,
-    ...filterObject, 
+    ...filterObject,
+    ...convertSortingToParams(cardsParams.sorting || []),
   });
 
   if (meLoading || me?.role !== 'ADMIN') {
     return null;
   }
 
-  const columns: ColumnDef<AdminCardItem>[] = [
-    { accessorKey: 'cardNumber', header: 'Số thẻ' },
-    { accessorKey: 'cardName', header: 'Tên thẻ' },
+  // V9: ColumnDef nhận thêm generic TFeatures (AppFeatures, export từ AdminDataTable).
+  // Cột "embossedName" là cột ghép (id, không có accessorKey) -> tắt sort vì
+  // server không biết sort theo field ảo này; muốn sort được thì phải thêm
+  // accessorFn + để server hỗ trợ sort theo firstName/lastName riêng.
+  const columns: ColumnDef<AppFeatures, AdminCardItem>[] = [
+    { accessorKey: 'cardNumber', header: 'Số thẻ', enableSorting: true },
+    { accessorKey: 'cardName', header: 'Tên thẻ', enableSorting: true },
     {
       id: 'embossedName',
       header: 'Chủ thẻ',
+      enableSorting: false,
       cell: ({ row }) =>
         `${row.original.embossedFirstName} ${row.original.embossedLastName}`.trim() ||
-        '—',
+        '---',
     },
-    { accessorKey: 'issuingContractNumber', header: 'HĐ phát hành' },
-    { accessorKey: 'userEmail', header: 'Chủ sở hữu' },
+    { accessorKey: 'issuingContractNumber', header: 'HĐ phát hành', enableSorting: true },
+    { accessorKey: 'userEmail', header: 'Chủ sở hữu', enableSorting: true },
     {
       accessorKey: 'expiryDate',
       header: 'Hết hạn',
-      cell: ({ getValue }) => getValue<string | null>() ?? '—',
+      enableSorting: true,
+      cell: ({ getValue }) => getValue<string | null>() ?? '---',
     },
     {
       accessorKey: 'createdAt',
       header: 'Ngày tạo',
+      enableSorting: true,
       cell: ({ getValue }) =>
         new Date(getValue<string>()).toLocaleDateString('vi-VN'),
     },
   ];
 
   return (
-    <div className="flex flex-col gap-5 p-4 sm:p-8"> 
-      
+    <div className="flex flex-col gap-5 p-4 sm:p-8">
       {/* HEADER & THANH LỌC THÔNG MINH */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
             <Landmark className="h-5 w-5 text-emerald-600" />
@@ -138,9 +151,7 @@ export default function AdminCardsPage() {
             Quản lý thẻ
           </h1>
         </div>
-
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-          
           <div className="flex items-center gap-2 px-3 bg-white rounded-xl border border-slate-200 shrink-0">
             <Filter className="w-4 h-4 text-emerald-500" />
             {/* THAY THẾ SELECT THỦ CÔNG BẰNG REGISTER */}
@@ -154,7 +165,6 @@ export default function AdminCardsPage() {
               <option value="userEmail">Email chủ sở hữu</option>
             </select>
           </div>
-
           <div className="relative flex-1">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <Search className="h-4 w-4 text-slate-400" />
@@ -186,6 +196,8 @@ export default function AdminCardsPage() {
         isFetching={isFetching}
         emptyMessage="Không tìm thấy thẻ nào."
         showColumnFilters={false}
+        sorting={cardsParams.sorting}
+        onSortingChange={(sorting) => setCardsParams({ sorting })}
       />
     </div>
   );

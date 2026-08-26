@@ -7,11 +7,11 @@ import { AuthMe } from '@/types/user';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminContracts } from '../hooks/useAdminContracts';
 import { useAdminCards } from '../hooks/useAdminCards';
-import { AdminDataTable } from '@/components/AdminDataTable';
-import { ColumnDef, ColumnFiltersState } from '@tanstack/react-table';
+import { AdminDataTable, type AppFeatures } from '@/components/AdminDataTable';
+import { ColumnDef, ColumnFiltersState, SortingState } from '@tanstack/react-table';
 import { AdminContractItem, AdminCardItem } from '@/types/admin-tables';
 import { AdminUser } from '@/types/user';
-import { useAdminStore } from '../store/useAdminStore'; 
+import { useAdminStore } from '../store/useAdminStore';
 import { useAdminStats } from '../hooks/useAdminStats';
 
 interface AdminDashboardProps {
@@ -25,22 +25,34 @@ const convertFiltersToObject = (filters: ColumnFiltersState) => {
   }, {} as Record<string, string>);
 };
 
+// Mới: chuyển SortingState (v9) -> { sortBy, sortOrder } để gửi cho API.
+// Nếu backend hỗ trợ nhiều cột sort thì đổi hàm này để trả về mảng thay vì 1 cặp.
+const convertSortingToParams = (sorting: SortingState) => {
+  const [first] = sorting;
+  if (!first) return {};
+  return {
+    sortBy: first.id,
+    sortOrder: first.desc ? ('desc' as const) : ('asc' as const),
+  };
+};
+
 export function AdminDashboard({ authData }: AdminDashboardProps) {
-  const { 
-    activeTab, setActiveTab, 
+  const {
+    activeTab, setActiveTab,
     contractsParams, setContractsParams,
-    cardsParams, setCardsParams 
+    cardsParams, setCardsParams
   } = useAdminStore();
 
   const { data: usersData, isLoading: isUsersLoading, isFetching: isUsersFetching } = useAdminUsers({
     enabled: activeTab === 'USERS'
   });
-  
+
   const { data: contractsData, isLoading: isContractsLoading, isFetching: isContractsFetching } = useAdminContracts({
     search: contractsParams.search,
     page: contractsParams.page,
     pageSize: contractsParams.pageSize,
     filters: convertFiltersToObject(contractsParams.columnFilters || []),
+    ...convertSortingToParams(contractsParams.sorting || []),
   }, {
     enabled: activeTab === 'CONTRACTS'
   });
@@ -50,6 +62,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     page: cardsParams.page,
     pageSize: cardsParams.pageSize,
     filters: convertFiltersToObject(cardsParams.columnFilters || []),
+    ...convertSortingToParams(cardsParams.sorting || []),
   }, {
     enabled: activeTab === 'CARDS'
   });
@@ -58,7 +71,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
   const { register, control, setValue } = useForm({
     defaultValues: { searchInput: '' }
   });
-  
+
   // 3. DÙNG `useWatch` ĐỂ THEO DÕI GIÁ TRỊ NHẬP VÀO
   const searchInput = useWatch({
     control,
@@ -83,53 +96,65 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     return () => clearTimeout(timer);
   }, [searchInput, activeTab, setContractsParams, setCardsParams, contractsParams.search, cardsParams.search]);
 
-  const contractColumns: ColumnDef<AdminContractItem, unknown>[] = [
-    { accessorKey: 'contractNumber', header: 'Số hợp đồng' },
-    { accessorKey: 'contractName', header: 'Tên hợp đồng' },
-    { accessorKey: 'type', header: 'Loại' },
-    { accessorKey: 'productCode', header: 'Sản phẩm' },
-    { accessorKey: 'userEmail', header: 'Email chủ sở hữu' },
+  // ------------------------------------------------------------------
+  // V9: ColumnDef nhận thêm generic TFeatures (lấy từ AdminDataTable qua `AppFeatures`).
+  // enableSorting: true bật sort cho cột đó (rowSortingFeature mặc định enable hết,
+  // nên chỉ cần khai báo false cho cột KHÔNG muốn sort).
+  // ------------------------------------------------------------------
+  const contractColumns: ColumnDef<AppFeatures, AdminContractItem, unknown>[] = [
+    { accessorKey: 'contractNumber', header: 'Số hợp đồng', enableSorting: true },
+    { accessorKey: 'contractName', header: 'Tên hợp đồng', enableSorting: true },
+    { accessorKey: 'type', header: 'Loại', enableSorting: true },
+    { accessorKey: 'productCode', header: 'Sản phẩm', enableSorting: false },
+    { accessorKey: 'userEmail', header: 'Email chủ sở hữu', enableSorting: true },
     {
       accessorKey: 'createdAt',
       header: 'Ngày tạo',
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('vi-VN')
+      enableSorting: true,
+      cell: ({ row }) => new Date(row.getValue<string>('createdAt')).toLocaleDateString('vi-VN')
     },
   ];
 
-  const cardColumns: ColumnDef<AdminCardItem, unknown>[] = [
-    { accessorKey: 'cardNumber', header: 'Số thẻ (PAN)' },
-    { accessorKey: 'cardName', header: 'Tên thẻ' },
-    { accessorKey: 'embossedFirstName', header: 'Tên in nổi' },
-    { accessorKey: 'embossedLastName', header: 'Họ in nổi' },
-    { accessorKey: 'userEmail', header: 'Email chủ sở hữu' },
+  const cardColumns: ColumnDef<AppFeatures, AdminCardItem, unknown>[] = [
+    { accessorKey: 'cardNumber', header: 'Số thẻ (PAN)', enableSorting: true },
+    { accessorKey: 'cardName', header: 'Tên thẻ', enableSorting: true },
+    { accessorKey: 'embossedFirstName', header: 'Tên in nổi', enableSorting: true },
+    { accessorKey: 'embossedLastName', header: 'Họ in nổi', enableSorting: true },
+    { accessorKey: 'userEmail', header: 'Email chủ sở hữu', enableSorting: true },
     {
       accessorKey: 'createdAt',
       header: 'Ngày tạo',
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('vi-VN')
+      enableSorting: true,
+      cell: ({ row }) => new Date(row.getValue<string>('createdAt')).toLocaleDateString('vi-VN')
     },
   ];
 
-  const userColumns: ColumnDef<AdminUser, unknown>[] = [
-    { accessorKey: 'email', header: 'Email' },
-    { accessorKey: 'clientNumber', header: 'Số khách hàng', cell: ({ row }) => row.original.clientNumber || '—' },
-    { accessorKey: 'role', header: 'Vai trò' },
+  const userColumns: ColumnDef<AppFeatures, AdminUser, unknown>[] = [
+    { accessorKey: 'email', header: 'Email', enableSorting: true },
+    {
+      accessorKey: 'clientNumber',
+      header: 'Số khách hàng',
+      enableSorting: true,
+      cell: ({ row }) => row.original.clientNumber || '---'
+    },
+    { accessorKey: 'role', header: 'Vai trò', enableSorting: true },
     {
       accessorKey: 'createdAt',
       header: 'Ngày tạo',
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('vi-VN')
+      enableSorting: true,
+      cell: ({ row }) => new Date(row.getValue<string>('createdAt')).toLocaleDateString('vi-VN')
     },
   ];
 
   const totalUsersCount = Array.isArray(usersData) ? usersData.length : 0;
   const totalContractsCount = contractsData?.meta?.total || 0;
   const totalCardsCount = cardsData?.meta?.total || 0;
-  
   const adminName = authData?.email?.split('@')[0] || 'Quản trị viên';
+
   const { data: stats, isLoading: statsLoading } = useAdminStats();
 
   return (
     <div className="mx-auto w-full max-w-6xl rounded-3xl bg-white p-4 sm:p-6 lg:p-8 text-slate-900 shadow-xl border border-slate-100 min-h-[80vh] flex flex-col gap-6 sm:gap-8">
-      
       {/* WELCOME BANNER */}
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-linear-to-br from-emerald-500 to-teal-700 p-6 sm:p-8 lg:p-10 shadow-lg shadow-teal-900/10">
         <div className="relative z-10 flex flex-col gap-2 md:w-2/3">
@@ -154,28 +179,25 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
 
       {/* THỐNG KÊ */}
       <div className="grid grid-cols-4 gap-4">
-        <StatCard 
+        <StatCard
           icon={<Users className="h-6 w-6" />}
-          label="Khách hàng" 
-          value={statsLoading ? '...' : String(stats?.totalUsers ?? 0)} 
+          label="Khách hàng"
+          value={statsLoading ? '...' : String(stats?.totalUsers ?? 0)}
         />
-        
-        <StatCard 
+        <StatCard
           icon={<FileText className="h-6 w-6" />}
-          label="Hợp đồng" 
-          value={statsLoading ? '...' : String(stats?.totalContracts ?? 0)} 
+          label="Hợp đồng"
+          value={statsLoading ? '...' : String(stats?.totalContracts ?? 0)}
         />
-        
-        <StatCard 
+        <StatCard
           icon={<CreditCard className="h-6 w-6" />}
-          label="Thẻ đã phát hành" 
-          value={statsLoading ? '...' : String(stats?.totalCards ?? 0)} 
+          label="Thẻ đã phát hành"
+          value={statsLoading ? '...' : String(stats?.totalCards ?? 0)}
         />
-        
-        <StatCard 
+        <StatCard
           icon={<BarChart className="h-6 w-6" />}
-          label="TB thẻ/khách hàng" 
-          value={statsLoading ? '...' : String(stats?.avgCardsPerUser ?? '0.0')} 
+          label="TB thẻ/khách hàng"
+          value={statsLoading ? '...' : String(stats?.avgCardsPerUser ?? '0.0')}
         />
       </div>
 
@@ -243,10 +265,9 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
             onPageSizeChange={() => {}}
             isLoading={isUsersLoading}
             isFetching={isUsersFetching}
-            showColumnFilters={false} 
+            showColumnFilters={false}
           />
         )}
-        
         {activeTab === 'CONTRACTS' && (
           <AdminDataTable
             columns={contractColumns}
@@ -260,9 +281,10 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
             showColumnFilters={false}
             isLoading={isContractsLoading}
             isFetching={isContractsFetching}
+            sorting={contractsParams.sorting}
+            onSortingChange={(sorting) => setContractsParams({ sorting })}
           />
         )}
-        
         {activeTab === 'CARDS' && (
           <AdminDataTable
             columns={cardColumns}
@@ -276,6 +298,8 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
             showColumnFilters={false}
             isLoading={isCardsLoading}
             isFetching={isCardsFetching}
+            sorting={cardsParams.sorting}
+            onSortingChange={(sorting) => setCardsParams({ sorting })}
           />
         )}
       </div>

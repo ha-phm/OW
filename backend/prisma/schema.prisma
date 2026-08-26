@@ -35,7 +35,7 @@ enum ContractType {
 model Contract {
   id                Int          @id @default(autoincrement())
   userId            Int
-  clientNumber      String       
+  clientNumber      String
   contractNumber    String       @unique
   applicationNumber String?
   type              ContractType // LIABILITY hoặc ISSUING
@@ -44,16 +44,22 @@ model Contract {
   status            String       @default("ACTIVE")
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
-
   user              User         @relation(fields: [userId], references: [id])
 
-  
   parentContractId  Int?
   parentContract    Contract?    @relation("ContractHierarchy", fields: [parentContractId], references: [id])
   childContracts    Contract[]   @relation("ContractHierarchy")
 
   // Một Issuing Contract có thể sinh ra nhiều thẻ (thẻ chính, thẻ phụ...)
   cards             Card[]
+
+  // --- Index phục vụ filter/sort/search ở AdminService ---
+  @@index([clientNumber])
+  @@index([contractName])
+  @@index([productCode])
+  @@index([type])
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model Card {
@@ -68,6 +74,12 @@ model Card {
   status            String   @default("ACTIVE")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  productCode       String? 
+  productCode       String?
   issuingContract   Contract @relation(fields: [issuingContractId], references: [id])
+
+  // --- Index phục vụ filter/sort/search ở AdminService ---
+  @@index([cardName])
+  @@index([expiryDate])
+  @@index([createdAt])
+  @@index([issuingContractId])
 }

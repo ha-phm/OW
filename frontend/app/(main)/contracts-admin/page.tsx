@@ -2,16 +2,16 @@
 
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useForm, useWatch } from 'react-hook-form';
 import { FileStack, Filter, Search } from 'lucide-react';
 import { useAuthMe } from '../../../hooks/useAuthMe';
 import { useAdminContracts } from '../../../hooks/useAdminContracts';
 import { AdminContractItem, ContractType } from '../../../types/admin-tables';
-import { AdminDataTable } from '../../../components/AdminDataTable';
-import { useAdminStore } from '../../../store/useAdminStore'; 
+import { AdminDataTable, type AppFeatures } from '../../../components/AdminDataTable';
+import { useAdminStore } from '../../../store/useAdminStore';
 
-const SEARCH_DEBOUNCE_MS = 300; 
+const SEARCH_DEBOUNCE_MS = 300;
 
 const TYPE_LABEL: Record<ContractType, string> = {
   LIABILITY: 'Liability',
@@ -26,12 +26,21 @@ interface FilterFormValues {
   inputValue: string;
 }
 
+// Mới: chuyển SortingState (v9) -> { sortBy, sortOrder } cho API.
+const convertSortingToParams = (sorting: SortingState) => {
+  const [first] = sorting;
+  if (!first) return {};
+  return {
+    sortBy: first.id,
+    sortOrder: first.desc ? ('desc' as const) : ('asc' as const),
+  };
+};
+
 export default function AdminContractsPage() {
   const router = useRouter();
   const { data: me, isLoading: meLoading } = useAuthMe();
-
   const { contractsParams, setContractsParams } = useAdminStore();
-  
+
   // 1. ÁP DỤNG REACT HOOK FORM CHO THANH TÌM KIẾM
   const { register, control, setValue } = useForm<FilterFormValues>({
     defaultValues: {
@@ -47,7 +56,6 @@ export default function AdminContractsPage() {
   const getStoreValue = useCallback((field: FilterField) => {
     if (field === 'search') return contractsParams.search || '';
     if (field === 'type') return contractsParams.type || '';
-    
     const filterObj = contractsParams.columnFilters?.find(f => f.id === field);
     return (filterObj?.value as string) || '';
   }, [contractsParams.search, contractsParams.type, contractsParams.columnFilters]);
@@ -64,20 +72,18 @@ export default function AdminContractsPage() {
     const timer = setTimeout(() => {
       if (filterField !== 'type') {
         const currentValueInStore = getStoreValue(filterField);
-        
         if (inputValue !== currentValueInStore) {
           if (filterField === 'search') {
             setContractsParams({ search: inputValue, page: 1 });
           } else {
             const currentFilters = contractsParams.columnFilters || [];
             const otherFilters = currentFilters.filter(f => f.id !== filterField);
-            
             if (inputValue.trim() === '') {
               setContractsParams({ columnFilters: otherFilters, page: 1 });
             } else {
-              setContractsParams({ 
+              setContractsParams({
                 columnFilters: [...otherFilters, { id: filterField, value: inputValue }],
-                page: 1 
+                page: 1
               });
             }
           }
@@ -104,19 +110,24 @@ export default function AdminContractsPage() {
     page: contractsParams.page,
     pageSize: contractsParams.pageSize,
     type: contractsParams.type || undefined,
-    ...filterObject, 
+    ...filterObject,
+    ...convertSortingToParams(contractsParams.sorting || []),
   });
 
   if (meLoading || me?.role !== 'ADMIN') {
     return null;
   }
 
-  const columns: ColumnDef<AdminContractItem>[] = [
-    { accessorKey: 'contractNumber', header: 'Số hợp đồng' },
-    { accessorKey: 'contractName', header: 'Tên hợp đồng' },
+  // V9: ColumnDef nhận thêm generic TFeatures (AppFeatures, export từ AdminDataTable).
+  // enableSorting: true bật sort cho cột; cột "type" render badge tùy biến vẫn sort được
+  // vì sort dựa trên giá trị gốc (accessorKey), không phải trên cell đã render.
+  const columns: ColumnDef<AppFeatures, AdminContractItem>[] = [
+    { accessorKey: 'contractNumber', header: 'Số hợp đồng', enableSorting: true },
+    { accessorKey: 'contractName', header: 'Tên hợp đồng', enableSorting: true },
     {
       accessorKey: 'type',
       header: 'Loại',
+      enableSorting: true,
       cell: ({ getValue }) => {
         const value = getValue<ContractType>();
         return (
@@ -132,22 +143,21 @@ export default function AdminContractsPage() {
         );
       },
     },
-    { accessorKey: 'clientNumber', header: 'Mã KH' },
-    { accessorKey: 'userEmail', header: 'Chủ sở hữu' },
+    { accessorKey: 'clientNumber', header: 'Mã KH', enableSorting: true },
+    { accessorKey: 'userEmail', header: 'Chủ sở hữu', enableSorting: true },
     {
       accessorKey: 'createdAt',
       header: 'Ngày tạo',
+      enableSorting: true,
       cell: ({ getValue }) =>
         new Date(getValue<string>()).toLocaleDateString('vi-VN'),
     },
   ];
 
   return (
-    <div className="flex flex-col gap-5 p-4 sm:p-8"> 
-      
+    <div className="flex flex-col gap-5 p-4 sm:p-8">
       {/* HEADER & THANH LỌC */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
             <FileStack className="h-5 w-5 text-emerald-600" />
@@ -159,7 +169,6 @@ export default function AdminContractsPage() {
 
         {/* Thanh Lọc Thông Minh (Responsive) */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-          
           {/* 1. Chọn Cột Cần Lọc */}
           <div className="flex items-center gap-2 px-3 bg-white rounded-xl border border-slate-200 shrink-0">
             <Filter className="w-4 h-4 text-emerald-500" />
@@ -217,7 +226,9 @@ export default function AdminContractsPage() {
         isLoading={isLoading}
         isFetching={isFetching}
         emptyMessage="Không tìm thấy hợp đồng nào."
-        showColumnFilters={false} 
+        showColumnFilters={false}
+        sorting={contractsParams.sorting}
+        onSortingChange={(sorting) => setContractsParams({ sorting })}
       />
     </div>
   );

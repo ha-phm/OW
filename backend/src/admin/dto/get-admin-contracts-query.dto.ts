@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export class GetAdminContractsQueryDto extends PaginationQueryDto {
@@ -21,4 +21,21 @@ export class GetAdminContractsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   type?: string;
+
+  // --- Thêm 2 field này để hết lỗi 400 ---
+  @IsOptional()
+  @IsIn([
+    'contractNumber',
+    'contractName',
+    'type',
+    'productCode',
+    'clientNumber',
+    'userEmail',
+    'createdAt',
+  ])
+  sortBy?: string;
+
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  sortOrder?: 'asc' | 'desc';
 }
