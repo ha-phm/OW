@@ -1,7 +1,5 @@
 import { apiPost } from '@/api/api';
-
 import { SignupFormValues } from '../schema/client.schema'; 
-
 
 export interface LoginPayload {
   email: string;
@@ -17,9 +15,10 @@ export interface UserProfile {
 }
 
 export interface AuthResponse {
-  access_token: string;
-  refresh_token: string;
-  user: UserProfile;
+  // Backend hiện tại trả về { accessToken: '...' }
+  accessToken?: string; 
+  access_token?: string; // Giữ hờ đề phòng backend trả snake_case
+  user?: UserProfile;
 }
 
 export const authService = {

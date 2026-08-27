@@ -98,16 +98,22 @@ export class AuthService {
         );
       }
 
+      // Ép kiểu string để tránh ESLint cảnh báo
       const isRefreshTokenMatches = await bcrypt.compare(
         refreshToken,
-        user.refreshToken as string,
+        user.refreshToken,
       );
+
       if (!isRefreshTokenMatches) {
         throw new UnauthorizedException('Refresh token không hợp lệ.');
       }
 
       return this.issueTokens(user);
-    } catch {
+    } catch (error) {
+      // 👈 Tốt nhất là throw lại đúng lỗi (hoặc ghi log) để dễ debug thay vì nuốt lỗi
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException(
         'Refresh token đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.',
       );

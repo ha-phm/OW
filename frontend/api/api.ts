@@ -1,5 +1,4 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { jwtDecode } from 'jwt-decode';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/\/+$/, '');
 
@@ -9,20 +8,31 @@ export class ApiError extends Error {
   }
 }
 
-// Hàm xử lý việc logout, phát sự kiện ra ngoài thay vì dùng window.location.href
+// 1. BIẾN RAM LƯU ACCESS TOKEN (In-memory Storage)
+let inMemoryAccessToken: string | null = null;
+
+export const setAccessToken = (token: string | null) => {
+  inMemoryAccessToken = token;
+};
+
+export const getAccessToken = () => inMemoryAccessToken;
+
+// 2. HÀM XỬ LÝ LOGOUT
 const forceLogout = () => {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    setAccessToken(null); // Xoá token trên RAM
+    // Gửi event ra ngoài để component hoặc hook xử lý đẩy về trang login
     window.dispatchEvent(new Event('auth:unauthorized'));
   }
 };
 
+// 3. TẠO AXIOS INSTANCE
 const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // BẮT BUỘC ĐỂ TRÌNH DUYỆT GỬI HTTP-ONLY COOKIE
 });
 
 interface PromiseCallback {
@@ -44,56 +54,19 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
+// 4. REQUEST INTERCEPTOR: Tự động đính kèm Access Token từ RAM vào header
 apiClient.interceptors.request.use(
-  async (config) => {
-    if (typeof window !== 'undefined') {
-      let token = localStorage.getItem('access_token');
-      
-      if (token) {
-        try {
-          const decodedToken = jwtDecode(token);
-          const currentTime = Date.now() / 1000;
-
-          if (decodedToken.exp && decodedToken.exp < currentTime + 10) {
-            const refreshToken = localStorage.getItem('refresh_token');
-            
-            if (refreshToken && !isRefreshing) {
-              isRefreshing = true;
-              try {
-                const res = await axios.post(`${API_URL}/auth/refresh`, {
-                  refresh_token: refreshToken,
-                });
-                
-                const { access_token, refresh_token: new_refresh_token } = res.data;
-                localStorage.setItem('access_token', access_token);
-                localStorage.setItem('refresh_token', new_refresh_token);
-                
-                token = access_token; 
-                processQueue(null, access_token);
-              } catch (err) {
-                processQueue(err, null);
-                forceLogout();
-              } finally {
-                isRefreshing = false;
-              }
-            } else if (isRefreshing) {
-              token = await new Promise<string | null>((resolve, reject) => {
-                failedQueue.push({ resolve, reject });
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Invalid token format', error);
-        }
-
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+  (config) => {
+    const token = getAccessToken();
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error: unknown) => Promise.reject(error)
 );
 
+// 5. RESPONSE INTERCEPTOR: Bắt lỗi 401 và tự động refresh token
 apiClient.interceptors.response.use(
   (response) => response.data,
   async (error: AxiosError<{ message?: string | string[] }>) => {
@@ -102,14 +75,18 @@ apiClient.interceptors.response.use(
     if (error.response) {
       const status = error.response.status;
       const data = error.response.data;
-      
+
+      // Nếu lỗi 401 (hết hạn Access Token) và chưa từng retry
       if (status === 401 && originalRequest && !originalRequest._retry) {
         if (isRefreshing) {
+          // Xếp hàng chờ nếu đang có request khác gọi refresh rồi
           return new Promise<string | null>((resolve, reject) => {
             failedQueue.push({ resolve, reject });
           })
             .then((token) => {
-              originalRequest.headers.Authorization = 'Bearer ' + token;
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+              }
               return axios(originalRequest).then((res) => res.data);
             })
             .catch((err: unknown) => Promise.reject(err));
@@ -118,40 +95,39 @@ apiClient.interceptors.response.use(
         originalRequest._retry = true;
         isRefreshing = true;
 
-        const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
-
-        if (!refreshToken) {
-          forceLogout();
-          return Promise.reject(error);
-        }
-
         try {
-          const res = await axios.post(`${API_URL}/auth/refresh`, {
-            refresh_token: refreshToken,
+          // Gọi API refresh token. 
+          // Cực kì quan trọng: Phải có withCredentials: true để trình duyệt gửi kèm HttpOnly Cookie
+          const res = await axios.post(`${API_URL}/auth/refresh`, {}, {
+            withCredentials: true 
           });
 
-          const { access_token, refresh_token: new_refresh_token } = res.data;
+          // Tuỳ vào backend của bạn trả về tên biến là gì (accessToken hay access_token)
+          const newAccessToken = res.data.accessToken || res.data.access_token;
 
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('access_token', access_token);
-            localStorage.setItem('refresh_token', new_refresh_token);
+          // Lưu token mới vào RAM
+          setAccessToken(newAccessToken);
+          processQueue(null, newAccessToken);
+
+          // Cập nhật token cho request gốc và gọi lại
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           }
-
-          processQueue(null, access_token);
-
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+          
           const retryResponse = await axios(originalRequest);
-
           return retryResponse.data;
+          
         } catch (refreshError: unknown) {
+          // Nếu refresh cũng thất bại (VD: Cookie hết hạn) -> Buộc logout
           processQueue(refreshError, null);
-          forceLogout(); // Refresh thất bại -> Phát sự kiện logout
+          forceLogout();
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;
         }
       }
 
+      // Xử lý các lỗi HTTP khác
       let message = 'Có lỗi xảy ra';
       if (data?.message) {
         message = Array.isArray(data.message) ? data.message.join(', ') : data.message;
@@ -163,22 +139,23 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Các hàm Helpers bọc lại Axios
 function unwrap<T>(promise: Promise<unknown>): Promise<T> {
   return promise as Promise<T>;
 }
- 
+
 export function apiGet<TResponse>(path: string): Promise<TResponse> {
   return unwrap<TResponse>(apiClient.get(path));
 }
- 
-export function apiPost<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+
+export function apiPost<TResponse, TBody>(path: string, body?: TBody): Promise<TResponse> {
   return unwrap<TResponse>(apiClient.post(path, body));
 }
- 
+
 export function apiPatch<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
   return unwrap<TResponse>(apiClient.patch(path, body));
 }
- 
+
 export function apiDelete<TResponse>(path: string): Promise<TResponse> {
   return unwrap<TResponse>(apiClient.delete(path));
 }
