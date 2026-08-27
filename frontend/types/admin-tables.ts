@@ -21,6 +21,7 @@ export interface AdminContractItem {
 export interface AdminCardItem {
   id: number;
   cardNumber: string;
+  maskedCardNumber?: string;
   cardName: string;
   embossedFirstName: string;
   embossedLastName: string;

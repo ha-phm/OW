@@ -4,10 +4,10 @@ import { cardService } from '../services/card.service';
 export const CARDS_QUERY_KEY = 'my-cards';
 const PAGE_SIZE = 3;
 
-export function useCards(search: string, page: number) {
+export function useCards(search: string, page: number, pageSize: number = 6) {
   return useQuery({
-    queryKey: [CARDS_QUERY_KEY, search, page],
-    queryFn: () => cardService.listMine(search, page, PAGE_SIZE),
+    queryKey: [CARDS_QUERY_KEY, search, page, pageSize],
+    queryFn: () => cardService.listMine(search, page, pageSize),
     placeholderData: keepPreviousData,
     staleTime: 30 * 1000,
   });

@@ -4,16 +4,46 @@ import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useForm, useWatch } from 'react-hook-form';
-import { Landmark, Filter, Search } from 'lucide-react';
+import { useState } from 'react';
+import { Landmark, Filter, Search, Copy, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuthMe } from '../../../hooks/useAuthMe';
 import { useAdminCards } from '../../../hooks/useAdminCards';
 import { AdminCardItem } from '../../../types/admin-tables';
 import { AdminDataTable, type AppFeatures } from '../../../components/AdminDataTable';
 import { useAdminStore } from '../../../store/useAdminStore';
+import { maskCardNumber } from '../../../utils/format';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
 type FilterField = 'search' | 'cardNumber' | 'cardName' | 'userEmail';
+
+function MaskedCardCell({ cardNumber, maskedCardNumber }: { cardNumber: string; maskedCardNumber?: string }) {
+  const [copied, setCopied] = useState(false);
+  const display = maskedCardNumber || maskCardNumber(cardNumber);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(cardNumber);
+    setCopied(true);
+    toast.success('Đã sao chép số thẻ');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 font-mono text-xs">
+      <span className="text-slate-800 font-medium">{display}</span>
+      <button
+        type="button"
+        onClick={handleCopy}
+        title="Sao chép số thẻ"
+        className="p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition cursor-pointer"
+      >
+        {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+      </button>
+    </div>
+  );
+}
 
 // Khai báo type cho Form Lọc
 interface FilterFormValues {
@@ -112,7 +142,17 @@ export default function AdminCardsPage() {
   // server không biết sort theo field ảo này; muốn sort được thì phải thêm
   // accessorFn + để server hỗ trợ sort theo firstName/lastName riêng.
   const columns: ColumnDef<AppFeatures, AdminCardItem>[] = [
-    { accessorKey: 'cardNumber', header: 'Số thẻ', enableSorting: true },
+    {
+      accessorKey: 'cardNumber',
+      header: 'Số thẻ (PAN)',
+      enableSorting: true,
+      cell: ({ row }) => (
+        <MaskedCardCell
+          cardNumber={row.original.cardNumber}
+          maskedCardNumber={row.original.maskedCardNumber}
+        />
+      ),
+    },
     { accessorKey: 'cardName', header: 'Tên thẻ', enableSorting: true },
     {
       id: 'embossedName',

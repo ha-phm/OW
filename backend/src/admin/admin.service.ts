@@ -9,6 +9,7 @@ import {
   buildContractOrderBy,
 } from './helpers/contract-query.helper';
 import { buildCardWhere, buildCardOrderBy } from './helpers/card-query.helper';
+import { maskCardNumber } from '../common/utils/text.utils';
 
 const userListSelect = {
   id: true,
@@ -33,6 +34,7 @@ export interface AdminContractItem {
 export interface AdminCardItem {
   id: number;
   cardNumber: string;
+  maskedCardNumber?: string;
   cardName: string;
   embossedFirstName: string;
   embossedLastName: string;
@@ -145,6 +147,7 @@ export class AdminService {
     const data: AdminCardItem[] = cards.map((card) => ({
       id: card.id,
       cardNumber: card.cardNumber,
+      maskedCardNumber: maskCardNumber(card.cardNumber),
       cardName: card.cardName || 'Card Contract',
       embossedFirstName: card.embossedFirstName || '',
       embossedLastName: card.embossedLastName || '',

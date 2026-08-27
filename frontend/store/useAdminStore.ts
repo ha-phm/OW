@@ -6,8 +6,8 @@ interface TableParams {
   search: string;
   page: number;
   pageSize: number;
-  columnFilters: ColumnFiltersState; // Bộ lọc cột
-  sorting: SortingState; // Mới: trạng thái sắp xếp (manualSorting - server xử lý)
+  columnFilters: ColumnFiltersState; 
+  sorting: SortingState; 
 }
 
 interface AdminState {

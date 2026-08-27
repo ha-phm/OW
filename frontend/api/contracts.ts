@@ -3,6 +3,7 @@ import { CardCategory } from '../constants/cardCategories';
 
 export interface QuickOpenCardPayload {
   cardCategory: CardCategory;
+  cardName?: string; // <-- ĐÃ THÊM TRƯỜNG NÀY ĐỂ HẾT BÁO LỖI
   embossedFirstName: string;
   embossedLastName: string;
   embossedCompanyName?: string;
@@ -31,12 +32,6 @@ export function quickOpenCard(
     '/contracts/quick-open',
     payload,
   );
-}
-
-export interface CreateSupplementaryCardPayload {
-  cardName?: string;
-  embossedFirstName: string;
-  embossedLastName: string;
 }
 
 export interface CreateSupplementaryCardPayload {

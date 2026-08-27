@@ -21,11 +21,13 @@ import {
 } from '../common/utils/way4-response.util';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { CreateSupplementaryCardDto } from './dto/create-supplymentary-card.dto';
+import { maskCardNumber } from '../common/utils/text.utils';
 
 export type { PaginatedResult };
 export type { CardContractResponse };
 export interface CardListItem {
   cardNumber: string;
+  maskedCardNumber?: string;
   cardName: string;
   embossedFirstName: string;
   embossedLastName: string;
@@ -257,6 +259,7 @@ export class CardService {
       const way4 = way4ByNumber.get(card.cardNumber);
       return {
         cardNumber: card.cardNumber,
+        maskedCardNumber: maskCardNumber(card.cardNumber),
         cardName: card.cardName || way4?.CardName || 'Card Contract',
         embossedFirstName:
           card.embossedFirstName || way4?.EmbossedFirstName || '',
@@ -292,6 +295,7 @@ export class CardService {
 
     return {
       cardNumber: fallback.cardNumber,
+      maskedCardNumber: maskCardNumber(fallback.cardNumber),
       cardName: fallback.cardName || record.ContractName || 'Card Contract',
       embossedFirstName:
         fallback.embossedFirstName || record.EmbossedFirstName || '',
@@ -373,6 +377,7 @@ export class CardService {
 
     return {
       cardNumber: updated.cardNumber,
+      maskedCardNumber: maskCardNumber(updated.cardNumber),
       cardName: updated.cardName || 'Card Contract',
       embossedFirstName: updated.embossedFirstName || '',
       embossedLastName: updated.embossedLastName || '',

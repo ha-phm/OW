@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form'; // 1. IMPORT THÊM useWatch
-import { Search, BarChart2, Activity, Users, FileText, CreditCard, BarChart } from 'lucide-react';
+import { Search, BarChart2, Activity, Users, FileText, CreditCard, BarChart, Copy, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { AuthMe } from '@/types/user';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminContracts } from '../hooks/useAdminContracts';
@@ -13,6 +14,34 @@ import { AdminContractItem, AdminCardItem } from '@/types/admin-tables';
 import { AdminUser } from '@/types/user';
 import { useAdminStore } from '../store/useAdminStore';
 import { useAdminStats } from '../hooks/useAdminStats';
+import { maskCardNumber } from '../utils/format';
+
+function MaskedCardCell({ cardNumber, maskedCardNumber }: { cardNumber: string; maskedCardNumber?: string }) {
+  const [copied, setCopied] = useState(false);
+  const display = maskedCardNumber || maskCardNumber(cardNumber);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(cardNumber);
+    setCopied(true);
+    toast.success('Đã sao chép số thẻ');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 font-mono text-xs">
+      <span className="text-slate-800 font-medium">{display}</span>
+      <button
+        type="button"
+        onClick={handleCopy}
+        title="Sao chép số thẻ"
+        className="p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition cursor-pointer"
+      >
+        {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+      </button>
+    </div>
+  );
+}
 
 interface AdminDashboardProps {
   authData: AuthMe;
@@ -116,7 +145,17 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
   ];
 
   const cardColumns: ColumnDef<AppFeatures, AdminCardItem, unknown>[] = [
-    { accessorKey: 'cardNumber', header: 'Số thẻ (PAN)', enableSorting: true },
+    {
+      accessorKey: 'cardNumber',
+      header: 'Số thẻ (PAN)',
+      enableSorting: true,
+      cell: ({ row }) => (
+        <MaskedCardCell
+          cardNumber={row.original.cardNumber}
+          maskedCardNumber={row.original.maskedCardNumber}
+        />
+      ),
+    },
     { accessorKey: 'cardName', header: 'Tên thẻ', enableSorting: true },
     { accessorKey: 'embossedFirstName', header: 'Tên in nổi', enableSorting: true },
     { accessorKey: 'embossedLastName', header: 'Họ in nổi', enableSorting: true },

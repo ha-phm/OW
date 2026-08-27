@@ -1,5 +1,6 @@
 export type CardListItem = {
   cardNumber: string;
+  maskedCardNumber?: string;
   cardName: string;
   embossedFirstName: string;
   embossedLastName: string;

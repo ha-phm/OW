@@ -9,14 +9,24 @@ import { quickOpenCard, createSupplementaryCard } from '../api/contracts';
 import { ApiError } from '../api/api';
 import { CardCategory } from '../constants/cardCategories';
 
+// 1. THÊM BẢNG MAP CATEGORY VỚI TÊN THẺ MẶC ĐỊNH
+const CATEGORY_TO_TAG_MAP: Record<string, string> = {
+  [CardCategory.TRAVEL]: 'Thẻ Du Lịch',
+  [CardCategory.ECOMMERCE]: 'Thẻ Thương Mại Điện Tử',
+  [CardCategory.VISA]: 'Thẻ Visa',
+  [CardCategory.CREDIT]: 'Thẻ Credit',
+};
+
 interface QuickOpenCardModalProps {
   existingCards?: { cardNumber: string; productName?: string; cardName?: string }[];
   onClose: () => void;
   onSuccess: (cardPan: string) => void;
 }
 
+// 2. THÊM cardName VÀO FormValues
 interface FormValues {
   cardCategory: CardCategory;
+  cardName: string; // Thêm trường này cho Thẻ Chính
   embossedFirstName: string;
   embossedLastName: string;
   bank: string;
@@ -27,10 +37,9 @@ interface FormValues {
   suppLastName: string;
 }
 
-// 1. ĐƯA FormField RA NGOÀI ĐỂ KHÔNG BỊ RE-RENDER MẤT FOCUS KHI GÕ
 const FormField = ({
   name,
-  control, // Nhận control từ Component cha truyền xuống
+  control,
   label,
   placeholder,
   required = false,
@@ -50,9 +59,12 @@ const FormField = ({
         <ModalField
           label={label}
           value={field.value as string}
-          onChange={(val) => field.onChange(val.toUpperCase())}
+          onChange={(val) => 
+            // Giữ nguyên case cho tên gọi nhớ thẻ, tự động viết hoa cho tên in nổi
+            field.onChange(name === 'cardName' || name === 'suppCardName' ? val : val.toUpperCase())
+          }
           placeholder={placeholder}
-          error={error?.message} // Truyền thẳng lỗi xuống ModalField
+          error={error?.message}
         />
       </div>
     )}
@@ -65,10 +77,10 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
   const [createdCardPan, setCreatedCardPan] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // 2. LẤY THÊM HÀM `reset` ĐỂ XÓA DỮ LIỆU KHI CHUYỂN TAB
   const { control, handleSubmit, setValue, reset, formState: { isSubmitting, errors } } = useForm<FormValues>({
     defaultValues: {
       cardCategory: CardCategory.TRAVEL,
+      cardName: '', // Khởi tạo giá trị mặc định cho cardName
       embossedFirstName: '',
       embossedLastName: '',
       bank: '',
@@ -85,12 +97,19 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
     name: 'cardCategory',
   });
 
+  // 3. CẬP NHẬT LOGIC SUBMIT ĐỂ TỰ ĐỘNG GÁN TÊN NẾU BỎ TRỐNG
   const onSubmitForm = async (data: FormValues) => {
     setApiError(null);
     try {
       if (tab === 'MAIN') {
+        // Lấy tên mặc định từ Tag đã chọn
+        const defaultTagName = CATEGORY_TO_TAG_MAP[data.cardCategory] || 'Thẻ Mới';
+        // Gán tên mặc định nếu user để trống
+        const finalCardName = data.cardName?.trim() ? data.cardName.trim() : defaultTagName;
+
         const result = await quickOpenCard({
           cardCategory: data.cardCategory,
+          cardName: finalCardName, // Truyền tên thẻ đã xử lý xuống API
           embossedFirstName: data.embossedFirstName,
           embossedLastName: data.embossedLastName,
           bank: data.bank,
@@ -99,8 +118,11 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
         });
         setCreatedCardPan(result.cardPan);
       } else {
+        // Tương tự với thẻ phụ
+        const finalSuppCardName = data.suppCardName?.trim() ? data.suppCardName.trim() : 'Thẻ Phụ';
+
         const result = await createSupplementaryCard(data.selectedMainCard, {
-          cardName: data.suppCardName,
+          cardName: finalSuppCardName, // Truyền tên thẻ phụ đã xử lý xuống API
           embossedFirstName: data.suppFirstName,
           embossedLastName: data.suppLastName,
         });
@@ -151,7 +173,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
             setTab('MAIN'); 
             setStep(1); 
             setApiError(null); 
-            reset(); // 3. RESET FORM KHI CHUYỂN TAB
+            reset(); 
           }}
           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
             tab === 'MAIN' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-700'
@@ -165,7 +187,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
             setTab('SUPPLEMENTARY'); 
             setStep(1); 
             setApiError(null); 
-            reset(); // 3. RESET FORM KHI CHUYỂN TAB
+            reset(); 
           }}
           className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
             tab === 'SUPPLEMENTARY' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-700'
@@ -220,8 +242,16 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
             ) : (
               <div className="space-y-4 animate-in slide-in-from-right-2 duration-200">
                 <p className="text-sm font-medium text-slate-700">2. Thông tin in nổi & Thanh toán</p>
+                
+                {/* 4. THÊM INPUT NHẬP TÊN THẺ VÀ GỢI Ý MẶC ĐỊNH THEO TAG */}
+                <FormField 
+                  name="cardName" 
+                  control={control} 
+                  label="Tên gọi nhớ thẻ (Không bắt buộc)" 
+                  placeholder={`Mặc định: ${CATEGORY_TO_TAG_MAP[cardCategory] || 'Thẻ Mới'}`} 
+                />
+
                 <div className="grid grid-cols-2 gap-3">
-                  {/* 4. BỔ SUNG control={control} VÀO TẤT CẢ FormField */}
                   <FormField name="embossedFirstName" control={control} label="Tên (First Name) *" placeholder="VD: VAN A" required />
                   <FormField name="embossedLastName" control={control} label="Họ (Last Name) *" placeholder="VD: NGUYEN" required />
                 </div>
@@ -284,7 +314,13 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
               )}
             </div>
             
-            <FormField name="suppCardName" control={control} label="Tên gọi nhớ thẻ (Không bắt buộc)" placeholder="VD: Thẻ tiêu vặt cho con..." />
+            {/* 5. CẬP NHẬT PLACEHOLDER THẺ PHỤ */}
+            <FormField 
+              name="suppCardName" 
+              control={control} 
+              label="Tên gọi nhớ thẻ (Không bắt buộc)" 
+              placeholder="Mặc định: Thẻ Phụ" 
+            />
             
             <div className="grid grid-cols-2 gap-3">
               <FormField name="suppFirstName" control={control} label="Tên người thân *" placeholder="VD: VAN A" required />

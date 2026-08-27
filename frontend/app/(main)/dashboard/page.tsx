@@ -17,11 +17,12 @@ import { CardDetailModal } from '../../../modals/CardDetailModal';
 import { QuickOpenCardModal } from '../../../modals/QuickOpenCardModal';
 import { AdminDashboard } from '../../../components/AdminDashboard';
 
+// Màu Solid (Đơn sắc) chuẩn Banking cho thẻ ảo Mock
 const MOCK_CARDS = [
-  { id: '1', gradient: 'from-slate-700 to-slate-900', type: 'Signature' },
-  { id: '2', gradient: 'from-blue-500 to-blue-800', type: 'Platinum' },
-  { id: '3', gradient: 'from-amber-400 to-orange-600', type: 'Gold' },
-  { id: '4', gradient: 'from-teal-400 to-emerald-600', type: 'Infinite' },
+  { id: '1', bgClass: 'bg-slate-900', type: 'Signature' },
+  { id: '2', bgClass: 'bg-blue-800', type: 'Platinum' },
+  { id: '3', bgClass: 'bg-amber-700', type: 'Gold' },
+  { id: '4', bgClass: 'bg-teal-800', type: 'Infinite' },
 ];
 
 export default function DashboardPage() {
@@ -80,18 +81,20 @@ export default function DashboardPage() {
         <h2 className="text-2xl font-bold text-slate-900">{displayName}</h2>
       </div>
 
-      <div className="relative z-0 flex min-h-55 sm:min-h-65 w-full flex-col justify-center overflow-hidden rounded-3xl bg-linear-to-br from-emerald-400 to-teal-600 p-6 shadow-md sm:p-8">
+      {/* ĐÃ SỬA: Đổi nền khối Hero thành bg-brand để đồng bộ với Sidebar */}
+      <div className="relative z-0 flex min-h-55 sm:min-h-65 w-full flex-col justify-center overflow-hidden rounded-3xl bg-emerald-600 p-6 shadow-md sm:p-8">
         <div className="relative z-40 max-w-[55%] sm:max-w-[50%]">
           <h3 className="mb-2 text-lg sm:text-3xl font-bold text-white leading-tight drop-shadow-md">
             Khám phá đặc quyền <br className="hidden sm:block" /> thẻ xanh
           </h3>
-          <p className="mb-5 sm:mb-6 text-xs sm:text-sm text-emerald-50 drop-shadow-md">
+          <p className="mb-5 sm:mb-6 text-xs sm:text-sm text-white/90 drop-shadow-md">
             Trải nghiệm thanh toán không giới hạn.
           </p>
           <div>
             <button
               onClick={() => setIsQuickOpenModalVisible(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 sm:px-8 py-2.5 text-sm font-bold text-teal-600 shadow-lg shadow-black/10 transition-transform hover:-translate-y-0.5 hover:bg-slate-50"
+              // ĐÃ SỬA: Đổi text button thành text-brand và hover thành bg-brand-mint
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 sm:px-8 py-2.5 text-sm font-bold text-brand shadow-lg shadow-black/10 transition-transform hover:-translate-y-0.5 hover:bg-brand-mint hover:text-brand-dark cursor-pointer"
             >
               Mở thẻ ngay
             </button>
@@ -110,7 +113,7 @@ export default function DashboardPage() {
             return (
               <MockCard 
                 key={mockCard.id}
-                gradient={mockCard.gradient}
+                bgClass={mockCard.bgClass}
                 cardType={mockCard.type}
                 className={`absolute left-0 top-1/2 -translate-y-1/2 origin-center transition-all duration-1000 ease-in-out ${transformClasses}`}
               />
@@ -146,12 +149,12 @@ export default function DashboardPage() {
             <p className="text-sm text-slate-500">Bạn chưa có thẻ nào.</p>
           </div>
         ) : (
-          <div className="flex w-full snap-x snap-mandatory flex-nowrap gap-4 overflow-x-auto pb-4 sm:gap-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] scrollbar-none">
+          <div className="flex w-full snap-x snap-mandatory flex-nowrap gap-4 overflow-x-auto pb-6 pt-2 sm:gap-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] scrollbar-none scroll-smooth">
             {cards.map((card) => (
               <button
                 key={card.cardNumber}
                 onClick={() => setSelectedCard(card.cardNumber)}
-                className="w-[85vw] shrink-0 snap-center text-left transition-transform hover:-translate-y-1 sm:w-85"
+                className="w-[85vw] shrink-0 snap-center sm:snap-start text-left transition-transform hover:-translate-y-1 sm:w-[320px] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
                 <VirtualCardVisual card={card} />
               </button>
@@ -160,7 +163,7 @@ export default function DashboardPage() {
             {cards.length >= 3 && (
               <Link 
                 href="/cards" 
-                className="flex w-40 sm:w-50 shrink-0 snap-center flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-white/30 transition hover:bg-slate-50/50 hover:border-emerald-300"
+                className="flex w-40 sm:w-50 shrink-0 snap-center flex-col items-center justify-center gap-3 rounded-2xl sm:rounded-3xl border-2 border-dashed border-slate-300 bg-white/30 transition hover:bg-slate-50/50 hover:border-emerald-300"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                   <ChevronRight className="h-6 w-6" />
@@ -191,14 +194,15 @@ export default function DashboardPage() {
   );
 }
 
-function MockCard({ gradient, cardType, className }: { gradient: string; cardType: string; className: string }) {
+// Bỏ gradient, dùng màu Solid, làm Chip phẳng hơn
+function MockCard({ bgClass, cardType, className }: { bgClass: string; cardType: string; className: string }) {
   return (
-    <div className={`flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-xl bg-linear-to-br aspect-[1.586/1] w-40 sm:w-56 text-white ${gradient} ${className}`}>
+    <div className={`flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 p-3 sm:p-4 shadow-xl aspect-[1.586/1] w-40 sm:w-56 text-white ${bgClass} ${className}`}>
       <div className="flex items-center justify-between opacity-80">
         <span className="text-[8px] sm:text-[10px] font-bold tracking-widest uppercase">{cardType}</span>
         <Wifi className="h-3 w-3 sm:h-4 sm:w-4 rotate-90" />
       </div>
-      <div className="mt-1 sm:mt-2 relative h-5 w-7 sm:h-7 sm:w-9 rounded bg-linear-to-br from-yellow-200 to-yellow-500 shadow-inner flex items-center justify-center opacity-90 overflow-hidden">
+      <div className="mt-1 sm:mt-2 relative h-5 w-7 sm:h-7 sm:w-9 rounded bg-amber-400 border border-amber-500/50 flex items-center justify-center opacity-90 overflow-hidden">
         <div className="w-full h-px bg-black/10 absolute" />
         <div className="h-full w-px bg-black/10 absolute" />
       </div>
@@ -215,7 +219,7 @@ function MockCard({ gradient, cardType, className }: { gradient: string; cardTyp
           <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-yellow-400/90 mix-blend-multiply" />
         </div>
       </div>
-      <div className="absolute -left-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+      <div className="absolute -left-10 -top-10 h-32 w-32 rounded-full bg-white/5 blur-2xl pointer-events-none" />
     </div>
   );
 }

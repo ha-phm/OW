@@ -85,7 +85,7 @@ export function CardDetailModal({
       ) : data ? (
         <div className="space-y-5 animate-in fade-in duration-300">
           <div className="flex justify-center">
-            <VirtualCardVisual card={data} revealFull />
+            <VirtualCardVisual card={data} allowToggle />
           </div>
 
           {isEditing ? (
