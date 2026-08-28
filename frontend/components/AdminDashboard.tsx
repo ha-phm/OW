@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form'; // 1. IMPORT THÊM useWatch
-import { Search, BarChart2, Activity, Users, FileText, CreditCard, BarChart, Copy, Check } from 'lucide-react';
-import { toast } from 'sonner';
+import { useEffect } from 'react';
+import { useForm, useWatch } from 'react-hook-form'; 
+import { Search, BarChart2, Activity, Users, FileText, CreditCard, BarChart } from 'lucide-react';
 import { AuthMe } from '@/types/user';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminContracts } from '../hooks/useAdminContracts';
@@ -14,34 +13,6 @@ import { AdminContractItem, AdminCardItem } from '@/types/admin-tables';
 import { AdminUser } from '@/types/user';
 import { useAdminStore } from '../store/useAdminStore';
 import { useAdminStats } from '../hooks/useAdminStats';
-import { maskCardNumber } from '../utils/format';
-
-function MaskedCardCell({ cardNumber, maskedCardNumber }: { cardNumber: string; maskedCardNumber?: string }) {
-  const [copied, setCopied] = useState(false);
-  const display = maskedCardNumber || maskCardNumber(cardNumber);
-
-  const handleCopy = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(cardNumber);
-    setCopied(true);
-    toast.success('Đã sao chép số thẻ');
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="flex items-center gap-1.5 font-mono text-xs">
-      <span className="text-slate-800 font-medium">{display}</span>
-      <button
-        type="button"
-        onClick={handleCopy}
-        title="Sao chép số thẻ"
-        className="p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition cursor-pointer"
-      >
-        {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-      </button>
-    </div>
-  );
-}
 
 interface AdminDashboardProps {
   authData: AuthMe;
@@ -54,8 +25,7 @@ const convertFiltersToObject = (filters: ColumnFiltersState) => {
   }, {} as Record<string, string>);
 };
 
-// Mới: chuyển SortingState (v9) -> { sortBy, sortOrder } để gửi cho API.
-// Nếu backend hỗ trợ nhiều cột sort thì đổi hàm này để trả về mảng thay vì 1 cặp.
+// Chuyển SortingState (v9) -> { sortBy, sortOrder } để gửi cho API.
 const convertSortingToParams = (sorting: SortingState) => {
   const [first] = sorting;
   if (!first) return {};
@@ -69,12 +39,22 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
   const {
     activeTab, setActiveTab,
     contractsParams, setContractsParams,
-    cardsParams, setCardsParams
+    cardsParams, setCardsParams,
+    usersParams, setUsersParams, // Đã thêm usersParams
   } = useAdminStore();
 
-  const { data: usersData, isLoading: isUsersLoading, isFetching: isUsersFetching } = useAdminUsers({
-    enabled: activeTab === 'USERS'
-  });
+  // ĐÃ SỬA: Tách tham số truyền vào API và options của React Query
+  const { data: usersData, isLoading: isUsersLoading, isFetching: isUsersFetching } = useAdminUsers(
+    {
+      search: usersParams.search,
+      page: usersParams.page,
+      pageSize: usersParams.pageSize,
+      ...convertSortingToParams(usersParams.sorting || []),
+    },
+    {
+      enabled: activeTab === 'USERS'
+    }
+  );
 
   const { data: contractsData, isLoading: isContractsLoading, isFetching: isContractsFetching } = useAdminContracts({
     search: contractsParams.search,
@@ -96,23 +76,24 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     enabled: activeTab === 'CARDS'
   });
 
-  // 2. LẤY `control` THAY VÌ `watch` TỪ useForm
   const { register, control, setValue } = useForm({
     defaultValues: { searchInput: '' }
   });
 
-  // 3. DÙNG `useWatch` ĐỂ THEO DÕI GIÁ TRỊ NHẬP VÀO
   const searchInput = useWatch({
     control,
     name: 'searchInput',
   });
 
+  // ĐÃ SỬA: Đồng bộ thanh tìm kiếm cho cả tab USERS
   useEffect(() => {
     if (activeTab === 'CONTRACTS') setValue('searchInput', contractsParams.search);
     else if (activeTab === 'CARDS') setValue('searchInput', cardsParams.search);
+    else if (activeTab === 'USERS') setValue('searchInput', usersParams.search);
     else setValue('searchInput', '');
-  }, [activeTab, contractsParams.search, cardsParams.search, setValue]);
+  }, [activeTab, contractsParams.search, cardsParams.search, usersParams.search, setValue]);
 
+  // ĐÃ SỬA: Cập nhật tìm kiếm vào store cho cả tab USERS
   useEffect(() => {
     const timer = setTimeout(() => {
       if (activeTab === 'CONTRACTS' && searchInput !== contractsParams.search) {
@@ -121,21 +102,41 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
       if (activeTab === 'CARDS' && searchInput !== cardsParams.search) {
         setCardsParams({ search: searchInput });
       }
+      if (activeTab === 'USERS' && searchInput !== usersParams.search) {
+        setUsersParams({ search: searchInput });
+      }
     }, 350);
     return () => clearTimeout(timer);
-  }, [searchInput, activeTab, setContractsParams, setCardsParams, contractsParams.search, cardsParams.search]);
+  }, [searchInput, activeTab, setContractsParams, setCardsParams, setUsersParams, contractsParams.search, cardsParams.search, usersParams.search]);
 
   // ------------------------------------------------------------------
-  // V9: ColumnDef nhận thêm generic TFeatures (lấy từ AdminDataTable qua `AppFeatures`).
-  // enableSorting: true bật sort cho cột đó (rowSortingFeature mặc định enable hết,
-  // nên chỉ cần khai báo false cho cột KHÔNG muốn sort).
+  // ĐỊNH NGHĨA CỘT (COLUMNS)
   // ------------------------------------------------------------------
   const contractColumns: ColumnDef<AppFeatures, AdminContractItem, unknown>[] = [
     { accessorKey: 'contractNumber', header: 'Số hợp đồng', enableSorting: true },
     { accessorKey: 'contractName', header: 'Tên hợp đồng', enableSorting: true },
     { accessorKey: 'type', header: 'Loại', enableSorting: true },
     { accessorKey: 'productCode', header: 'Sản phẩm', enableSorting: false },
-    { accessorKey: 'userEmail', header: 'Email chủ sở hữu', enableSorting: true },
+    { 
+      accessorKey: 'userEmail', 
+      header: 'Email chủ sở hữu', 
+      enableSorting: true,
+      cell: ({ row }) => {
+        const email = row.getValue<string>('userEmail');
+        const isActive = row.original.userIsActive; 
+        
+        return (
+          <div className="flex items-center gap-2">
+            <span>{email}</span>
+            {isActive === false && (
+              <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] sm:text-xs text-red-600 font-bold whitespace-nowrap">
+                Bị khóa
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
     {
       accessorKey: 'createdAt',
       header: 'Ngày tạo',
@@ -145,21 +146,30 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
   ];
 
   const cardColumns: ColumnDef<AppFeatures, AdminCardItem, unknown>[] = [
-    {
-      accessorKey: 'cardNumber',
-      header: 'Số thẻ (PAN)',
-      enableSorting: true,
-      cell: ({ row }) => (
-        <MaskedCardCell
-          cardNumber={row.original.cardNumber}
-          maskedCardNumber={row.original.maskedCardNumber}
-        />
-      ),
-    },
+    { accessorKey: 'cardNumber', header: 'Số thẻ (PAN)', enableSorting: true },
     { accessorKey: 'cardName', header: 'Tên thẻ', enableSorting: true },
     { accessorKey: 'embossedFirstName', header: 'Tên in nổi', enableSorting: true },
     { accessorKey: 'embossedLastName', header: 'Họ in nổi', enableSorting: true },
-    { accessorKey: 'userEmail', header: 'Email chủ sở hữu', enableSorting: true },
+    { 
+      accessorKey: 'userEmail', 
+      header: 'Email chủ sở hữu', 
+      enableSorting: true,
+      cell: ({ row }) => {
+        const email = row.getValue<string>('userEmail');
+        const isActive = row.original.userIsActive; 
+        
+        return (
+          <div className="flex items-center gap-2">
+            <span>{email}</span>
+            {isActive === false && (
+              <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] sm:text-xs text-red-600 font-bold whitespace-nowrap">
+                Bị khóa
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
     {
       accessorKey: 'createdAt',
       header: 'Ngày tạo',
@@ -169,7 +179,28 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
   ];
 
   const userColumns: ColumnDef<AppFeatures, AdminUser, unknown>[] = [
-    { accessorKey: 'email', header: 'Email', enableSorting: true },
+    { 
+      accessorKey: 'email', 
+      header: 'Email', 
+      enableSorting: true,
+      cell: ({ row }) => {
+        const email = row.getValue<string>('email');
+        const isActive = row.original.isActive; 
+        
+        return (
+          <div className="flex items-center gap-2">
+            <span className={isActive === false ? 'text-slate-400 line-through' : ''}>
+              {email}
+            </span>
+            {isActive === false && (
+              <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] sm:text-xs text-red-600 font-bold whitespace-nowrap">
+                Vô hiệu hóa
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
     {
       accessorKey: 'clientNumber',
       header: 'Số khách hàng',
@@ -185,7 +216,8 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     },
   ];
 
-  const totalUsersCount = Array.isArray(usersData) ? usersData.length : 0;
+  // ĐÃ SỬA: Đếm tổng user dựa trên meta data trả về
+  const totalUsersCount = usersData?.meta?.total || 0;
   const totalContractsCount = contractsData?.meta?.total || 0;
   const totalCardsCount = cardsData?.meta?.total || 0;
   const adminName = authData?.email?.split('@')[0] || 'Quản trị viên';
@@ -275,36 +307,38 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
           </button>
         </div>
 
-        {activeTab !== 'USERS' && (
-          <div className="relative w-full lg:w-96 shrink-0">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-              <Search className="h-4 w-4 text-slate-400" />
-            </div>
-            <input
-              {...register('searchInput')}
-              type="text"
-              placeholder="Tìm kiếm tổng hợp hệ thống..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-shadow"
-            />
+        {/* ĐÃ SỬA: Hiển thị thanh search cho cả 3 tab */}
+        <div className="relative w-full lg:w-96 shrink-0">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+            <Search className="h-4 w-4 text-slate-400" />
           </div>
-        )}
+          <input
+            {...register('searchInput')}
+            type="text"
+            placeholder="Tìm kiếm tổng hợp hệ thống..."
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-shadow"
+          />
+        </div>
       </div>
 
       {/* RENDER BẢNG (TABLES) */}
       <div className="bg-white rounded-2xl w-full">
+        {/* ĐÃ SỬA: Bảng USERS nhận đủ props phân trang */}
         {activeTab === 'USERS' && (
           <AdminDataTable
             columns={userColumns}
-            data={Array.isArray(usersData) ? usersData : []}
-            page={1}
-            pageSize={totalUsersCount || 10}
-            totalPages={1}
+            data={usersData?.data || []} 
+            page={usersParams.page || 1}
+            pageSize={usersParams.pageSize || 10}
+            totalPages={usersData?.meta?.totalPages || 1}
             total={totalUsersCount}
-            onPageChange={() => {}}
-            onPageSizeChange={() => {}}
+            onPageChange={(page) => setUsersParams({ page })}
+            onPageSizeChange={(pageSize) => setUsersParams({ pageSize, page: 1 })}
             isLoading={isUsersLoading}
             isFetching={isUsersFetching}
             showColumnFilters={false}
+            sorting={usersParams.sorting}
+            onSortingChange={(sorting) => setUsersParams({ sorting })}
           />
         )}
         {activeTab === 'CONTRACTS' && (

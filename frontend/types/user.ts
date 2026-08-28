@@ -6,6 +6,7 @@ export interface AdminUser {
   clientId: string | null;
   clientNumber: string | null;
   role: Role;
+  isActive: boolean;
   createdAt: string;
 }
 

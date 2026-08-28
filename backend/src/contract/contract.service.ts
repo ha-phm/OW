@@ -378,6 +378,7 @@ export class ContractService {
         embossedFirstName: dto.embossedFirstName,
         embossedLastName: dto.embossedLastName,
         productCode,
+        cardName: dto.cardName,
       },
     });
 

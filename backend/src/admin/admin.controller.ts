@@ -7,12 +7,14 @@ import {
   Body,
   UseGuards,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AdminService } from './admin.service';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { GetAdminUsersQueryDto } from './dto/get-admin-users-query.dto';
 
 @UseGuards(RolesGuard)
 @Roles(Role.ADMIN)
@@ -26,8 +28,8 @@ export class AdminController {
   }
 
   @Get('users')
-  findAll() {
-    return this.adminService.findAllUsers();
+  async listUsers(@Query() query: GetAdminUsersQueryDto) {
+    return this.adminService.listAllUsers(query);
   }
 
   @Patch('users/:id/role')

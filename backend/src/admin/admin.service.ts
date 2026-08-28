@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Role, ContractType } from '@prisma/client';
+import { Prisma, Role, ContractType } from '@prisma/client';
 import { GetAdminContractsQueryDto } from './dto/get-admin-contracts-query.dto';
 import { GetAdminCardsQueryDto } from './dto/get-admin-cards-query.dto';
 import { PaginatedResult, buildMeta } from './helpers/pagination.helper';
@@ -10,6 +10,7 @@ import {
 } from './helpers/contract-query.helper';
 import { buildCardWhere, buildCardOrderBy } from './helpers/card-query.helper';
 import { maskCardNumber } from '../common/utils/text.utils';
+import { GetAdminUsersQueryDto } from './dto/get-admin-users-query.dto';
 
 const userListSelect = {
   id: true,
@@ -17,6 +18,7 @@ const userListSelect = {
   clientId: true,
   clientNumber: true,
   role: true,
+  isActive: true,
   createdAt: true,
 } as const;
 
@@ -28,6 +30,7 @@ export interface AdminContractItem {
   productCode: string;
   clientNumber: string;
   userEmail: string;
+  userIsActive: boolean;
   createdAt: Date;
 }
 
@@ -42,6 +45,7 @@ export interface AdminCardItem {
   issuingContractNumber: string;
   userEmail: string;
   clientNumber: string;
+  userIsActive: boolean;
   createdAt: Date;
 }
 
@@ -49,11 +53,39 @@ export interface AdminCardItem {
 export class AdminService {
   constructor(private prisma: PrismaService) {}
 
-  findAllUsers() {
-    return this.prisma.user.findMany({
-      select: userListSelect,
-      orderBy: { createdAt: 'desc' },
-    });
+  async listAllUsers(query: GetAdminUsersQueryDto) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 10;
+    const skip = (page - 1) * pageSize;
+
+    // 2. Dùng type chuẩn của Prisma thay vì 'any'
+    const where: Prisma.UserWhereInput = {};
+    if (query.search) {
+      where.email = {
+        contains: query.search,
+        mode: 'insensitive', // Tìm kiếm không phân biệt hoa thường
+      };
+    }
+
+    // 3. Khai báo type cho orderBy
+    let orderBy: Prisma.UserOrderByWithRelationInput = { createdAt: 'desc' };
+    if (query.sortBy) {
+      orderBy = { [query.sortBy]: query.sortOrder ?? 'desc' };
+    }
+
+    // 4. Thực thi truy vấn
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        orderBy,
+        skip,
+        take: pageSize,
+        select: userListSelect,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return { data: users, meta: buildMeta(page, pageSize, total) };
   }
 
   async updateUserRole(id: number, role: Role) {
@@ -69,8 +101,14 @@ export class AdminService {
   async deleteUser(id: number) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
-    await this.prisma.user.delete({ where: { id } });
-    return { message: 'Đã xoá người dùng' };
+
+    // Thay vì delete, chúng ta update isActive = false
+    await this.prisma.user.update({
+      where: { id },
+      data: { isActive: false },
+    });
+
+    return { message: 'Đã vô hiệu hoá tài khoản người dùng' };
   }
 
   // ---------------------------------------------------------------------
@@ -98,7 +136,7 @@ export class AdminService {
         orderBy,
         skip,
         take: query.pageSize,
-        include: { user: { select: { email: true } } },
+        include: { user: { select: { email: true, isActive: true } } },
       }),
       this.prisma.contract.count({ where }),
     ]);
@@ -111,6 +149,7 @@ export class AdminService {
       productCode: c.productCode ?? '',
       clientNumber: c.clientNumber,
       userEmail: c.user?.email ?? '',
+      userIsActive: c.user?.isActive ?? false,
       createdAt: c.createdAt,
     }));
 
@@ -138,7 +177,9 @@ export class AdminService {
         skip,
         take: query.pageSize,
         include: {
-          issuingContract: { include: { user: { select: { email: true } } } },
+          issuingContract: {
+            include: { user: { select: { email: true, isActive: true } } },
+          },
         },
       }),
       this.prisma.card.count({ where }),
@@ -155,6 +196,7 @@ export class AdminService {
       issuingContractNumber: card.issuingContract.contractNumber,
       userEmail: card.issuingContract.user?.email ?? '',
       clientNumber: card.issuingContract.clientNumber,
+      userIsActive: card.issuingContract.user?.isActive ?? false,
       createdAt: card.createdAt,
     }));
 

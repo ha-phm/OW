@@ -25,6 +25,8 @@ model User {
 
   // Một user có thể có nhiều hợp đồng (Liability và/hoặc Issuing)
   contracts Contract[]
+
+  isActive     Boolean    @default(true)
 }
 
 enum ContractType {
@@ -38,7 +40,7 @@ model Contract {
   clientNumber      String
   contractNumber    String       @unique
   applicationNumber String?
-  type              ContractType // LIABILITY hoặc ISSUING
+  type              ContractType 
   productCode       String?
   contractName      String?
   status            String       @default("ACTIVE")

@@ -71,6 +71,12 @@ export class AuthService {
       throw new UnauthorizedException('Tài khoản không tồn tại');
     }
 
+    if (user.isActive === false) {
+      throw new UnauthorizedException(
+        'Tài khoản đã bị khóa hoặc vô hiệu hóa. Vui lòng liên hệ Admin.',
+      );
+    }
+
     const isPasswordValid = await bcrypt.compare(pass, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Sai mật khẩu');
@@ -95,6 +101,13 @@ export class AuthService {
       if (!user || !user.refreshToken) {
         throw new UnauthorizedException(
           'Không thể xác thực. Vui lòng đăng nhập lại.',
+        );
+      }
+
+      // 🛑 THÊM ĐOẠN NÀY: Chặn refresh token nếu tài khoản đã bị khóa
+      if (user.isActive === false) {
+        throw new UnauthorizedException(
+          'Tài khoản đã bị khóa. Phiên đăng nhập kết thúc.',
         );
       }
 

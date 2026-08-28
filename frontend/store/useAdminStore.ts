@@ -70,6 +70,16 @@ export const useAdminStore = create<AdminState>((set) => ({
 
   setUsersParams: (newParams) =>
     set((state) => ({
-      usersParams: { ...state.usersParams, ...newParams },
+      usersParams: {
+        ...state.usersParams,
+        ...newParams,
+        // Tự động nhảy về trang 1 nếu thay đổi tìm kiếm, lọc, hoặc sắp xếp
+        page:
+          newParams.search !== undefined ||
+          newParams.columnFilters !== undefined ||
+          newParams.sorting !== undefined
+            ? 1
+            : (newParams.page ?? state.usersParams.page),
+      },
     })),
 }));

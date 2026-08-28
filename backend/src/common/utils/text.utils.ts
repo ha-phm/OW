@@ -42,4 +42,3 @@ export function maskCardNumber(
 
   return masked.replace(/(.{4})/g, '$1 ').trim();
 }
-

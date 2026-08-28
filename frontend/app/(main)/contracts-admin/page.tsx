@@ -144,7 +144,26 @@ export default function AdminContractsPage() {
       },
     },
     { accessorKey: 'clientNumber', header: 'Mã KH', enableSorting: true },
-    { accessorKey: 'userEmail', header: 'Chủ sở hữu', enableSorting: true },
+    { 
+      accessorKey: 'userEmail', 
+      header: 'Chủ sở hữu', 
+      enableSorting: true,
+      cell: ({ row }) => {
+        const email = row.getValue<string>('userEmail');
+        const isActive = row.original.userIsActive; 
+        
+        return (
+          <div className="flex items-center gap-2">
+            <span>{email}</span>
+            {isActive === false && (
+              <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] sm:text-xs text-red-600 font-bold whitespace-nowrap">
+                Bị khóa
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
     {
       accessorKey: 'createdAt',
       header: 'Ngày tạo',

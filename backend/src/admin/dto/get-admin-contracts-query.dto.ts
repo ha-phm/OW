@@ -22,7 +22,6 @@ export class GetAdminContractsQueryDto extends PaginationQueryDto {
   @IsString()
   type?: string;
 
-  // --- Thêm 2 field này để hết lỗi 400 ---
   @IsOptional()
   @IsIn([
     'contractNumber',

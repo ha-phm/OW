@@ -17,4 +17,8 @@ export class CreateCardApplicationDto {
   @IsOptional()
   @IsString()
   embossedCompanyName?: string;
+
+  @IsString({ message: 'Tên thẻ phải là một chuỗi văn bản' })
+  @IsOptional()
+  cardName?: string;
 }

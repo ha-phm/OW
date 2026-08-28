@@ -3,8 +3,10 @@ import { AdminUser, Role } from '../types/user';
 import {
   PaginatedAdminContracts,
   PaginatedAdminCards,
+  PaginatedAdminUsers, // MỚI IMPORT
   GetAdminContractsParams,
   GetAdminCardsParams,
+  GetAdminUsersParams, // MỚI IMPORT
 } from '../types/admin-tables';
 
 export interface AdminDashboardStats {
@@ -15,7 +17,31 @@ export interface AdminDashboardStats {
 }
 
 export const adminService = {
-  getUsers: () => apiGet<AdminUser[]>('/admin/users'),
+  // ---------------------------------------------------------------------
+  // QUẢN LÝ NGƯỜI DÙNG
+  // ---------------------------------------------------------------------
+  listUsers: (
+    params: GetAdminUsersParams & Record<string, unknown>
+  ): Promise<PaginatedAdminUsers> => {
+    const query = new URLSearchParams({
+      page: String(params.page || 1),
+      pageSize: String(params.pageSize || 10),
+    });
+    
+    if (params.search && typeof params.search === 'string') {
+      query.set('search', params.search.trim());
+    }
+
+    // Quét các biến sắp xếp (sort) hoặc filter khác
+    const excludeKeys = ['page', 'pageSize', 'search', 'filters', 'columnFilters'];
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '' && !excludeKeys.includes(key)) {
+        query.set(key, String(value));
+      }
+    });
+
+    return apiGet<PaginatedAdminUsers>(`/admin/users?${query.toString()}`);
+  },
 
   updateRole: (id: number, role: Role) =>
     apiPatch<AdminUser, { role: Role }>(`/admin/users/${id}/role`, { role }),
@@ -23,13 +49,15 @@ export const adminService = {
   deleteUser: (id: number) =>
     apiDelete<{ message: string }>(`/admin/users/${id}`),
 
+  // ---------------------------------------------------------------------
+  // QUẢN LÝ HỢP ĐỒNG
+  // ---------------------------------------------------------------------
   listContracts: (
-    // THAY ĐỔI: Dùng unknown thay vì any để vượt qua ESLint
     params: GetAdminContractsParams & Record<string, unknown>,
   ): Promise<PaginatedAdminContracts> => {
     const query = new URLSearchParams({
-      page: String(params.page),
-      pageSize: String(params.pageSize),
+      page: String(params.page || 1),
+      pageSize: String(params.pageSize || 10),
     });
     
     if (params.search && typeof params.search === 'string') {
@@ -39,7 +67,6 @@ export const adminService = {
       query.set('type', params.type);
     }
 
-    // 1. Quét toàn bộ các biến lọc dạng phẳng (flat) từ Zustand
     const excludeKeys = ['page', 'pageSize', 'search', 'type', 'filters', 'columnFilters'];
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '' && !excludeKeys.includes(key)) {
@@ -47,7 +74,6 @@ export const adminService = {
       }
     });
 
-    // 2. Vẫn giữ lại params.filters đề phòng trường hợp dùng ở nơi khác
     if (params.filters && typeof params.filters === 'object') {
       Object.entries(params.filters as Record<string, unknown>).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
@@ -61,20 +87,21 @@ export const adminService = {
     );
   },
 
+  // ---------------------------------------------------------------------
+  // QUẢN LÝ THẺ
+  // ---------------------------------------------------------------------
   listCards: (
-    // THAY ĐỔI: Dùng unknown thay vì any để vượt qua ESLint
     params: GetAdminCardsParams & Record<string, unknown>
   ): Promise<PaginatedAdminCards> => {
     const query = new URLSearchParams({
-      page: String(params.page),
-      pageSize: String(params.pageSize),
+      page: String(params.page || 1),
+      pageSize: String(params.pageSize || 10),
     });
     
     if (params.search && typeof params.search === 'string') {
       query.set('search', params.search.trim());
     }
 
-    // 1. Quét toàn bộ các biến lọc dạng phẳng (flat) từ Zustand
     const excludeKeys = ['page', 'pageSize', 'search', 'filters', 'columnFilters'];
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '' && !excludeKeys.includes(key)) {
@@ -82,7 +109,6 @@ export const adminService = {
       }
     });
 
-    // 2. Vẫn giữ lại params.filters 
     if (params.filters && typeof params.filters === 'object') {
       Object.entries(params.filters as Record<string, unknown>).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {

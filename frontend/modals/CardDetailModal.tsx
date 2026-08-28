@@ -141,7 +141,10 @@ export function CardDetailModal({
           ) : (
             <>
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-xl bg-slate-50 p-4 text-xs sm:grid-cols-3 border border-slate-100">
-                <DetailRow label="Sản phẩm" value={data.productName} />
+                <DetailRow 
+                  label="Tên thẻ" 
+                  value={data.cardName || data.productName} 
+                />
                 <DetailRow
                   label="Hạn mức"
                   value={data.creditLimit != null ? formatVnd(data.creditLimit) : undefined}

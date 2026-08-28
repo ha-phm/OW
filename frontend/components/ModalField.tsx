@@ -16,7 +16,14 @@ export function ModalField({
   return (
     <label className="block w-full">
       <span className="mb-1.5 block text-xs font-medium text-slate-500">
-        {label} {optional && <span className="text-slate-300">(không bắt buộc)</span>}
+        {label.includes('*') ? (
+          <>
+            {label.replace('*', '')}
+            <span className="text-red-500 font-bold">*</span>
+          </>
+        ) : (
+          label
+        )} {optional && <span className="text-slate-300">(không bắt buộc)</span>}
       </span>
       <input
         type="text"
