@@ -3,10 +3,10 @@ import { AdminUser, Role } from '../types/user';
 import {
   PaginatedAdminContracts,
   PaginatedAdminCards,
-  PaginatedAdminUsers, // MỚI IMPORT
+  PaginatedAdminUsers, 
   GetAdminContractsParams,
   GetAdminCardsParams,
-  GetAdminUsersParams, // MỚI IMPORT
+  GetAdminUsersParams, 
 } from '../types/admin-tables';
 
 export interface AdminDashboardStats {
@@ -32,7 +32,6 @@ export const adminService = {
       query.set('search', params.search.trim());
     }
 
-    // Quét các biến sắp xếp (sort) hoặc filter khác
     const excludeKeys = ['page', 'pageSize', 'search', 'filters', 'columnFilters'];
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '' && !excludeKeys.includes(key)) {

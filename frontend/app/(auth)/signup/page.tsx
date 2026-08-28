@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import SignupForm from '../../../components/SignupForm';
-import Navbar from '../../../components/NavBar'; // Nhớ check lại đường dẫn import
+import SignupForm from '../../../components/Signup/SignupForm';
+import Navbar from '../../../components/Home/NavBar'; // Nhớ check lại đường dẫn import
 
 export default function SignupPage() {
   const router = useRouter();

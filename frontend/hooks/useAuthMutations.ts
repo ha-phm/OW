@@ -4,8 +4,6 @@ import { AxiosError } from 'axios';
 import { authService, LoginPayload } from '@/services/auth.service';
 import { SignupFormValues } from '../schema/client.schema';
 import { toast } from 'sonner';
-
-// Bổ sung import setAccessToken từ file cấu hình axios của bạn
 import { setAccessToken } from '@/api/api'; 
 
 interface ErrorResponse {
@@ -18,8 +16,6 @@ export function useLogin() {
   return useMutation({
     mutationFn: (payload: LoginPayload) => authService.login(payload),
     onSuccess: (data) => {
-      // 1. CHỈ LƯU ACCESS TOKEN VÀO RAM, XOÁ BỎ LOCALSTORAGE
-      // Lấy data.accessToken hoặc data.access_token tuỳ theo backend trả về
       const token = data.accessToken || data.access_token || null;
       setAccessToken(token);
       
@@ -55,7 +51,6 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => authService.logout(),
     onSettled: () => {
-      // 2. XOÁ ACCESS TOKEN TRÊN RAM THAY VÌ LOCALSTORAGE
       setAccessToken(null);
       router.push('/login');
     },

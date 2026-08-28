@@ -4,15 +4,15 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form'; 
 import { Search, BarChart2, Activity, Users, FileText, CreditCard, BarChart } from 'lucide-react';
 import { AuthMe } from '@/types/user';
-import { useAdminUsers } from '../hooks/useAdminUsers';
-import { useAdminContracts } from '../hooks/useAdminContracts';
-import { useAdminCards } from '../hooks/useAdminCards';
+import { useAdminUsers } from '../../hooks/useAdminUsers';
+import { useAdminContracts } from '../../hooks/useAdminContracts';
+import { useAdminCards } from '../../hooks/useAdminCards';
 import { AdminDataTable, type AppFeatures } from '@/components/AdminDataTable';
 import { ColumnDef, ColumnFiltersState, SortingState } from '@tanstack/react-table';
 import { AdminContractItem, AdminCardItem } from '@/types/admin-tables';
 import { AdminUser } from '@/types/user';
-import { useAdminStore } from '../store/useAdminStore';
-import { useAdminStats } from '../hooks/useAdminStats';
+import { useAdminStore } from '../../store/useAdminStore';
+import { useAdminStats } from '../../hooks/useAdminStats';
 
 interface AdminDashboardProps {
   authData: AuthMe;

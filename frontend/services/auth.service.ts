@@ -15,9 +15,8 @@ export interface UserProfile {
 }
 
 export interface AuthResponse {
-  // Backend hiện tại trả về { accessToken: '...' }
   accessToken?: string; 
-  access_token?: string; // Giữ hờ đề phòng backend trả snake_case
+  access_token?: string; 
   user?: UserProfile;
 }
 

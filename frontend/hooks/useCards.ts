@@ -2,7 +2,6 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { cardService } from '../services/card.service';
 
 export const CARDS_QUERY_KEY = 'my-cards';
-const PAGE_SIZE = 3;
 
 export function useCards(search: string, page: number, pageSize: number = 6) {
   return useQuery({

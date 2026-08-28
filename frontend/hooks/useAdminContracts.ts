@@ -7,6 +7,6 @@ export function useAdminContracts(params: GetAdminContractsParams, options?: { e
     queryKey: ['admin', 'contracts', params],
     queryFn: () => adminService.listContracts(params),
     placeholderData: keepPreviousData,
-    enabled: options?.enabled, // Bổ sung cờ enabled
+    enabled: options?.enabled, 
   });
 }

@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useSignup } from '../hooks/useAuthMutations'; 
-import { signupSchema, SignupFormValues } from '../schema/client.schema';
+import { useSignup } from '../../hooks/useAuthMutations'; 
+import { signupSchema, SignupFormValues } from '../../schema/client.schema';
 
 type SignupFormProps = {
   onSuccess: () => void;

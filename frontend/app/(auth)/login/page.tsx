@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { LoginForm } from '../../../components/LoginForm';
-import Navbar from '../../../components/NavBar'; 
+import { LoginForm } from '../../../components/Login/LoginForm';
+import Navbar from '../../../components/Home/NavBar'; 
 
 export default function LoginPage() {
   return (

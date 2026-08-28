@@ -1,11 +1,11 @@
 'use client';
 
 import { Pencil } from 'lucide-react';
-import { extractText } from '../utils/client.utils';
-import { IssClientDetailsV2APIRecord } from '../hooks/useCurrentUser'
-// Khai báo type cho props
+import { extractText } from '../../utils/client.utils';
+import { IssClientDetailsV2APIRecord } from '../../hooks/useCurrentUser'
+
 interface ProfileViewProps {
-  profile: IssClientDetailsV2APIRecord; // Thay 'any' bằng type IssClientDetailsV2APIRecord của bạn nếu có
+  profile: IssClientDetailsV2APIRecord; 
   onEdit: () => void;
 }
 

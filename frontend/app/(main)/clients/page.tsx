@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '../../../hooks/useCurrentUser';
-import ProfileView from '../../../components/ProfileView';
-import ProfileEdit from '../../../components/ProfileEdit';
+import ProfileView from '../../../components/Client/ProfileView';
+import ProfileEdit from '../../../components/Client/ProfileEdit';
 
 export function CustomerProfilePage() {
   const { data, isLoading, refetch } = useCurrentUser();

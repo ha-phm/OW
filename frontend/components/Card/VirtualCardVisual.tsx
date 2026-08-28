@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { CardListItem } from '../types/card.types';
-import { formatCardNumberGroups } from '../utils/format';
+import { CardListItem } from '../../types/card.types';
+import { formatCardNumberGroups } from '../../utils/format';
 
-// ĐÃ SỬA: Hàm lấy Theme Thẻ đổi sang Màu Đơn Sắc
 function getCardTheme(card?: CardListItem) {
   const textToMatch = [card?.productName, card?.cardName]
     .filter(Boolean)
     .join(' ')
     .toUpperCase();
   
-  // 1. Thẻ Du Lịch
+ 
   if (
     textToMatch.includes('TRAINING01') ||
     textToMatch.includes('PRODUCT 01') ||
@@ -26,7 +25,7 @@ function getCardTheme(card?: CardListItem) {
     };
   }
 
-  // 2. Thẻ Thương Mại Điện Tử
+ 
   if (
     textToMatch.includes('TRAINING02') ||
     textToMatch.includes('PRODUCT 02') ||
@@ -41,7 +40,7 @@ function getCardTheme(card?: CardListItem) {
     };
   }
 
-  // 3. Thẻ Visa
+ 
   if (
     textToMatch.includes('TRAINING03') ||
     textToMatch.includes('PRODUCT 03') ||
@@ -54,7 +53,7 @@ function getCardTheme(card?: CardListItem) {
     };
   }
   
-  // 4. Thẻ Credit / Signature (Màu siêu tối quyền lực)
+  
   return { 
     bgClass: 'bg-indigo-950',
     glow: 'rgba(30, 27, 75, 0.35)',
@@ -97,7 +96,6 @@ export function VirtualCardVisual({
 
   return (
     <div
-      // ĐÃ SỬA: Xóa bg-gradient-to-br, thay bằng theme.bgClass và thêm border mờ tạo khối
       className={`relative flex aspect-[1.586/1] w-full max-w-full flex-col justify-between overflow-hidden rounded-2xl sm:rounded-3xl ${theme.bgClass} border border-white/10 p-[clamp(0.85rem,4.8cqw,1.5rem)] text-white shadow-xl sm:shadow-2xl transition-all duration-300 group hover:shadow-2xl hover:border-white/25 @container`}
     >
       {/* 1. NỀN HỌA TIẾT CONG & CHẤM BI */}
@@ -131,7 +129,7 @@ export function VirtualCardVisual({
         style={{ backgroundColor: theme.glow }}
       />
 
-      {/* 2. HÀNG TRÊN CÙNG: "openway" + TÍN HIỆU WIFI */}
+     
       <div className="relative z-10 flex items-center justify-between">
         <div className="flex flex-col">
           <span className="font-sans text-[clamp(1rem,5.8cqw,1.55rem)] font-light tracking-tight text-white drop-shadow-sm lowercase">
@@ -155,7 +153,7 @@ export function VirtualCardVisual({
         </div>
       </div>
 
-      {/* 3. CHIP EMV VÀNG (Làm phẳng, bỏ Gradient nổi 3D quá đà) */}
+      
       <div className="relative z-10 my-auto pt-0.5">
         <div className="relative w-[clamp(2rem,11.5cqw,2.75rem)] aspect-[1.35/1] rounded-lg bg-amber-500 p-[1.2px] shadow-sm">
           <div className="relative h-full w-full rounded-[5px] bg-amber-400 overflow-hidden border border-amber-600/40">
@@ -167,7 +165,7 @@ export function VirtualCardVisual({
         </div>
       </div>
 
-      {/* 4. SỐ THẺ TRẢI RỘNG */}
+      {/* SỐ THẺ TRẢI RỘNG */}
       <div className="relative z-10 flex flex-col gap-1 mt-auto">
         <div className="flex items-center justify-between">
           <div className="flex w-full items-center justify-between font-mono text-[clamp(0.82rem,5.2cqw,1.38rem)] font-bold tracking-widest sm:tracking-[0.15em] text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.6)]">
@@ -200,7 +198,6 @@ export function VirtualCardVisual({
           )}
         </div>
 
-        {/* 5. HÀNG THÔNG TIN DƯỚI CÙNG */}
         <div className="flex items-end justify-between pt-0.5 sm:pt-1">
           <div className="flex flex-col min-w-0 pr-2">
             <div className="flex items-center gap-1.5 mb-0.5">

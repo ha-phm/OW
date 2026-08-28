@@ -6,26 +6,26 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
 type TopbarProps = { 
-  onToggleMenu?: () => void; // Prop để mở Sidebar trên Mobile
+  onToggleMenu?: () => void;
 };
 
 export function Topbar({ onToggleMenu }: TopbarProps) {
   const { mutate: logout, isPending } = useLogout();
   
-  // 1. Tự động lấy dữ liệu người dùng ngay bên trong Topbar
+  
   const { data: authData } = useAuthMe();
   const { data: clientData } = useCurrentUser();
 
-  // 2. Trích xuất tên từ hồ sơ hệ thống Openway
+  
   const profile = clientData?.IssClientDetailsV2APIRecord;
   const profileName = profile
     ? [profile.LastName, profile.MiddleName, profile.FirstName].filter(Boolean).join(' ') || profile.FullName
     : null;
 
-  // 3. Logic ưu tiên hiển thị: Tên Hồ Sơ -> Email -> 'Admin'
+ 
   const userName = profileName || authData?.email || 'Admin';
   
-  // Lấy chữ cái đầu tiên để làm Avatar
+  
   const initial = userName.charAt(0).toUpperCase();
 
   return (

@@ -16,7 +16,7 @@ import {
 import { toast } from 'sonner';
 import { useCards } from '../../../hooks/useCards';
 import { ApiError } from '../../../api/api';
-import { VirtualCardVisual } from '../../../components/VirtualCardVisual';
+import { VirtualCardVisual } from '../../../components/Card/VirtualCardVisual';
 import { CardDetailModal } from '../../../modals/CardDetailModal';
 import { QuickOpenCardModal } from '../../../modals/QuickOpenCardModal';
 import { AdminDataTable, type AppFeatures } from '../../../components/AdminDataTable';

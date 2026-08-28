@@ -12,10 +12,10 @@ import {
 import { useCurrentUser } from '../../../hooks/useCurrentUser';
 import { useAuthMe } from '../../../hooks/useAuthMe';
 import { useCards } from '../../../hooks/useCards'; 
-import { VirtualCardVisual } from '../../../components/VirtualCardVisual'; 
+import { VirtualCardVisual } from '../../../components/Card/VirtualCardVisual'; 
 import { CardDetailModal } from '../../../modals/CardDetailModal'; 
 import { QuickOpenCardModal } from '../../../modals/QuickOpenCardModal';
-import { AdminDashboard } from '../../../components/AdminDashboard';
+import { AdminDashboard } from '../../../components/Dashboard/AdminDashboard';
 
 // Màu Solid (Đơn sắc) chuẩn Banking cho thẻ ảo Mock
 const MOCK_CARDS = [

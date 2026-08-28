@@ -4,12 +4,10 @@ import { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';
-import { apiPatch, ApiError } from '../api/api';
-import { extractCode } from '../utils/client.utils';
-import { IssClientDetailsV2APIRecord } from '../hooks/useCurrentUser';
-
-// 1. IMPORT SCHEMA VÀ TYPE TỪ ZOD
-import { profileEditSchema, EditFormData } from '../schema/client.schema';
+import { apiPatch, ApiError } from '../../api/api';
+import { extractCode } from '../../utils/client.utils';
+import { IssClientDetailsV2APIRecord } from '../../hooks/useCurrentUser';
+import { profileEditSchema, EditFormData } from '../../schema/client.schema';
 
 interface ProfileEditProps {
   profile: IssClientDetailsV2APIRecord;

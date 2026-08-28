@@ -7,9 +7,9 @@ import { ApiError } from '../api/api';
 import { cardService } from '../services/card.service';
 import { useCardDetail } from '../hooks/useCardDetail';
 import { CARDS_QUERY_KEY } from '../hooks/useCards';
-import { ModalShell } from '../components/ModalShell';
-import { ModalField } from '../components/ModalField';
-import { VirtualCardVisual } from '../components/VirtualCardVisual';
+import { ModalShell } from '../components/Card/ModalShell';
+import { ModalField } from '../components/Card/ModalField';
+import { VirtualCardVisual } from '../components/Card/VirtualCardVisual';
 import { formatVnd } from '../utils/format';
 
 export function CardDetailModal({
@@ -71,7 +71,6 @@ export function CardDetailModal({
       onClose={onClose}
     >
       {isLoading && !data ? (
-        // Khung xương (Skeleton) mượt mà chống giật Layout
         <div className="space-y-5 animate-pulse">
           <div className="flex aspect-[1.586/1] w-full max-w-sm items-center justify-center rounded-2xl bg-slate-100">
              <Loader2 className="h-8 w-8 animate-spin text-slate-300" />

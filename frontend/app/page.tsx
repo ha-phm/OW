@@ -1,9 +1,8 @@
-import Navbar from '../components/NavBar';
-import Hero from '../components/LandingPageMain';
+import Navbar from '../components/Home/NavBar';
+import Hero from '../components/Home/LandingPageMain';
 
 export default function Home() {
   return (
-    // THÊM: flex flex-col
     <main className="min-h-screen bg-[#0d1410] overflow-x-hidden font-sans relative selection:bg-green-500 selection:text-black flex flex-col">
       
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20 z-0">

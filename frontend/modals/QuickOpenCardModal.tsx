@@ -3,13 +3,12 @@
 import { useState } from 'react';
 import { useForm, Controller, Control, useWatch } from 'react-hook-form';
 import { CreditCard, Loader2, AlertCircle, CheckCircle2, Users } from 'lucide-react';
-import { ModalShell } from '../components/ModalShell';
-import { ModalField } from '../components/ModalField';
+import { ModalShell } from '../components/Card/ModalShell';
+import { ModalField } from '../components/Card/ModalField';
 import { quickOpenCard, createSupplementaryCard } from '../api/contracts';
 import { ApiError } from '../api/api';
 import { CardCategory } from '../constants/cardCategories';
 
-// 1. THÊM BẢNG MAP CATEGORY VỚI TÊN THẺ MẶC ĐỊNH
 const CATEGORY_TO_TAG_MAP: Record<string, string> = {
   [CardCategory.TRAVEL]: 'Thẻ Du Lịch',
   [CardCategory.ECOMMERCE]: 'Thẻ Thương Mại Điện Tử',
@@ -23,10 +22,9 @@ interface QuickOpenCardModalProps {
   onSuccess: (cardPan: string) => void;
 }
 
-// 2. THÊM cardName VÀO FormValues
 interface FormValues {
   cardCategory: CardCategory;
-  cardName: string; // Thêm trường này cho Thẻ Chính
+  cardName: string; 
   embossedFirstName: string;
   embossedLastName: string;
   bank: string;
@@ -60,7 +58,6 @@ const FormField = ({
           label={label}
           value={field.value as string}
           onChange={(val) => 
-            // Giữ nguyên case cho tên gọi nhớ thẻ, tự động viết hoa cho tên in nổi
             field.onChange(name === 'cardName' || name === 'suppCardName' ? val : val.toUpperCase())
           }
           placeholder={placeholder}
@@ -80,7 +77,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
   const { control, handleSubmit, setValue, reset, formState: { isSubmitting, errors } } = useForm<FormValues>({
     defaultValues: {
       cardCategory: CardCategory.TRAVEL,
-      cardName: '', // Khởi tạo giá trị mặc định cho cardName
+      cardName: '', 
       embossedFirstName: '',
       embossedLastName: '',
       bank: '',
@@ -97,19 +94,16 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
     name: 'cardCategory',
   });
 
-  // 3. CẬP NHẬT LOGIC SUBMIT ĐỂ TỰ ĐỘNG GÁN TÊN NẾU BỎ TRỐNG
   const onSubmitForm = async (data: FormValues) => {
     setApiError(null);
     try {
       if (tab === 'MAIN') {
-        // Lấy tên mặc định từ Tag đã chọn
         const defaultTagName = CATEGORY_TO_TAG_MAP[data.cardCategory] || 'Thẻ Mới';
-        // Gán tên mặc định nếu user để trống
         const finalCardName = data.cardName?.trim() ? data.cardName.trim() : defaultTagName;
 
         const result = await quickOpenCard({
           cardCategory: data.cardCategory,
-          cardName: finalCardName, // Truyền tên thẻ đã xử lý xuống API
+          cardName: finalCardName, 
           embossedFirstName: data.embossedFirstName,
           embossedLastName: data.embossedLastName,
           bank: data.bank,
@@ -122,7 +116,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
         const finalSuppCardName = data.suppCardName?.trim() ? data.suppCardName.trim() : 'Thẻ Phụ';
 
         const result = await createSupplementaryCard(data.selectedMainCard, {
-          cardName: finalSuppCardName, // Truyền tên thẻ phụ đã xử lý xuống API
+          cardName: finalSuppCardName, 
           embossedFirstName: data.suppFirstName,
           embossedLastName: data.suppLastName,
         });
@@ -243,7 +237,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
               <div className="space-y-4 animate-in slide-in-from-right-2 duration-200">
                 <p className="text-sm font-medium text-slate-700">2. Thông tin in nổi & Thanh toán</p>
                 
-                {/* 4. THÊM INPUT NHẬP TÊN THẺ VÀ GỢI Ý MẶC ĐỊNH THEO TAG */}
+                {/* THÊM INPUT NHẬP TÊN THẺ VÀ GỢI Ý MẶC ĐỊNH THEO TAG */}
                 <FormField 
                   name="cardName" 
                   control={control} 
@@ -314,7 +308,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
               )}
             </div>
             
-            {/* 5. CẬP NHẬT PLACEHOLDER THẺ PHỤ */}
+            {/* CẬP NHẬT PLACEHOLDER THẺ PHỤ */}
             <FormField 
               name="suppCardName" 
               control={control} 
