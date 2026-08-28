@@ -1,32 +1,27 @@
 'use client';
 
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { User, Lock } from 'lucide-react';
 import { useLogin } from '../../hooks/useAuthMutations';
-
-// 1. Khai báo kiểu dữ liệu cho các trường
-interface LoginFormData {
-  email: string;
-  password: string;
-}
+import { loginSchema, LoginFormValues } from '../../schema/client.schema'; 
 
 export function LoginForm() {
   const { mutate, isPending, error: apiError } = useLogin();
 
-  // 2. Khởi tạo form
   const {
     register,
     handleSubmit,
     formState: { errors }
-  } = useForm<LoginFormData>({
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema), 
     defaultValues: {
       email: '',
       password: '',
     }
   });
 
-  // 3. Hàm submit gọn gàng, tự động nhận data đã được kiểm tra
-  const onSubmit = (data: LoginFormData) => {
+  const onSubmit = (data: LoginFormValues) => {
     mutate(data);
   };
 
@@ -42,12 +37,13 @@ export function LoginForm() {
             type="email"
             placeholder="Nhập địa chỉ email"
             autoComplete="email"
-            {...register('email', { required: 'Vui lòng nhập email' })}
+            maxLength={100} // Lớp khiên bảo vệ giao diện
+            {...register('email')}
             className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-6 pr-12 text-white placeholder:text-white/70 focus:outline-none focus:border-white/50 transition-colors"
           />
           <User className="absolute right-5 top-1/2 -translate-y-1/2 text-white/70" size={20} />
         </div>
-        {/* Hiển thị lỗi nếu người dùng bỏ trống */}
+        {/* Lỗi được trả tự động từ Zod Schema */}
         {errors.email && <p className="text-red-400 text-xs mt-1 absolute">{errors.email.message}</p>}
       </div>
 
@@ -59,12 +55,13 @@ export function LoginForm() {
             type="password"
             placeholder="Nhập mật khẩu"
             autoComplete="current-password"
-            {...register('password', { required: 'Vui lòng nhập mật khẩu' })}
+            maxLength={50} // Giới hạn chiều dài mật khẩu
+            {...register('password')}
             className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-6 pr-12 text-white placeholder:text-white/70 focus:outline-none focus:border-white/50 transition-colors"
           />
           <Lock className="absolute right-5 top-1/2 -translate-y-1/2 text-white/70" size={20} />
         </div>
-        {/* Hiển thị lỗi nếu người dùng bỏ trống */}
+        {/* Lỗi được trả tự động từ Zod Schema */}
         {errors.password && <p className="text-red-400 text-xs mt-1 absolute">{errors.password.message}</p>}
       </div>
 

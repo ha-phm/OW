@@ -5,6 +5,7 @@ export function ModalField({
   placeholder,
   optional,
   error, 
+  maxLength,
 }: {
   label: string;
   value: string;
@@ -12,6 +13,7 @@ export function ModalField({
   placeholder?: string;
   optional?: boolean;
   error?: string; 
+  maxLength?: number;
 }) {
   return (
     <label className="block w-full">
@@ -30,6 +32,7 @@ export function ModalField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        maxLength={maxLength}
         className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:ring-2 ${
           
           error

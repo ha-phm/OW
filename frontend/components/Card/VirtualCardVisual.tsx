@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { CardListItem } from '../../types/card.types';
-import { formatCardNumberGroups } from '../../utils/format';
+import { formatCardNumberGroups, removeVietnameseTones } from '../../utils/format';
 
 function getCardTheme(card?: CardListItem) {
   const textToMatch = [card?.productName, card?.cardName]
@@ -76,7 +76,8 @@ export function VirtualCardVisual({
   if (!card) return null;
 
   const isRevealed = allowToggle ? internalRevealed : revealFull;
-  const fullName = [card.embossedFirstName, card.embossedLastName].filter(Boolean).join(' ') || 'CARDHOLDER NAME';
+  const rawFullName = [card.embossedFirstName, card.embossedLastName].filter(Boolean).join(' ') || 'CARDHOLDER NAME';
+  const fullName = removeVietnameseTones(rawFullName);
   const theme = getCardTheme(card);
   const groups = formatCardNumberGroups(card.cardNumber, isRevealed);
 

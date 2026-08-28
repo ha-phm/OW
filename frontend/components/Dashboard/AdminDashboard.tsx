@@ -249,7 +249,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
       </div>
 
       {/* THỐNG KÊ */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={<Users className="h-6 w-6" />}
           label="Khách hàng"
@@ -387,7 +387,7 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
         <div className="rounded-lg bg-emerald-100/80 p-1 sm:p-1.5 shrink-0">
           {icon}
         </div>
-        <span className="text-xs sm:text-sm font-semibold text-slate-600 truncate">{label}</span>
+        <span className="text-xs sm:text-sm font-semibold text-slate-600 leading-tight">{label}</span>
       </div>
       <div className="text-xl sm:text-3xl font-bold tracking-tight text-slate-800 truncate">{value}</div>
     </div>

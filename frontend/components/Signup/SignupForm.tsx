@@ -100,12 +100,14 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
             <div>
               <label className={labelClass}>Email *</label>
-              <input type="email" {...register('email')} className={inputClass} placeholder="Nhập email" />
+            
+              <input type="email" {...register('email')} className={inputClass} placeholder="Nhập email" maxLength={100} />
               {errors.email && <p className={errorClass}>{errors.email.message}</p>}
             </div>
             <div>
               <label className={labelClass}>Mật khẩu *</label>
-              <input type="password" {...register('password')} className={inputClass} placeholder="Tạo mật khẩu" />
+              
+              <input type="password" {...register('password')} className={inputClass} placeholder="Tạo mật khẩu" maxLength={50} />
               {errors.password && <p className={errorClass}>{errors.password.message}</p>}
             </div>
           </div>
@@ -164,22 +166,24 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-x-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div>
               <label className={labelClass}>Số CMND / CCCD *</label>
-              <input {...register('identityCardNumber')} className={inputClass} />
+              
+              <input {...register('identityCardNumber')} className={inputClass} maxLength={12} />
               {errors.identityCardNumber && <p className={errorClass}>{errors.identityCardNumber.message}</p>}
             </div>
             <div>
               <label className={labelClass}>Số BHXH *</label>
-              <input {...register('socialSecurityNumber')} className={inputClass} />
+              
+              <input {...register('socialSecurityNumber')} className={inputClass} maxLength={15} />
               {errors.socialSecurityNumber && <p className={errorClass}>{errors.socialSecurityNumber.message}</p>}
             </div>
-            {/* ĐÃ SỬA: Cho trường này chiếm trọn 2 cột vì nội dung dài */}
             <div className="md:col-span-2">
               <label className={labelClass}>Chi tiết nơi cấp / ngày cấp</label>
-              <input {...register('identityCardDetails')} className={inputClass} />
+              <input {...register('identityCardDetails')} className={inputClass} maxLength={100} />
             </div>
             <div className="md:col-span-2">
               <label className={labelClass}>Mã số thuế</label>
-              <input {...register('individualTaxpayerNumber')} className={inputClass} />
+              
+              <input {...register('individualTaxpayerNumber')} className={inputClass} maxLength={15} /> 
             </div>
           </div>
         )}
@@ -190,27 +194,28 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-x-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div>
               <label className={labelClass}>Điện thoại *</label>
-              <input type="tel" {...register('mobilePhone')} className={inputClass} />
+              
+              <input type="tel" {...register('mobilePhone')} className={inputClass} maxLength={10} />
               {errors.mobilePhone && <p className={errorClass}>{errors.mobilePhone.message}</p>}
             </div>
             <div>
               <label className={labelClass}>Thành phố *</label>
-              <input {...register('city')} className={inputClass} />
+              <input {...register('city')} className={inputClass} maxLength={100} />
               {errors.city && <p className={errorClass}>{errors.city.message}</p>}
             </div>
-            {/* Trường địa chỉ chiếm 2 cột */}
             <div className="md:col-span-2">
               <label className={labelClass}>Địa chỉ thường trú *</label>
-              <input {...register('addressLine1')} className={inputClass} />
+              
+              <input {...register('addressLine1')} className={inputClass} maxLength={255} />
               {errors.addressLine1 && <p className={errorClass}>{errors.addressLine1.message}</p>}
             </div>
             <div>
               <label className={labelClass}>Công ty</label>
-              <input {...register('companyName')} className={inputClass} />
+              <input {...register('companyName')} className={inputClass} maxLength={150} />
             </div>
             <div>
               <label className={labelClass}>Nghề nghiệp</label>
-              <input {...register('profession')} className={inputClass} />
+              <input {...register('profession')} className={inputClass} maxLength={100} />
             </div>
           </div>
         )}

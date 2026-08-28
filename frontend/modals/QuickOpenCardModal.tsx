@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, Controller, Control, useWatch } from 'react-hook-form';
+import { useForm, Controller, Control, useWatch, RegisterOptions } from 'react-hook-form';
 import { CreditCard, Loader2, AlertCircle, CheckCircle2, Users } from 'lucide-react';
 import { ModalShell } from '../components/Card/ModalShell';
 import { ModalField } from '../components/Card/ModalField';
@@ -41,27 +41,40 @@ const FormField = ({
   label,
   placeholder,
   required = false,
+  maxLength,
+  rules,
 }: {
   name: keyof FormValues;
   control: Control<FormValues>;
   label: string;
   placeholder?: string;
   required?: boolean;
+  maxLength?: number;
+  rules?: RegisterOptions<FormValues, keyof FormValues>;
 }) => (
   <Controller
     name={name}
     control={control}
-    rules={{ required: required ? 'Vui lòng điền thông tin này' : false }}
+    rules={{ 
+      required: required ? 'Vui lòng điền thông tin này' : false,
+      ...rules 
+    }}
     render={({ field, fieldState: { error } }) => (
       <div>
         <ModalField
           label={label}
           value={field.value as string}
-          onChange={(val) => 
-            field.onChange(name === 'cardName' || name === 'suppCardName' ? val : val.toUpperCase())
-          }
+          onChange={(val) => {
+            // Lọc: Nếu là Số tài khoản thì xóa hết ký tự không phải là số
+            if (name === 'account') {
+              field.onChange(val.replace(/\D/g, ''));
+            } else {
+              field.onChange(name === 'cardName' || name === 'suppCardName' ? val : val.toUpperCase());
+            }
+          }}
           placeholder={placeholder}
           error={error?.message}
+          maxLength={maxLength}
         />
       </div>
     )}
@@ -237,7 +250,6 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
               <div className="space-y-4 animate-in slide-in-from-right-2 duration-200">
                 <p className="text-sm font-medium text-slate-700">2. Thông tin in nổi & Thanh toán</p>
                 
-                {/* THÊM INPUT NHẬP TÊN THẺ VÀ GỢI Ý MẶC ĐỊNH THEO TAG */}
                 <FormField 
                   name="cardName" 
                   control={control} 
@@ -251,7 +263,24 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <FormField name="bank" control={control} label="Ngân hàng thanh toán *" placeholder="VD: VCB" required />
-                  <FormField name="account" control={control} label="Số tài khoản *" placeholder="VD: 0123456789" required />
+                  <FormField 
+                    name="account" 
+                    control={control} 
+                    label="Số tài khoản *" 
+                    placeholder="VD: 0123456789" 
+                    required 
+                    maxLength={15} 
+                    rules={{
+                      pattern: {
+                        value: /^\d{8,15}$/,
+                        message: 'Tài khoản phải từ 8 đến 15 số'
+                      },
+                      minLength: {
+                        value: 8,
+                        message: 'Tài khoản phải có ít nhất 8 số'
+                      }
+                    }}
+                  />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button 
@@ -308,7 +337,6 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
               )}
             </div>
             
-            {/* CẬP NHẬT PLACEHOLDER THẺ PHỤ */}
             <FormField 
               name="suppCardName" 
               control={control} 

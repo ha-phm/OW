@@ -22,6 +22,8 @@ import { QuickOpenCardModal } from '../../../modals/QuickOpenCardModal';
 import { AdminDataTable, type AppFeatures } from '../../../components/AdminDataTable';
 import { CardListItem } from '../../../types/card.types';
 import { maskCardNumber } from '../../../utils/format';
+import { formatCardProductLabel } from '../../../constants/cardCategories';
+
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -117,14 +119,11 @@ export default function CardsPage() {
       accessorKey: 'productName',
       header: 'Loại thẻ / Sản phẩm',
       enableSorting: true,
-      cell: ({ getValue }) => {
-        const val = getValue<string>() || 'Thẻ thanh toán';
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-            {val}
-          </span>
-        );
-      },
+      cell: ({ getValue }) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+          {formatCardProductLabel(getValue<string>())}
+        </span>
+      ),
     },
     {
       accessorKey: 'issuingContractNumber',
@@ -245,16 +244,14 @@ export default function CardsPage() {
               <h3 className="text-lg font-bold">Thẻ ảo trực quan</h3>
             </div>
 
-            {/* ĐÃ SỬA: Chuyển grid thành flex trượt ngang */}
             <div 
               className="flex overflow-x-auto gap-4 sm:gap-6 pb-6 pt-2 snap-x snap-mandatory scroll-smooth
-                         [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] scrollbar-none"
+                          [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] scrollbar-none"
             >
               {cards.map((card) => (
                 <button
                   key={card.cardNumber}
                   onClick={() => setSelectedCard(card.cardNumber)}
-                  // ĐÃ SỬA: Thêm flex-none, giới hạn chiều rộng và hiệu ứng snap
                   className="flex-none w-[85vw] sm:w-[320px] snap-center sm:snap-start text-left transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-2xl sm:rounded-3xl"
                 >
                   <VirtualCardVisual card={card} />

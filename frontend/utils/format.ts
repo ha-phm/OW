@@ -53,3 +53,16 @@ export function formatCardNumberGroups(cardNumber?: string, revealFull = false):
   return ['••••', '••••', '••••', last4];
 }
 
+/**
+ * Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu và viết hoa toàn bộ
+ * Phục vụ cho việc in nổi tên trên thẻ (Embossed Name) chuẩn quốc tế
+ */
+export function removeVietnameseTones(str: string): string {
+  if (!str) return '';
+  return str
+    .normalize('NFD') // Tách các ký tự dấu ra khỏi chữ cái gốc
+    .replace(/[\u0300-\u036f]/g, '') // Xóa các dấu thanh
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toUpperCase(); // Luôn viết hoa chuẩn thẻ thanh toán
+}
