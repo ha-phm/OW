@@ -44,4 +44,9 @@ export class AdminController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.deleteUser(id);
   }
+
+  @Patch('users/:id/restore')
+  restoreUser(@Param('id') id: string) {
+    return this.adminService.restoreUser(+id);
+  }
 }

@@ -111,6 +111,19 @@ export class AdminService {
     return { message: 'Đã vô hiệu hoá tài khoản người dùng' };
   }
 
+  async restoreUser(id: number) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+
+    // Cập nhật lại isActive = true
+    await this.prisma.user.update({
+      where: { id },
+      data: { isActive: true },
+    });
+
+    return { message: 'Đã mở khóa tài khoản người dùng thành công' };
+  }
+
   // ---------------------------------------------------------------------
   // QUẢN LÝ HỢP ĐỒNG (ADMIN)
   // ---------------------------------------------------------------------

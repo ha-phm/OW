@@ -48,6 +48,9 @@ export const adminService = {
   deleteUser: (id: number) =>
     apiDelete<{ message: string }>(`/admin/users/${id}`),
 
+  restoreUser: (id: number) =>
+    apiPatch<{ message: string }, undefined>(`/admin/users/${id}/restore`, undefined),
+  
   // ---------------------------------------------------------------------
   // QUẢN LÝ HỢP ĐỒNG
   // ---------------------------------------------------------------------

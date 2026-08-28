@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ColumnDef, SortingState } from '@tanstack/react-table';
-import { UserCog, Trash2, Pencil, Search } from 'lucide-react';
+import { UserCog, Trash2, Pencil, Search, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { useAdminUsers, useUpdateUserRole, useDeleteUser } from '../../../hooks/useAdminUsers';
+import { useAdminUsers, useUpdateUserRole, useDeleteUser, useRestoreUser } from '../../../hooks/useAdminUsers';
 import { useAuthMe } from '../../../hooks/useAuthMe';
 import { AdminUser, Role } from '../../../types/user';
 import { AdminDataTable, type AppFeatures } from '../../../components/AdminDataTable';
@@ -39,6 +39,7 @@ export default function UsersPage() {
 
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
+  const restoreUser = useRestoreUser();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -141,6 +142,8 @@ export default function UsersPage() {
       enableSorting: false,
       cell: ({ row }) => {
         const user = row.original;
+        const isActive = user.isActive;
+
         return (
           <div className="flex items-center justify-end gap-1">
             <button
@@ -150,13 +153,29 @@ export default function UsersPage() {
             >
               <Pencil className="h-4 w-4" />
             </button>
-            <button
-              onClick={() => handleDeleteUser(user.id, user.email)}
-              title="Vô hiệu hoá tài khoản"
-              className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {isActive !== false ? (
+              // Nút Vô hiệu hóa (Khóa)
+              <button
+                onClick={() => handleDeleteUser(user.id, user.email)}
+                title="Vô hiệu hoá tài khoản"
+                className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            ) : (
+              // Nút Khôi phục (Mở khóa)
+              <button
+                onClick={() => {
+                  if (confirm(`Bạn có chắc chắn muốn mở khóa tài khoản ${user.email} không?`)) {
+                    restoreUser.mutate(user.id);
+                  }
+                }}
+                title="Mở khóa tài khoản"
+                className="rounded-lg p-2 text-emerald-500 transition hover:bg-emerald-50 hover:text-emerald-600"
+              >
+                <Unlock className="h-4 w-4" />
+              </button>
+            )}
           </div>
         );
       },

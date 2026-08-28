@@ -39,3 +39,17 @@ export function useDeleteUser() {
     onError: () => toast.error('Không thể vô hiệu hóa tài khoản'),
   });
 }
+
+// Nhớ export thêm useRestoreUser nhé
+export function useRestoreUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => adminService.restoreUser(id),
+    onSuccess: () => {
+      toast.success('Đã khôi phục tài khoản thành công');
+      // Refetch lại danh sách user để giao diện cập nhật ngay lập tức
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+    onError: () => toast.error('Không thể khôi phục tài khoản'),
+  });
+}
