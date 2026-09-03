@@ -21,14 +21,13 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 
-// ------------------------------------------------------------------
 // V9: bạn phải khai báo tường minh những "feature" mà bảng sẽ dùng.
 // Ở đây ta cần: lọc theo cột (columnFilteringFeature) + sắp xếp (rowSortingFeature).
 // getCoreRowModel không cần khai báo nữa - v9 tự động có sẵn.
-// Vì đang dùng manualFiltering/manualSorting (server xử lý), ta KHÔNG cần
+// Đang dùng manualFiltering/manualSorting (server xử lý), ta không cần
 // filteredRowModel/sortedRowModel - chỉ cần feature để có state + API (setFilterValue,
 // toggleSorting, getIsSorted, ...).
-// ------------------------------------------------------------------
+
 export const tableFeatureSet = tableFeatures({
   columnFilteringFeature,
   rowSortingFeature,
@@ -102,7 +101,6 @@ export function AdminDataTable<TData extends RowData>({
     return () => clearTimeout(timer);
   }, [localFiltersString, propFiltersString, onColumnFiltersChange]);
 
-  // MEMOIZE DATA VÀ COLUMNS ĐỂ TRIỆT TIÊU CẢNH BÁO CỦA TANSTACK TABLE
   const tableData = useMemo(() => data, [data]);
   const tableColumns = useMemo(() => columns, [columns]);
 

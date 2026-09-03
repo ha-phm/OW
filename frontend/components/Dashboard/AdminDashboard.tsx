@@ -3,16 +3,17 @@
 import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form'; 
 import { Search, BarChart2, Activity, Users, FileText, CreditCard, BarChart } from 'lucide-react';
-import { AuthMe } from '@/types/user';
+import { AuthMe, AdminUser } from '@/types/user';
 import { useAdminUsers } from '../../hooks/useAdminUsers';
 import { useAdminContracts } from '../../hooks/useAdminContracts';
 import { useAdminCards } from '../../hooks/useAdminCards';
 import { AdminDataTable, type AppFeatures } from '@/components/AdminDataTable';
 import { ColumnDef, ColumnFiltersState, SortingState } from '@tanstack/react-table';
 import { AdminContractItem, AdminCardItem } from '@/types/admin-tables';
-import { AdminUser } from '@/types/user';
 import { useAdminStore } from '../../store/useAdminStore';
 import { useAdminStats } from '../../hooks/useAdminStats';
+import { DashboardCharts } from './DashboardCharts';
+import { useAdminChartStats } from '../../hooks/useAdminChartStats';
 
 interface AdminDashboardProps {
   authData: AuthMe;
@@ -40,15 +41,15 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     activeTab, setActiveTab,
     contractsParams, setContractsParams,
     cardsParams, setCardsParams,
-    usersParams, setUsersParams, // Đã thêm usersParams
+    usersParams, setUsersParams,
   } = useAdminStore();
 
-  // ĐÃ SỬA: Tách tham số truyền vào API và options của React Query
   const { data: usersData, isLoading: isUsersLoading, isFetching: isUsersFetching } = useAdminUsers(
     {
       search: usersParams.search,
       page: usersParams.page,
       pageSize: usersParams.pageSize,
+      ...convertFiltersToObject(usersParams.columnFilters || []),
       ...convertSortingToParams(usersParams.sorting || []),
     },
     {
@@ -60,7 +61,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     search: contractsParams.search,
     page: contractsParams.page,
     pageSize: contractsParams.pageSize,
-    filters: convertFiltersToObject(contractsParams.columnFilters || []),
+    ...convertFiltersToObject(contractsParams.columnFilters || []),
     ...convertSortingToParams(contractsParams.sorting || []),
   }, {
     enabled: activeTab === 'CONTRACTS'
@@ -70,7 +71,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     search: cardsParams.search,
     page: cardsParams.page,
     pageSize: cardsParams.pageSize,
-    filters: convertFiltersToObject(cardsParams.columnFilters || []),
+    ...convertFiltersToObject(cardsParams.columnFilters || []),
     ...convertSortingToParams(cardsParams.sorting || []),
   }, {
     enabled: activeTab === 'CARDS'
@@ -85,7 +86,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     name: 'searchInput',
   });
 
-  // ĐÃ SỬA: Đồng bộ thanh tìm kiếm cho cả tab USERS
+  
   useEffect(() => {
     if (activeTab === 'CONTRACTS') setValue('searchInput', contractsParams.search);
     else if (activeTab === 'CARDS') setValue('searchInput', cardsParams.search);
@@ -93,7 +94,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     else setValue('searchInput', '');
   }, [activeTab, contractsParams.search, cardsParams.search, usersParams.search, setValue]);
 
-  // ĐÃ SỬA: Cập nhật tìm kiếm vào store cho cả tab USERS
+  
   useEffect(() => {
     const timer = setTimeout(() => {
       if (activeTab === 'CONTRACTS' && searchInput !== contractsParams.search) {
@@ -109,9 +110,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     return () => clearTimeout(timer);
   }, [searchInput, activeTab, setContractsParams, setCardsParams, setUsersParams, contractsParams.search, cardsParams.search, usersParams.search]);
 
-  // ------------------------------------------------------------------
-  // ĐỊNH NGHĨA CỘT (COLUMNS)
-  // ------------------------------------------------------------------
+  
   const contractColumns: ColumnDef<AppFeatures, AdminContractItem, unknown>[] = [
     { accessorKey: 'contractNumber', header: 'Số hợp đồng', enableSorting: true },
     { accessorKey: 'contractName', header: 'Tên hợp đồng', enableSorting: true },
@@ -183,23 +182,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
       accessorKey: 'email', 
       header: 'Email', 
       enableSorting: true,
-      cell: ({ row }) => {
-        const email = row.getValue<string>('email');
-        const isActive = row.original.isActive; 
-        
-        return (
-          <div className="flex items-center gap-2">
-            <span className={isActive === false ? 'text-slate-400 line-through' : ''}>
-              {email}
-            </span>
-            {isActive === false && (
-              <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] sm:text-xs text-red-600 font-bold whitespace-nowrap">
-                Vô hiệu hóa
-              </span>
-            )}
-          </div>
-        );
-      }
+      cell: ({ row }) => <span className="font-medium text-slate-700">{row.getValue<string>('email')}</span>
     },
     {
       accessorKey: 'clientNumber',
@@ -209,6 +192,23 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     },
     { accessorKey: 'role', header: 'Vai trò', enableSorting: true },
     {
+      accessorKey: 'isActive',
+      header: 'Trạng thái',
+      enableSorting: true,
+      cell: ({ getValue }) => {
+        const isActive = getValue<boolean>();
+        return isActive ? (
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200 whitespace-nowrap">
+            Hoạt động
+          </span>
+        ) : (
+          <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 border border-red-200 whitespace-nowrap">
+            Bị khóa
+          </span>
+        );
+      }
+    },
+    {
       accessorKey: 'createdAt',
       header: 'Ngày tạo',
       enableSorting: true,
@@ -216,17 +216,18 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
     },
   ];
 
-  // ĐÃ SỬA: Đếm tổng user dựa trên meta data trả về
+  
   const totalUsersCount = usersData?.meta?.total || 0;
   const totalContractsCount = contractsData?.meta?.total || 0;
   const totalCardsCount = cardsData?.meta?.total || 0;
   const adminName = authData?.email?.split('@')[0] || 'Quản trị viên';
 
   const { data: stats, isLoading: statsLoading } = useAdminStats();
+  const { data: chartData, isLoading: chartLoading } = useAdminChartStats()
 
   return (
     <div className="mx-auto w-full max-w-6xl rounded-3xl bg-white p-4 sm:p-6 lg:p-8 text-slate-900 shadow-xl border border-slate-100 min-h-[80vh] flex flex-col gap-6 sm:gap-8">
-      {/* WELCOME BANNER */}
+      
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-linear-to-br from-emerald-500 to-teal-700 p-6 sm:p-8 lg:p-10 shadow-lg shadow-teal-900/10">
         <div className="relative z-10 flex flex-col gap-2 md:w-2/3">
           <div className="flex items-center gap-2 text-teal-100 mb-1">
@@ -271,7 +272,8 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
           value={statsLoading ? '...' : String(stats?.avgCardsPerUser ?? '0.0')}
         />
       </div>
-
+      
+     <DashboardCharts data={chartData} isLoading={chartLoading} />
       {/* TABS & SEARCH */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1.5 rounded-xl w-full lg:flex lg:w-max lg:gap-0">
@@ -307,7 +309,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
           </button>
         </div>
 
-        {/* ĐÃ SỬA: Hiển thị thanh search cho cả 3 tab */}
+  
         <div className="relative w-full lg:w-96 shrink-0">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
             <Search className="h-4 w-4 text-slate-400" />
@@ -321,9 +323,7 @@ export function AdminDashboard({ authData }: AdminDashboardProps) {
         </div>
       </div>
 
-      {/* RENDER BẢNG (TABLES) */}
       <div className="bg-white rounded-2xl w-full">
-        {/* ĐÃ SỬA: Bảng USERS nhận đủ props phân trang */}
         {activeTab === 'USERS' && (
           <AdminDataTable
             columns={userColumns}

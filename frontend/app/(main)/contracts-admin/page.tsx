@@ -26,7 +26,7 @@ interface FilterFormValues {
   inputValue: string;
 }
 
-// Mới: chuyển SortingState (v9) -> { sortBy, sortOrder } cho API.
+// chuyển SortingState (v9) -> { sortBy, sortOrder } cho API.
 const convertSortingToParams = (sorting: SortingState) => {
   const [first] = sorting;
   if (!first) return {};
@@ -41,7 +41,7 @@ export default function AdminContractsPage() {
   const { data: me, isLoading: meLoading } = useAuthMe();
   const { contractsParams, setContractsParams } = useAdminStore();
 
-  // 1. ÁP DỤNG REACT HOOK FORM CHO THANH TÌM KIẾM
+  
   const { register, control, setValue } = useForm<FilterFormValues>({
     defaultValues: {
       filterField: 'search',
@@ -52,7 +52,7 @@ export default function AdminContractsPage() {
   const filterField = useWatch({ control, name: 'filterField' });
   const inputValue = useWatch({ control, name: 'inputValue' });
 
-  // 2. DÙNG useCallback ĐỂ ESLINT HẾT BÁO LỖI EXHAUSTIVE DEPS
+  
   const getStoreValue = useCallback((field: FilterField) => {
     if (field === 'search') return contractsParams.search || '';
     if (field === 'type') return contractsParams.type || '';
@@ -60,14 +60,14 @@ export default function AdminContractsPage() {
     return (filterObj?.value as string) || '';
   }, [contractsParams.search, contractsParams.type, contractsParams.columnFilters]);
 
-  // 3. Đồng bộ ô input khi người dùng đổi cột lọc (Không cần comment ép tắt lỗi nữa)
+  
   useEffect(() => {
     if (filterField !== 'type') {
       setValue('inputValue', getStoreValue(filterField));
     }
   }, [filterField, getStoreValue, setValue]);
 
-  // 4. Debounce: Lưu giá trị người dùng gõ vào Zustand
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (filterField !== 'type') {
@@ -99,7 +99,7 @@ export default function AdminContractsPage() {
     }
   }, [meLoading, me, router]);
 
-  // Dàn phẳng mảng columnFilters ra để API dễ đọc
+  
   const filterObject = (contractsParams.columnFilters || []).reduce((acc, filter) => {
     acc[filter.id] = filter.value as string;
     return acc;
@@ -186,9 +186,7 @@ export default function AdminContractsPage() {
           </h1>
         </div>
 
-        {/* Thanh Lọc Thông Minh (Responsive) */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-          {/* 1. Chọn Cột Cần Lọc */}
           <div className="flex items-center gap-2 px-3 bg-white rounded-xl border border-slate-200 shrink-0">
             <Filter className="w-4 h-4 text-emerald-500" />
             <select
@@ -203,7 +201,6 @@ export default function AdminContractsPage() {
             </select>
           </div>
 
-          {/* 2. Ô Nhập / Chọn Giá Trị (Đổi giao diện ngay lập tức khi chọn "type") */}
           {filterField === 'type' ? (
             <select
               value={contractsParams.type || ''}
@@ -232,7 +229,6 @@ export default function AdminContractsPage() {
         </div>
       </div>
 
-      {/* BẢNG DỮ LIỆU */}
       <AdminDataTable
         columns={columns}
         data={data?.data ?? []}

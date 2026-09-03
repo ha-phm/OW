@@ -30,7 +30,6 @@ export function buildCardWhere(query: CardQueryFilters): Prisma.CardWhereInput {
     };
   }
 
-  // Search tổng hợp: OR trên các cột chính + số hợp đồng + email của bảng liên kết
   if (query.search) {
     const q = query.search.trim();
     where.OR = [
@@ -54,7 +53,6 @@ export function buildCardWhere(query: CardQueryFilters): Prisma.CardWhereInput {
   return where;
 }
 
-// Danh sách field hợp lệ để sort — phải khớp với @IsIn(...) trong GetAdminCardsQueryDto
 export function buildCardOrderBy(
   sortBy: string | undefined,
   sortOrder: 'asc' | 'desc' = 'desc',
@@ -66,10 +64,8 @@ export function buildCardOrderBy(
     case 'createdAt':
       return { [sortBy]: sortOrder };
     case 'issuingContractNumber':
-      // sort theo cột thuộc bảng liên kết Contract
       return { issuingContract: { contractNumber: sortOrder } };
     case 'userEmail':
-      // sort theo cột thuộc bảng liên kết Contract -> User
       return { issuingContract: { user: { email: sortOrder } } };
     default:
       return { createdAt: 'desc' };

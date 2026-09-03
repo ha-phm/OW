@@ -17,7 +17,6 @@ import { CardDetailModal } from '../../../modals/CardDetailModal';
 import { QuickOpenCardModal } from '../../../modals/QuickOpenCardModal';
 import { AdminDashboard } from '../../../components/Dashboard/AdminDashboard';
 
-// Màu Solid (Đơn sắc) chuẩn Banking cho thẻ ảo Mock
 const MOCK_CARDS = [
   { id: '1', bgClass: 'bg-slate-900', type: 'Signature' },
   { id: '2', bgClass: 'bg-blue-800', type: 'Platinum' },

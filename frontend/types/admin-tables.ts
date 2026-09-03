@@ -1,4 +1,4 @@
-import { AdminUser } from './user'; // Bổ sung import này
+import { AdminUser } from './user'; 
 
 export type PaginationMeta = {
   page: number;
@@ -34,6 +34,7 @@ export interface AdminCardItem {
   clientNumber: string;
   userIsActive: boolean;
   createdAt: string;
+  productName: string;
 }
 
 // --- CÁC TYPE TRẢ VỀ CÓ PHÂN TRANG (PAGINATED) ---
@@ -47,34 +48,32 @@ export type PaginatedAdminCards = {
   meta: PaginationMeta;
 };
 
-// 👇 BỔ SUNG TYPE NÀY CHO USER
 export type PaginatedAdminUsers = {
   data: AdminUser[];
   meta: PaginationMeta;
 };
 
-
+// ============================================================================
 // --- CÁC TYPE PARAMS GỬI LÊN API ---
-export type GetAdminContractsParams = {
-  search?: string;
-  type?: ContractType;
+// ============================================================================
+
+// 1. TẠO TYPE GỐC
+export type BaseTableParams = {
   page: number;
   pageSize: number;
-  filters?: Record<string, string>;
-};
-
-export type GetAdminCardsParams = {
-  search?: string;
-  page: number;
-  pageSize: number;
-  filters?: Record<string, string>;
-};
-
-// 👇 CHUYỂN TYPE NÀY TỪ BÊN FILE USER SANG ĐÂY
-export type GetAdminUsersParams = {
-  page?: number;
-  pageSize?: number;
   search?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
-}
+  
+  [key: string]: string | number | boolean | undefined; 
+};
+
+export type GetAdminContractsParams = BaseTableParams & {
+  type?: ContractType; 
+};
+
+export type GetAdminUsersParams = BaseTableParams & {
+  isActive?: string; 
+};
+
+export type GetAdminCardsParams = BaseTableParams;

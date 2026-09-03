@@ -104,7 +104,7 @@ export class AuthService {
         );
       }
 
-      // 🛑 THÊM ĐOẠN NÀY: Chặn refresh token nếu tài khoản đã bị khóa
+      // Chặn refresh token nếu tài khoản đã bị khóa
       if (user.isActive === false) {
         throw new UnauthorizedException(
           'Tài khoản đã bị khóa. Phiên đăng nhập kết thúc.',
@@ -123,7 +123,7 @@ export class AuthService {
 
       return this.issueTokens(user);
     } catch (error) {
-      // 👈 Tốt nhất là throw lại đúng lỗi (hoặc ghi log) để dễ debug thay vì nuốt lỗi
+      // Tốt nhất là throw lại đúng lỗi (hoặc ghi log) để dễ debug thay vì nuốt lỗi
       if (error instanceof UnauthorizedException) {
         throw error;
       }

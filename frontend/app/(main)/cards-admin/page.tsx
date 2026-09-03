@@ -51,7 +51,7 @@ interface FilterFormValues {
   inputValue: string;
 }
 
-// Mới: chuyển SortingState (v9) -> { sortBy, sortOrder } cho API.
+// chuyển SortingState (v9) -> { sortBy, sortOrder } cho API.
 const convertSortingToParams = (sorting: SortingState) => {
   const [first] = sorting;
   if (!first) return {};
@@ -77,19 +77,16 @@ export default function AdminCardsPage() {
   const filterField = useWatch({ control, name: 'filterField' });
   const inputValue = useWatch({ control, name: 'inputValue' });
 
-  // 2. DÙNG useCallback ĐỂ ESLINT HẾT BÁO LỖI EXHAUSTIVE DEPS
   const getStoreValue = useCallback((field: FilterField) => {
     if (field === 'search') return cardsParams.search || '';
     const filterObj = cardsParams.columnFilters?.find(f => f.id === field);
     return (filterObj?.value as string) || '';
   }, [cardsParams.search, cardsParams.columnFilters]);
 
-  // 3. Đồng bộ giao diện input khi đổi cột lọc (Code sạch, không cần comment disable)
   useEffect(() => {
     setValue('inputValue', getStoreValue(filterField));
   }, [filterField, getStoreValue, setValue]);
 
-  // 4. Debounce: Đẩy dữ liệu vào mảng columnFilters của Zustand
   useEffect(() => {
     const timer = setTimeout(() => {
       const currentValueInStore = getStoreValue(filterField);
@@ -119,7 +116,6 @@ export default function AdminCardsPage() {
     }
   }, [meLoading, me, router]);
 
-  // Dàn phẳng columnFilters thành Object cho API
   const filterObject = (cardsParams.columnFilters || []).reduce((acc, filter) => {
     acc[filter.id] = filter.value as string;
     return acc;
@@ -200,7 +196,6 @@ export default function AdminCardsPage() {
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-8">
-      {/* HEADER & THANH LỌC THÔNG MINH */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
@@ -213,7 +208,6 @@ export default function AdminCardsPage() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
           <div className="flex items-center gap-2 px-3 bg-white rounded-xl border border-slate-200 shrink-0">
             <Filter className="w-4 h-4 text-emerald-500" />
-            {/* THAY THẾ SELECT THỦ CÔNG BẰNG REGISTER */}
             <select
               {...register('filterField')}
               className="bg-transparent py-2.5 text-sm focus:outline-none text-slate-700 font-medium cursor-pointer w-full sm:w-auto appearance-none pr-4"
@@ -228,7 +222,6 @@ export default function AdminCardsPage() {
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <Search className="h-4 w-4 text-slate-400" />
             </div>
-            {/* THAY THẾ INPUT THỦ CÔNG BẰNG REGISTER */}
             <input
               {...register('inputValue')}
               placeholder={
@@ -241,7 +234,6 @@ export default function AdminCardsPage() {
         </div>
       </div>
 
-      {/* BẢNG DỮ LIỆU */}
       <AdminDataTable
         columns={columns}
         data={data?.data ?? []}
