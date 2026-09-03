@@ -7,6 +7,7 @@ export interface ContractQueryFilters {
   contractName?: string;
   productCode?: string;
   userEmail?: string;
+  userIsActive?: string; // Bổ sung tham số nhận trạng thái
 }
 
 const VALID_CONTRACT_TYPES: readonly string[] = Object.values(ContractType);
@@ -17,7 +18,7 @@ export function buildContractWhere(
   const where: Prisma.ContractWhereInput = {};
 
   if (query.type && VALID_CONTRACT_TYPES.includes(query.type)) {
-    where.type = query.type as ContractType;
+    where.type = query.type as ContractType; // Ép kiểu an toàn, không dùng any
   }
 
   if (query.contractNumber) {
@@ -38,10 +39,28 @@ export function buildContractWhere(
       mode: 'insensitive',
     };
   }
+
+  // --- SỬ DỤNG TYPE CỦA PRISMA ĐỂ KHÔNG PHẢI DÙNG ANY ---
+  // Gom điều kiện liên quan đến bảng User vào chung một object
+  const userConditions: Prisma.UserWhereInput = {};
+  let hasUserConditions = false;
+
   if (query.userEmail) {
-    where.user = {
-      email: { contains: query.userEmail.trim(), mode: 'insensitive' },
+    userConditions.email = {
+      contains: query.userEmail.trim(),
+      mode: 'insensitive',
     };
+    hasUserConditions = true;
+  }
+
+  if (query.userIsActive === 'true' || query.userIsActive === 'false') {
+    userConditions.isActive = query.userIsActive === 'true';
+    hasUserConditions = true;
+  }
+
+  // Gán vào where.user một lần duy nhất nếu có điều kiện
+  if (hasUserConditions) {
+    where.user = userConditions;
   }
 
   // Search tổng hợp: OR trên các cột chính + cột email của bảng liên kết
@@ -74,6 +93,9 @@ export function buildContractOrderBy(
     case 'userEmail':
       // sort theo cột thuộc bảng liên kết User
       return { user: { email: sortOrder } };
+    case 'userIsActive':
+      // sort theo trạng thái thuộc bảng liên kết User
+      return { user: { isActive: sortOrder } };
     default:
       return { createdAt: 'desc' };
   }

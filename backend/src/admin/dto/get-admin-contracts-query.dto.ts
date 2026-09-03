@@ -22,6 +22,11 @@ export class GetAdminContractsQueryDto extends PaginationQueryDto {
   @IsString()
   type?: string;
 
+  // 1. THÊM BIẾN HỨNG TRẠNG THÁI
+  @IsOptional()
+  @IsString()
+  userIsActive?: string;
+
   @IsOptional()
   @IsIn([
     'contractNumber',
@@ -31,6 +36,7 @@ export class GetAdminContractsQueryDto extends PaginationQueryDto {
     'clientNumber',
     'userEmail',
     'createdAt',
+    'userIsActive', // 2. CHO PHÉP SORT THEO CỘT NÀY
   ])
   sortBy?: string;
 

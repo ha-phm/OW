@@ -22,6 +22,7 @@ export class GetAdminCardsQueryDto extends PaginationQueryDto {
     'userEmail',
     'expiryDate',
     'createdAt',
+    'userIsActive',
   ])
   sortBy?: string;
 

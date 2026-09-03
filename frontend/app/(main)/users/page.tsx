@@ -52,14 +52,14 @@ export default function UsersPage() {
   }, [usersParams.search, usersParams.columnFilters]);
 
   useEffect(() => {
-    if (filterField !== 'isActive') {
+    if (filterField !== 'isActive' && filterField !== 'role') {
       setValue('inputValue', getStoreValue(filterField));
     }
   }, [filterField, getStoreValue, setValue]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (filterField !== 'isActive') {
+      if (filterField !== 'isActive' && filterField !== 'role') {
         const currentValueInStore = getStoreValue(filterField);
         if (inputValue !== currentValueInStore) {
           if (filterField === 'search') {
@@ -153,7 +153,8 @@ export default function UsersPage() {
           <select
             value={user.role}
             onChange={(e) => handleRoleChange(user.id, user.email, e.target.value as Role)}
-            className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-emerald-400 focus:outline-none cursor-pointer bg-white"
+            aria-label={`Thay đổi quyền của người dùng ${user.email}`}
+            className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm cursor-pointer bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
           >
             <option value="USER">USER</option>
             <option value="ADMIN">ADMIN</option>
@@ -197,17 +198,19 @@ export default function UsersPage() {
             <button
               onClick={() => toast('Đang mở trang chỉnh sửa...', { description: user.email })}
               title="Chỉnh sửa thông tin"
-              className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600"
+              aria-label={`Chỉnh sửa thông tin tài khoản ${user.email}`}
+              className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:bg-blue-50"
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil aria-hidden="true" className="h-4 w-4" />
             </button>
             {isActive !== false ? (
               <button
                 onClick={() => handleDeleteUser(user.id, user.email)}
                 title="Vô hiệu hoá tài khoản"
-                className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                aria-label={`Vô hiệu hoá tài khoản ${user.email}`}
+                className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:bg-red-50"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 aria-hidden="true" className="h-4 w-4" />
               </button>
             ) : (
               <button
@@ -217,9 +220,10 @@ export default function UsersPage() {
                   }
                 }}
                 title="Mở khóa tài khoản"
-                className="rounded-lg p-2 text-emerald-500 transition hover:bg-emerald-50 hover:text-emerald-600"
+                aria-label={`Mở khóa tài khoản ${user.email}`}
+                className="rounded-lg p-2 text-emerald-500 transition hover:bg-emerald-50 hover:text-emerald-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:bg-emerald-50"
               >
-                <Unlock className="h-4 w-4" />
+                <Unlock aria-hidden="true" className="h-4 w-4" />
               </button>
             )}
           </div>
@@ -229,24 +233,28 @@ export default function UsersPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 p-4 sm:p-8">
+   
+    <main className="flex flex-col gap-6 p-4 sm:p-8">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
-            <UserCog className="h-5 w-5 text-emerald-600" />
+      
+        <header className="flex items-center gap-3">
+          <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+            <UserCog aria-hidden="true" className="h-5 w-5 text-emerald-600" />
           </div>
           <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">Quản lý người dùng</h1>
-        </div>
+        </header>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+        <section aria-label="Bộ lọc và tìm kiếm" className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
           <div className="flex items-center gap-2 px-3 bg-white rounded-xl border border-slate-200 shrink-0">
-            <Filter className="w-4 h-4 text-emerald-500" />
+            <Filter aria-hidden="true" className="w-4 h-4 text-emerald-500" />
             <select
               {...register('filterField')}
-              className="bg-transparent py-2.5 text-sm focus:outline-none text-slate-700 font-medium cursor-pointer w-full sm:w-auto appearance-none pr-4"
+              aria-label="Chọn trường để lọc"
+              className="bg-transparent py-2.5 text-sm text-slate-700 font-medium cursor-pointer w-full sm:w-auto appearance-none pr-4 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
               <option value="search">Tìm kiếm chung</option>
-              <option value="email">Email</option>\<option value="clientNumber">Số khách hàng</option>
+              <option value="email">Email</option>
+              <option value="clientNumber">Số khách hàng</option>
               <option value="role">Quyền (Role)</option>
               <option value="isActive">Trạng thái</option>
             </select>
@@ -258,20 +266,20 @@ export default function UsersPage() {
               onChange={(e) => {
                 const val = e.target.value;
                 const otherFilters = (usersParams.columnFilters || []).filter(f => f.id !== 'isActive');
-                if (val === '') {
-                  setUsersParams({ columnFilters: otherFilters, page: 1 });
-                } else {
-                  setUsersParams({ columnFilters: [...otherFilters, { id: 'isActive', value: val }], page: 1 });
-                }
+                setUsersParams({ 
+                  columnFilters: val === '' ? otherFilters : [...otherFilters, { id: 'isActive', value: val }], 
+                  page: 1 
+                });
               }}
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-emerald-400 focus:outline-none cursor-pointer"
+              aria-label="Lọc theo trạng thái hoạt động"
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="true">Đang hoạt động</option>
               <option value="false">Bị khóa</option>
             </select>
+            
           ) : filterField === 'role' ? (
-            // --- DROPDOWN LỌC QUYỀN (THÊM MỚI) ---
             <select
               value={usersParams.columnFilters?.find(f => f.id === 'role')?.value as string || ''}
               onChange={(e) => {
@@ -282,7 +290,8 @@ export default function UsersPage() {
                   page: 1 
                 });
               }}
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-emerald-400 focus:outline-none cursor-pointer"
+              aria-label="Lọc theo quyền quản trị"
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
               <option value="">Tất cả quyền</option>
               <option value="ADMIN">ADMIN (Quản trị viên)</option>
@@ -291,17 +300,26 @@ export default function UsersPage() {
 
           ) : (
             <div className="relative flex-1">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
               <input
                 {...register('inputValue')}
-                placeholder={filterField === 'search' ? 'Nhập từ khóa...' : 'Nhập email...'}
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                aria-label={
+                  filterField === 'search' ? 'Nhập từ khóa tìm kiếm chung' : 
+                  filterField === 'email' ? 'Nhập email cần tìm' : 
+                  'Nhập số khách hàng cần tìm'
+                }
+                placeholder={
+                  filterField === 'search' ? 'Nhập từ khóa...' : 
+                  filterField === 'email' ? 'Nhập email...' : 
+                  'Nhập số khách hàng...'
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               />
             </div>
           )}
-        </div>
+        </section>
       </div>
 
       <AdminDataTable
@@ -320,6 +338,6 @@ export default function UsersPage() {
         sorting={usersParams.sorting}
         onSortingChange={(sorting) => setUsersParams({ sorting })}
       />
-    </div>
+    </main>
   );
 }

@@ -157,6 +157,7 @@ export class AdminService {
       contractName?: string;
       productCode?: string;
       userEmail?: string;
+      userIsActive?: string; // Khai báo thêm ở đây
     },
   ): Promise<PaginatedResult<AdminContractItem>> {
     const where = buildContractWhere(query);
@@ -166,7 +167,6 @@ export class AdminService {
     );
     const skip = (query.page - 1) * query.pageSize;
 
-    // Chạy song song: lấy đúng 1 trang dữ liệu + đếm tổng, không load toàn bộ bảng
     const [contracts, total] = await Promise.all([
       this.prisma.contract.findMany({
         where,
@@ -196,11 +196,14 @@ export class AdminService {
   // ---------------------------------------------------------------------
   // QUẢN LÝ THẺ (ADMIN)
   // ---------------------------------------------------------------------
+  // ... (các hàm ở trên giữ nguyên) ...
+
   async listAllCards(
     query: GetAdminCardsQueryDto & {
       cardNumber?: string;
       cardName?: string;
       userEmail?: string;
+      userIsActive?: string;
     },
   ): Promise<PaginatedResult<AdminCardItem>> {
     const where = buildCardWhere(query);

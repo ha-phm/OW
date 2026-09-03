@@ -18,15 +18,14 @@ const TYPE_LABEL: Record<ContractType, string> = {
   ISSUING: 'Issuing',
 };
 
-type FilterField = 'search' | 'contractNumber' | 'contractName' | 'userEmail' | 'type';
+// THÊM 'userIsActive' VÀO ĐÂY
+type FilterField = 'search' | 'contractNumber' | 'contractName' | 'userEmail' | 'type' | 'userIsActive';
 
-// Khai báo type cho Form Lọc
 interface FilterFormValues {
   filterField: FilterField;
   inputValue: string;
 }
 
-// chuyển SortingState (v9) -> { sortBy, sortOrder } cho API.
 const convertSortingToParams = (sorting: SortingState) => {
   const [first] = sorting;
   if (!first) return {};
@@ -41,7 +40,6 @@ export default function AdminContractsPage() {
   const { data: me, isLoading: meLoading } = useAuthMe();
   const { contractsParams, setContractsParams } = useAdminStore();
 
-  
   const { register, control, setValue } = useForm<FilterFormValues>({
     defaultValues: {
       filterField: 'search',
@@ -52,7 +50,6 @@ export default function AdminContractsPage() {
   const filterField = useWatch({ control, name: 'filterField' });
   const inputValue = useWatch({ control, name: 'inputValue' });
 
-  
   const getStoreValue = useCallback((field: FilterField) => {
     if (field === 'search') return contractsParams.search || '';
     if (field === 'type') return contractsParams.type || '';
@@ -60,17 +57,16 @@ export default function AdminContractsPage() {
     return (filterObj?.value as string) || '';
   }, [contractsParams.search, contractsParams.type, contractsParams.columnFilters]);
 
-  
+  // Bỏ qua cập nhật inputValue nếu đang chọn Dropdown (type hoặc userIsActive)
   useEffect(() => {
-    if (filterField !== 'type') {
+    if (filterField !== 'type' && filterField !== 'userIsActive') {
       setValue('inputValue', getStoreValue(filterField));
     }
   }, [filterField, getStoreValue, setValue]);
 
-
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (filterField !== 'type') {
+      if (filterField !== 'type' && filterField !== 'userIsActive') {
         const currentValueInStore = getStoreValue(filterField);
         if (inputValue !== currentValueInStore) {
           if (filterField === 'search') {
@@ -99,7 +95,6 @@ export default function AdminContractsPage() {
     }
   }, [meLoading, me, router]);
 
-  
   const filterObject = (contractsParams.columnFilters || []).reduce((acc, filter) => {
     acc[filter.id] = filter.value as string;
     return acc;
@@ -118,9 +113,6 @@ export default function AdminContractsPage() {
     return null;
   }
 
-  // V9: ColumnDef nhận thêm generic TFeatures (AppFeatures, export từ AdminDataTable).
-  // enableSorting: true bật sort cho cột; cột "type" render badge tùy biến vẫn sort được
-  // vì sort dựa trên giá trị gốc (accessorKey), không phải trên cell đã render.
   const columns: ColumnDef<AppFeatures, AdminContractItem>[] = [
     { accessorKey: 'contractNumber', header: 'Số hợp đồng', enableSorting: true },
     { accessorKey: 'contractName', header: 'Tên hợp đồng', enableSorting: true },
@@ -153,14 +145,27 @@ export default function AdminContractsPage() {
         const isActive = row.original.userIsActive; 
         
         return (
-          <div className="flex items-center gap-2">
-            <span>{email}</span>
-            {isActive === false && (
-              <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] sm:text-xs text-red-600 font-bold whitespace-nowrap">
-                Bị khóa
-              </span>
-            )}
-          </div>
+          <span className={`font-medium ${isActive === false ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+            {email}
+          </span>
+        );
+      }
+    },
+    // THÊM CỘT TRẠNG THÁI
+    {
+      accessorKey: 'userIsActive',
+      header: 'Trạng thái CSH',
+      enableSorting: true,
+      cell: ({ getValue }) => {
+        const isActive = getValue<boolean>();
+        return isActive ? (
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200 whitespace-nowrap">
+            Hoạt động
+          </span>
+        ) : (
+          <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 border border-red-200 whitespace-nowrap">
+            Bị khóa
+          </span>
         );
       }
     },
@@ -174,30 +179,35 @@ export default function AdminContractsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-5 p-4 sm:p-8">
-      {/* HEADER & THANH LỌC */}
+    // THAY DIV THÀNH MAIN
+    <main className="flex flex-col gap-5 p-4 sm:p-8">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
-            <FileStack className="h-5 w-5 text-emerald-600" />
+        
+        {/* THAY DIV THÀNH HEADER */}
+        <header className="flex items-center gap-3">
+          <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+            <FileStack aria-hidden="true" className="h-5 w-5 text-emerald-600" />
           </div>
           <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">
             Quản lý hợp đồng
           </h1>
-        </div>
+        </header>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+        {/* THAY DIV THÀNH SECTION CÓ ARIA-LABEL */}
+        <section aria-label="Bộ lọc và tìm kiếm hợp đồng" className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
           <div className="flex items-center gap-2 px-3 bg-white rounded-xl border border-slate-200 shrink-0">
-            <Filter className="w-4 h-4 text-emerald-500" />
+            <Filter aria-hidden="true" className="w-4 h-4 text-emerald-500" />
             <select
               {...register('filterField')}
-              className="bg-transparent py-2.5 text-sm focus:outline-none text-slate-700 font-medium cursor-pointer w-full sm:w-auto appearance-none pr-4"
+              aria-label="Chọn trường để lọc"
+              className="bg-transparent py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded text-slate-700 font-medium cursor-pointer w-full sm:w-auto appearance-none pr-4"
             >
               <option value="search">Tìm kiếm chung</option>
               <option value="contractNumber">Số hợp đồng</option>
               <option value="contractName">Tên hợp đồng</option>
               <option value="userEmail">Email chủ sở hữu</option>
               <option value="type">Loại hợp đồng</option>
+              <option value="userIsActive">Trạng thái CSH</option> {/* THÊM OPTION */}
             </select>
           </div>
 
@@ -205,28 +215,51 @@ export default function AdminContractsPage() {
             <select
               value={contractsParams.type || ''}
               onChange={(e) => setContractsParams({ type: e.target.value as ContractType | '', page: 1 })}
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-emerald-400 focus:outline-none cursor-pointer"
+              aria-label="Lọc theo loại hợp đồng"
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
               <option value="">Tất cả loại</option>
               <option value="LIABILITY">Liability</option>
               <option value="ISSUING">Issuing</option>
             </select>
+            
+          ) : filterField === 'userIsActive' ? (
+            // DROPDOWN CHO TRẠNG THÁI CSH
+            <select
+              value={contractsParams.columnFilters?.find(f => f.id === 'userIsActive')?.value as string || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                const otherFilters = (contractsParams.columnFilters || []).filter(f => f.id !== 'userIsActive');
+                setContractsParams({ 
+                  columnFilters: val === '' ? otherFilters : [...otherFilters, { id: 'userIsActive', value: val }], 
+                  page: 1 
+                });
+              }}
+              aria-label="Lọc theo trạng thái chủ sở hữu"
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="true">Đang hoạt động</option>
+              <option value="false">Bị khóa</option>
+            </select>
+            
           ) : (
             <div className="relative flex-1">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
               <input
                 {...register('inputValue')}
+                aria-label="Nhập thông tin cần tìm kiếm"
                 placeholder={
                   filterField === 'search' ? 'Nhập từ khóa...' :
                   filterField === 'userEmail' ? 'Nhập email...' : 'Nhập thông tin lọc...'
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               />
             </div>
           )}
-        </div>
+        </section>
       </div>
 
       <AdminDataTable
@@ -245,6 +278,6 @@ export default function AdminContractsPage() {
         sorting={contractsParams.sorting}
         onSortingChange={(sorting) => setContractsParams({ sorting })}
       />
-    </div>
+    </main>
   );
 }

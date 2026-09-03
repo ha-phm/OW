@@ -1,10 +1,11 @@
 import { Prisma } from '@prisma/client';
 
 export interface CardQueryFilters {
-  search?: string;
   cardNumber?: string;
   cardName?: string;
   userEmail?: string;
+  userIsActive?: string;
+  search?: string;
 }
 
 export function buildCardWhere(query: CardQueryFilters): Prisma.CardWhereInput {
@@ -16,20 +17,39 @@ export function buildCardWhere(query: CardQueryFilters): Prisma.CardWhereInput {
       mode: 'insensitive',
     };
   }
+
   if (query.cardName) {
     where.cardName = {
       contains: query.cardName.trim(),
       mode: 'insensitive',
     };
   }
+
+  // --- XỬ LÝ LỌC QUAN HỆ BẮC CẦU (USER) AN TOÀN ---
+  // Gom chung các điều kiện của user vào 1 object để không bị ghi đè lẫn nhau
+  const userConditions: Prisma.UserWhereInput = {};
+  let hasUserConditions = false;
+
   if (query.userEmail) {
+    userConditions.email = {
+      contains: query.userEmail.trim(),
+      mode: 'insensitive',
+    };
+    hasUserConditions = true;
+  }
+
+  if (query.userIsActive === 'true' || query.userIsActive === 'false') {
+    userConditions.isActive = query.userIsActive === 'true';
+    hasUserConditions = true;
+  }
+
+  if (hasUserConditions) {
     where.issuingContract = {
-      user: {
-        email: { contains: query.userEmail.trim(), mode: 'insensitive' },
-      },
+      user: userConditions,
     };
   }
 
+  // --- XỬ LÝ SEARCH CHUNG ---
   if (query.search) {
     const q = query.search.trim();
     where.OR = [
@@ -63,10 +83,17 @@ export function buildCardOrderBy(
     case 'expiryDate':
     case 'createdAt':
       return { [sortBy]: sortOrder };
+
     case 'issuingContractNumber':
       return { issuingContract: { contractNumber: sortOrder } };
+
     case 'userEmail':
       return { issuingContract: { user: { email: sortOrder } } };
+
+    // THÊM LOGIC SORT THEO TRẠNG THÁI Ở ĐÂY
+    case 'userIsActive':
+      return { issuingContract: { user: { isActive: sortOrder } } };
+
     default:
       return { createdAt: 'desc' };
   }
