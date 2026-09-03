@@ -22,9 +22,9 @@ export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEdi
   const {
     register,
     handleSubmit,
-    formState: { isSubmitting, errors }, // 2. LẤY THÊM errors ĐỂ HIỂN THỊ
+    formState: { isSubmitting, errors, dirtyFields, isDirty }, 
   } = useForm<EditFormData>({
-    resolver: zodResolver(profileEditSchema), // 3. GẮN ZOD VÀO ĐÂY
+    resolver: zodResolver(profileEditSchema), 
     defaultValues: {
       firstName: profile.FirstName ?? '',
       middleName: profile.MiddleName ?? '',
@@ -50,13 +50,26 @@ export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEdi
   const onSubmit: SubmitHandler<EditFormData> = async (formData) => {
     setSubmitError(null);
     try {
-      const cleanData = Object.fromEntries(
-        Object.entries(formData)
-          .filter(([, value]) => value !== '' && value !== null && value !== undefined)
-          .map(([key, value]) => [key, String(value)])
-      );
+      // 1. Chỉ lấy những trường nằm trong dirtyFields (đã bị người dùng thay đổi)
+      const dirtyData = Object.keys(dirtyFields).reduce((acc, key) => {
+        const fieldKey = key as keyof EditFormData;
+        const value = formData[fieldKey];
+        
+        // Vẫn giữ logic lọc các giá trị rỗng/null như cũ
+        if (value !== '' && value !== null && value !== undefined) {
+          acc[fieldKey] = String(value);
+        }
+        return acc;
+      }, {} as Record<string, string>);
 
-      await apiPatch(`/clients/me`, cleanData);
+      // Nếu không có dữ liệu nào thay đổi hợp lệ, bỏ qua việc gọi API và đóng form
+      if (Object.keys(dirtyData).length === 0) {
+        await onSuccess();
+        return;
+      }
+
+      // Chỉ gửi payload chứa các trường đã sửa
+      await apiPatch(`/clients/me`, dirtyData);
       await onSuccess();
     } catch (error: unknown) {
       const errorMsg =
@@ -72,7 +85,7 @@ export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEdi
   const inputClass =
     'w-full p-3 rounded-xl bg-white border border-slate-300 text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors shadow-sm';
   const labelClass = 'mb-1 ml-1 block text-sm font-medium text-slate-700';
-  const errorClass = 'text-red-500 text-xs mt-1 ml-1'; // CSS cho câu thông báo lỗi
+  const errorClass = 'text-red-500 text-xs mt-1 ml-1';
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -94,14 +107,12 @@ export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEdi
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
-        {/* Nhóm 1: Thông tin cá nhân */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="mb-4 border-b pb-2 text-lg font-semibold text-slate-800">Thông tin cá nhân</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Họ *</label>
               <input type="text" {...register('lastName')} className={inputClass} />
-              {/* 4. IN LỖI RA GIAO DIỆN */}
               {errors.lastName && <p className={errorClass}>{errors.lastName.message}</p>}
             </div>
             <div>
@@ -165,7 +176,6 @@ export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEdi
           </div>
         </div>
 
-        {/* Nhóm 2: Liên hệ & Công việc */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="mb-4 border-b pb-2 text-lg font-semibold text-slate-800">Liên hệ & Công việc</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -215,10 +225,12 @@ export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEdi
           >
             Hủy
           </button>
+          
+          {/* 2. SỬ DỤNG isDirty ĐỂ DISABLE NÚT SUBMIT */}
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:opacity-50"
+            disabled={isSubmitting || !isDirty}
+            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
           </button>
