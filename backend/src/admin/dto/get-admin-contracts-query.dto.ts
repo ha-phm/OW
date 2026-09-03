@@ -36,7 +36,7 @@ export class GetAdminContractsQueryDto extends PaginationQueryDto {
     'clientNumber',
     'userEmail',
     'createdAt',
-    'userIsActive', // 2. CHO PHÉP SORT THEO CỘT NÀY
+    'userIsActive',
   ])
   sortBy?: string;
 

@@ -23,6 +23,7 @@ export class SoapService {
   private readonly parser = new XMLParser({
     ignoreAttributes: false,
     removeNSPrefix: true,
+    parseTagValue: false,
   });
 
   constructor(private readonly config: ConfigService) {}
@@ -66,7 +67,7 @@ export class SoapService {
     const result =
       parsed.Envelope?.Body?.[`${operation}Response`]?.[`${operation}Result`];
 
-    if (!result || result.RetCode !== 0) {
+    if (!result || Number(result.RetCode) !== 0) {
       throw new BadRequestException({
         retCode: result?.RetCode ?? null,
         message: result?.RetMsg ?? 'OpenWay không trả về kết quả hợp lệ',

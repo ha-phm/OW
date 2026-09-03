@@ -12,6 +12,7 @@ import { useAuthMe } from '../../../hooks/useAuthMe';
 import { AdminUser, Role } from '../../../types/user';
 import { AdminDataTable, type AppFeatures } from '../../../components/AdminDataTable';
 import { useAdminStore } from '../../../store/useAdminStore';
+import { CustomSelect } from '../../../components/CustomSelect'; // Import Component mới
 
 const SEARCH_DEBOUNCE_MS = 300;
 type FilterField = 'search' | 'email' | 'clientNumber' | 'role' | 'isActive';
@@ -29,6 +30,34 @@ const convertSortingToParams = (sorting: SortingState) => {
     sortOrder: first.desc ? ('desc' as const) : ('asc' as const),
   };
 };
+
+// --- CÁC MẢNG DỮ LIỆU OPTIONS CHO CUSTOM SELECT ---
+const FILTER_FIELD_OPTIONS = [
+  { value: 'search', label: 'Tìm kiếm chung' },
+  { value: 'email', label: 'Email' },
+  { value: 'clientNumber', label: 'Số khách hàng' },
+  { value: 'role', label: 'Quyền (Role)' },
+  { value: 'isActive', label: 'Trạng thái' },
+];
+
+const ROLE_OPTIONS = [
+  { value: '', label: 'Tất cả quyền' },
+  { value: 'ADMIN', label: 'ADMIN' },
+  { value: 'USER', label: 'USER' },
+];
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'Tất cả trạng thái' },
+  { value: 'true', label: 'Đang hoạt động' },
+  { value: 'false', label: 'Bị khóa' },
+];
+
+// Options dành riêng cho cột Role trong bảng
+const TABLE_ROLE_OPTIONS = [
+  { value: 'ADMIN', label: 'ADMIN' },
+  { value: 'USER', label: 'USER' },
+];
+// --------------------------------------------------
 
 export default function UsersPage() {
   const router = useRouter();
@@ -150,15 +179,15 @@ export default function UsersPage() {
       cell: ({ row }) => {
         const user = row.original;
         return (
-          <select
-            value={user.role}
-            onChange={(e) => handleRoleChange(user.id, user.email, e.target.value as Role)}
-            aria-label={`Thay đổi quyền của người dùng ${user.email}`}
-            className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm cursor-pointer bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
-          >
-            <option value="USER">USER</option>
-            <option value="ADMIN">ADMIN</option>
-          </select>
+          // Thay <select> mặc định bằng CustomSelect
+          <div className="min-w-[120px]">
+             <CustomSelect
+                value={user.role}
+                onChange={(val) => handleRoleChange(user.id, user.email, val as Role)}
+                options={TABLE_ROLE_OPTIONS}
+                ariaLabel={`Thay đổi quyền của người dùng ${user.email}`}
+              />
+          </div>
         );
       },
     },
@@ -233,8 +262,14 @@ export default function UsersPage() {
   ];
 
   return (
-   
     <main className="flex flex-col gap-6 p-4 sm:p-8">
+      {/* KHU VỰC THÔNG BÁO CHO TRÌNH ĐỌC MÀN HÌNH */}
+      <div aria-live="polite" className="sr-only">
+        {isLoading || isFetching 
+          ? 'Đang tải dữ liệu người dùng...' 
+          : `Đã tìm thấy ${usersData?.meta?.total ?? 0} người dùng.`}
+      </div>
+
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
       
         <header className="flex items-center gap-3">
@@ -244,100 +279,94 @@ export default function UsersPage() {
           <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">Quản lý người dùng</h1>
         </header>
 
-        <section aria-label="Bộ lọc và tìm kiếm" className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-          <div className="flex items-center gap-2 px-3 bg-white rounded-xl border border-slate-200 shrink-0">
-            <Filter aria-hidden="true" className="w-4 h-4 text-emerald-500" />
-            <select
-              {...register('filterField')}
-              aria-label="Chọn trường để lọc"
-              className="bg-transparent py-2.5 text-sm text-slate-700 font-medium cursor-pointer w-full sm:w-auto appearance-none pr-4 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <option value="search">Tìm kiếm chung</option>
-              <option value="email">Email</option>
-              <option value="clientNumber">Số khách hàng</option>
-              <option value="role">Quyền (Role)</option>
-              <option value="isActive">Trạng thái</option>
-            </select>
-          </div>
+        {/* NÂNG CẤP BỘ LỌC CHUẨN A11Y */}
+        <form 
+          role="search"
+          aria-label="Bộ lọc tìm kiếm người dùng" 
+          onSubmit={(e) => e.preventDefault()}
+          className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100"
+        >
+          {/* Dropdown 1: Chọn trường cần lọc */}
+          <CustomSelect
+            value={filterField}
+            onChange={(val) => setValue('filterField', val as FilterField)}
+            options={FILTER_FIELD_OPTIONS}
+            icon={<Filter className="h-4 w-4" />}
+            ariaLabel="Chọn trường dữ liệu để lọc"
+          />
 
+          {/* Ô nhập liệu/Dropdown hiển thị tương ứng */}
           {filterField === 'isActive' ? (
-            <select
+             <CustomSelect
               value={usersParams.columnFilters?.find(f => f.id === 'isActive')?.value as string || ''}
-              onChange={(e) => {
-                const val = e.target.value;
+              onChange={(val) => {
                 const otherFilters = (usersParams.columnFilters || []).filter(f => f.id !== 'isActive');
                 setUsersParams({ 
                   columnFilters: val === '' ? otherFilters : [...otherFilters, { id: 'isActive', value: val }], 
                   page: 1 
                 });
               }}
-              aria-label="Lọc theo trạng thái hoạt động"
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="true">Đang hoạt động</option>
-              <option value="false">Bị khóa</option>
-            </select>
+              options={STATUS_OPTIONS}
+              ariaLabel="Lọc theo trạng thái hoạt động"
+            />
             
           ) : filterField === 'role' ? (
-            <select
+             <CustomSelect
               value={usersParams.columnFilters?.find(f => f.id === 'role')?.value as string || ''}
-              onChange={(e) => {
-                const val = e.target.value;
+              onChange={(val) => {
                 const otherFilters = (usersParams.columnFilters || []).filter(f => f.id !== 'role');
                 setUsersParams({ 
                   columnFilters: val === '' ? otherFilters : [...otherFilters, { id: 'role', value: val }], 
                   page: 1 
                 });
               }}
-              aria-label="Lọc theo quyền quản trị"
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <option value="">Tất cả quyền</option>
-              <option value="ADMIN">ADMIN (Quản trị viên)</option>
-              <option value="USER">USER (Người dùng)</option>
-            </select>
+              options={ROLE_OPTIONS}
+              ariaLabel="Lọc theo quyền quản trị"
+            />
 
           ) : (
             <div className="relative flex-1">
               <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
+              <label htmlFor="userSearchInput" className="sr-only">
+                {filterField === 'search' ? 'Nhập từ khóa tìm kiếm chung' : 
+                 filterField === 'email' ? 'Nhập email cần tìm' : 
+                 'Nhập số khách hàng cần tìm'}
+              </label>
               <input
+                id="userSearchInput"
                 {...register('inputValue')}
-                aria-label={
-                  filterField === 'search' ? 'Nhập từ khóa tìm kiếm chung' : 
-                  filterField === 'email' ? 'Nhập email cần tìm' : 
-                  'Nhập số khách hàng cần tìm'
-                }
                 placeholder={
                   filterField === 'search' ? 'Nhập từ khóa...' : 
                   filterField === 'email' ? 'Nhập email...' : 
                   'Nhập số khách hàng...'
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-sm"
               />
             </div>
           )}
-        </section>
+        </form>
       </div>
 
-      <AdminDataTable
-        columns={columns}
-        data={usersData?.data || []}
-        page={usersParams.page || 1}
-        pageSize={usersParams.pageSize || 10}
-        totalPages={usersData?.meta?.totalPages || 1}
-        total={usersData?.meta?.total || 0}
-        onPageChange={(page) => setUsersParams({ page })}
-        onPageSizeChange={(pageSize) => setUsersParams({ pageSize, page: 1 })}
-        isLoading={isLoading}
-        isFetching={isFetching}
-        emptyMessage="Không tìm thấy người dùng nào."
-        showColumnFilters={false}
-        sorting={usersParams.sorting}
-        onSortingChange={(sorting) => setUsersParams({ sorting })}
-      />
+      <div aria-busy={isLoading || isFetching}>
+        <AdminDataTable
+          columns={columns}
+          data={usersData?.data || []}
+          page={usersParams.page || 1}
+          pageSize={usersParams.pageSize || 10}
+          totalPages={usersData?.meta?.totalPages || 1}
+          total={usersData?.meta?.total || 0}
+          onPageChange={(page) => setUsersParams({ page })}
+          onPageSizeChange={(pageSize) => setUsersParams({ pageSize, page: 1 })}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          emptyMessage="Không tìm thấy người dùng nào."
+          showColumnFilters={false}
+          sorting={usersParams.sorting}
+          onSortingChange={(sorting) => setUsersParams({ sorting })}
+        />
+      </div>
     </main>
   );
 }

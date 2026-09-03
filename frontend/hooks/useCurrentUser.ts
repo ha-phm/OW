@@ -16,6 +16,7 @@ export interface IssClientDetailsV2APIRecord {
   LastName?: string;
   BirthDate?: string;
   Citizenship?: string;
+  MaritalStatusCode?: string; 
   MaritalStatus?: string;
   IndividualTaxpayerNumber?: string;
   HomePhone?: string;

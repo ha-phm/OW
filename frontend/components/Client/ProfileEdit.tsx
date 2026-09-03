@@ -5,7 +5,7 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';
 import { apiPatch, ApiError } from '../../api/api';
-import { extractCode } from '../../utils/client.utils';
+import { extractCode, mapMaritalStatusCode } from '../../utils/client.utils';
 import { IssClientDetailsV2APIRecord } from '../../hooks/useCurrentUser';
 import { profileEditSchema, EditFormData } from '../../schema/client.schema';
 
@@ -25,13 +25,13 @@ export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEdi
     formState: { isSubmitting, errors, dirtyFields, isDirty }, 
   } = useForm<EditFormData>({
     resolver: zodResolver(profileEditSchema), 
-    defaultValues: {
+    values: {
       firstName: profile.FirstName ?? '',
       middleName: profile.MiddleName ?? '',
       lastName: profile.LastName ?? '',
       birthDate: profile.BirthDate ?? '',
       gender: extractCode(profile.Gender) as 'M' | 'F',
-      maritalStatusCode: extractCode(profile.MaritalStatus) as 'S' | 'M' | 'D' | 'W',
+      maritalStatusCode: mapMaritalStatusCode(profile.MaritalStatusCode || profile.MaritalStatus) ?? 'S',
       mobilePhone: String(profile.MobilePhone ?? ''),
       email: profile.EMail ?? '',
       identityCardNumber: profile.IdentityCardNumber ?? '',
@@ -87,6 +87,9 @@ export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEdi
   const labelClass = 'mb-1 ml-1 block text-sm font-medium text-slate-700';
   const errorClass = 'text-red-500 text-xs mt-1 ml-1';
 
+  console.log('Raw MaritalStatus:', profile.MaritalStatusCode, profile.MaritalStatus);
+  // Trong useCurrentUser.ts hoặc ngay đầu ProfileEdit.tsx
+console.log('RAW from API:', JSON.stringify(profile.MobilePhone), typeof profile.MobilePhone);
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center justify-between">
@@ -133,6 +136,7 @@ export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEdi
             <div>
               <label className={labelClass}>Giới tính *</label>
               <select {...register('gender')} className={inputClass}>
+                
                 <option value="M">Nam (M)</option>
                 <option value="F">Nữ (F)</option>
               </select>
@@ -141,6 +145,7 @@ export default function ProfileEdit({ profile, onCancel, onSuccess }: ProfileEdi
             <div>
               <label className={labelClass}>Tình trạng hôn nhân *</label>
               <select {...register('maritalStatusCode')} className={inputClass}>
+              
                 <option value="S">Độc thân (S)</option>
                 <option value="M">Đã kết hôn (M)</option>
                 <option value="D">Ly hôn (D)</option>

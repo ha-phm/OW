@@ -10,6 +10,7 @@ import { useAdminContracts } from '../../../hooks/useAdminContracts';
 import { AdminContractItem, ContractType } from '../../../types/admin-tables';
 import { AdminDataTable, type AppFeatures } from '../../../components/AdminDataTable';
 import { useAdminStore } from '../../../store/useAdminStore';
+import { CustomSelect } from '../../../components/CustomSelect';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -18,7 +19,6 @@ const TYPE_LABEL: Record<ContractType, string> = {
   ISSUING: 'Issuing',
 };
 
-// THÊM 'userIsActive' VÀO ĐÂY
 type FilterField = 'search' | 'contractNumber' | 'contractName' | 'userEmail' | 'type' | 'userIsActive';
 
 interface FilterFormValues {
@@ -34,6 +34,29 @@ const convertSortingToParams = (sorting: SortingState) => {
     sortOrder: first.desc ? ('desc' as const) : ('asc' as const),
   };
 };
+
+// --- ĐỊNH NGHĨA CÁC MẢNG DỮ LIỆU CHO CUSTOM SELECT ---
+const FILTER_FIELD_OPTIONS = [
+  { value: 'search', label: 'Tìm kiếm chung' },
+  { value: 'contractNumber', label: 'Số hợp đồng' },
+  { value: 'contractName', label: 'Tên hợp đồng' },
+  { value: 'userEmail', label: 'Email chủ sở hữu' },
+  { value: 'type', label: 'Loại hợp đồng' },
+  { value: 'userIsActive', label: 'Trạng thái' },
+];
+
+const TYPE_OPTIONS = [
+  { value: '', label: 'Tất cả loại' },
+  { value: 'LIABILITY', label: 'Liability' },
+  { value: 'ISSUING', label: 'Issuing' },
+];
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'Tất cả trạng thái' },
+  { value: 'true', label: 'Đang hoạt động' },
+  { value: 'false', label: 'Bị khóa' },
+];
+// -----------------------------------------------------
 
 export default function AdminContractsPage() {
   const router = useRouter();
@@ -151,10 +174,9 @@ export default function AdminContractsPage() {
         );
       }
     },
-    // THÊM CỘT TRẠNG THÁI
     {
       accessorKey: 'userIsActive',
-      header: 'Trạng thái CSH',
+      header: 'Trạng thái',
       enableSorting: true,
       cell: ({ getValue }) => {
         const isActive = getValue<boolean>();
@@ -179,11 +201,16 @@ export default function AdminContractsPage() {
   ];
 
   return (
-    // THAY DIV THÀNH MAIN
     <main className="flex flex-col gap-5 p-4 sm:p-8">
+      {/* VÙNG THÔNG BÁO ẨN CHO MÁY ĐỌC MÀN HÌNH */}
+      <div aria-live="polite" className="sr-only">
+        {isLoading || isFetching 
+          ? 'Đang tải dữ liệu hợp đồng...' 
+          : `Đã tìm thấy ${data?.meta.total ?? 0} hợp đồng.`}
+      </div>
+
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         
-        {/* THAY DIV THÀNH HEADER */}
         <header className="flex items-center gap-3">
           <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
             <FileStack aria-hidden="true" className="h-5 w-5 text-emerald-600" />
@@ -193,91 +220,83 @@ export default function AdminContractsPage() {
           </h1>
         </header>
 
-        {/* THAY DIV THÀNH SECTION CÓ ARIA-LABEL */}
-        <section aria-label="Bộ lọc và tìm kiếm hợp đồng" className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-          <div className="flex items-center gap-2 px-3 bg-white rounded-xl border border-slate-200 shrink-0">
-            <Filter aria-hidden="true" className="w-4 h-4 text-emerald-500" />
-            <select
-              {...register('filterField')}
-              aria-label="Chọn trường để lọc"
-              className="bg-transparent py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded text-slate-700 font-medium cursor-pointer w-full sm:w-auto appearance-none pr-4"
-            >
-              <option value="search">Tìm kiếm chung</option>
-              <option value="contractNumber">Số hợp đồng</option>
-              <option value="contractName">Tên hợp đồng</option>
-              <option value="userEmail">Email chủ sở hữu</option>
-              <option value="type">Loại hợp đồng</option>
-              <option value="userIsActive">Trạng thái CSH</option> {/* THÊM OPTION */}
-            </select>
-          </div>
+        {/* KHU VỰC BỘ LỌC (Thay <select> bằng <CustomSelect>) */}
+        <form 
+          role="search"
+          aria-label="Bộ lọc hợp đồng" 
+          onSubmit={(e) => e.preventDefault()}
+          className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100"
+        >
+          {/* 1. Chọn trường cần lọc */}
+          <CustomSelect
+            value={filterField}
+            onChange={(val) => setValue('filterField', val as FilterField)}
+            options={FILTER_FIELD_OPTIONS}
+            icon={<Filter className="h-4 w-4" />}
+            ariaLabel="Chọn trường cần lọc"
+          />
 
+          {/* 2. Ô nhập/chọn giá trị lọc tương ứng */}
           {filterField === 'type' ? (
-            <select
+            <CustomSelect
               value={contractsParams.type || ''}
-              onChange={(e) => setContractsParams({ type: e.target.value as ContractType | '', page: 1 })}
-              aria-label="Lọc theo loại hợp đồng"
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <option value="">Tất cả loại</option>
-              <option value="LIABILITY">Liability</option>
-              <option value="ISSUING">Issuing</option>
-            </select>
+              onChange={(val) => setContractsParams({ type: val as ContractType | '', page: 1 })}
+              options={TYPE_OPTIONS}
+              ariaLabel="Lọc theo loại hợp đồng"
+            />
             
           ) : filterField === 'userIsActive' ? (
-            // DROPDOWN CHO TRẠNG THÁI CSH
-            <select
+            <CustomSelect
               value={contractsParams.columnFilters?.find(f => f.id === 'userIsActive')?.value as string || ''}
-              onChange={(e) => {
-                const val = e.target.value;
+              onChange={(val) => {
                 const otherFilters = (contractsParams.columnFilters || []).filter(f => f.id !== 'userIsActive');
                 setContractsParams({ 
                   columnFilters: val === '' ? otherFilters : [...otherFilters, { id: 'userIsActive', value: val }], 
                   page: 1 
                 });
               }}
-              aria-label="Lọc theo trạng thái chủ sở hữu"
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="true">Đang hoạt động</option>
-              <option value="false">Bị khóa</option>
-            </select>
+              options={STATUS_OPTIONS}
+              ariaLabel="Lọc theo trạng thái"
+            />
             
           ) : (
             <div className="relative flex-1">
               <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
+              <label htmlFor="searchInput" className="sr-only">Nhập thông tin tìm kiếm</label>
               <input
+                id="searchInput"
                 {...register('inputValue')}
-                aria-label="Nhập thông tin cần tìm kiếm"
                 placeholder={
                   filterField === 'search' ? 'Nhập từ khóa...' :
                   filterField === 'userEmail' ? 'Nhập email...' : 'Nhập thông tin lọc...'
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-sm"
               />
             </div>
           )}
-        </section>
+        </form>
       </div>
 
-      <AdminDataTable
-        columns={columns}
-        data={data?.data ?? []}
-        page={data?.meta.page ?? contractsParams.page}
-        totalPages={data?.meta.totalPages ?? 1}
-        total={data?.meta.total ?? 0}
-        pageSize={contractsParams.pageSize}
-        onPageChange={(page) => setContractsParams({ page })}
-        onPageSizeChange={(pageSize) => setContractsParams({ pageSize, page: 1 })}
-        isLoading={isLoading}
-        isFetching={isFetching}
-        emptyMessage="Không tìm thấy hợp đồng nào."
-        showColumnFilters={false}
-        sorting={contractsParams.sorting}
-        onSortingChange={(sorting) => setContractsParams({ sorting })}
-      />
+      <div aria-busy={isLoading || isFetching}>
+        <AdminDataTable
+          columns={columns}
+          data={data?.data ?? []}
+          page={data?.meta.page ?? contractsParams.page}
+          totalPages={data?.meta.totalPages ?? 1}
+          total={data?.meta.total ?? 0}
+          pageSize={contractsParams.pageSize}
+          onPageChange={(page) => setContractsParams({ page })}
+          onPageSizeChange={(pageSize) => setContractsParams({ pageSize, page: 1 })}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          emptyMessage="Không tìm thấy hợp đồng nào."
+          showColumnFilters={false}
+          sorting={contractsParams.sorting}
+          onSortingChange={(sorting) => setContractsParams({ sorting })}
+        />
+      </div>
     </main>
   );
 }

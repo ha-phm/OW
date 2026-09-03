@@ -50,7 +50,7 @@ interface AdminDataTableProps<TData extends RowData> {
   showColumnFilters?: boolean;
   columnFilters?: ColumnFiltersState;
   onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
-  // Mới: sort do server xử lý (manualSorting). Nếu không truyền, bảng vẫn
+  // sort do server xử lý (manualSorting). Nếu không truyền, bảng vẫn
   // hoạt động nhưng click header sẽ không có tác dụng ra ngoài.
   sorting?: SortingState;
   onSortingChange?: (sorting: SortingState) => void;
@@ -82,9 +82,7 @@ export function AdminDataTable<TData extends RowData>({
   const localFiltersString = JSON.stringify(localFilters);
 
   // Đồng bộ localFilters khi prop columnFilters đổi từ bên ngoài (ví dụ bị reset).
-  // KHÔNG dùng useEffect + setState ở đây (React khuyến cáo "Avoid calling setState()
-  // directly within an effect" vì gây thêm 1 lượt render). Thay vào đó "điều chỉnh state
-  // ngay trong lúc render" bằng cách theo dõi giá trị prop đã đồng bộ gần nhất.
+
   const [syncedPropFiltersString, setSyncedPropFiltersString] =
     useState(propFiltersString);
   if (propFiltersString !== syncedPropFiltersString) {
@@ -160,25 +158,32 @@ export function AdminDataTable<TData extends RowData>({
                     return (
                       <th
                         key={header.id}
+                        // A11y: Báo cho Screen Reader biết trạng thái sort
+                        aria-sort={
+                          canSort
+                            ? sortDir === 'asc'
+                              ? 'ascending'
+                              : sortDir === 'desc'
+                              ? 'descending'
+                              : 'none'
+                            : undefined
+                        }
                         className="px-5 py-4 align-top text-xs font-bold uppercase tracking-wider text-teal-800"
                       >
                         {header.isPlaceholder ? null : (
                           <div className="flex flex-col gap-2.5">
-                            <div
-                              className={`flex items-center gap-1.5 ${
-                                canSort ? 'cursor-pointer select-none group/sort' : ''
-                              }`}
-                              onClick={
-                                canSort
-                                  ? header.column.getToggleSortingHandler()
-                                  : undefined
-                              }
-                            >
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                              {canSort && (
+                            {canSort ? (
+                              // A11y: Dùng button cho cột có thể sắp xếp
+                              <button
+                                type="button"
+                                onClick={header.column.getToggleSortingHandler()}
+                                aria-label={`Sắp xếp cột này`}
+                                className="group/sort flex w-full items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-md -ml-1 px-1 py-0.5 transition-colors text-left"
+                              >
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext(),
+                                )}
                                 <span className="text-emerald-500/70 group-hover/sort:text-emerald-600">
                                   {sortDir === 'asc' ? (
                                     <ArrowUp className="h-3.5 w-3.5" />
@@ -188,8 +193,16 @@ export function AdminDataTable<TData extends RowData>({
                                     <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
                                   )}
                                 </span>
-                              )}
-                            </div>
+                              </button>
+                            ) : (
+                              // Render bình thường nếu không sort được
+                              <div className="flex items-center gap-1.5 -ml-1 px-1 py-0.5">
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext(),
+                                )}
+                              </div>
+                            )}
 
                             {showColumnFilters && header.column.getCanFilter() && (
                               <div className="relative flex items-center mt-1">
@@ -199,6 +212,7 @@ export function AdminDataTable<TData extends RowData>({
                                   value={(header.column.getFilterValue() ?? '') as string}
                                   onChange={(e) => header.column.setFilterValue(e.target.value)}
                                   placeholder="Lọc..."
+                                  aria-label="Lọc theo cột này"
                                   className="w-full rounded-lg border border-emerald-200/60 bg-white/80 py-1.5 pl-6 pr-2 text-xs font-normal text-slate-700 outline-none transition-colors placeholder:text-emerald-300 focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500 shadow-sm"
                                 />
                               </div>
@@ -258,6 +272,7 @@ export function AdminDataTable<TData extends RowData>({
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
+            aria-label="Chọn số kết quả hiển thị trên mỗi trang" // A11y
             className="rounded-lg border border-emerald-100 bg-emerald-50/30 px-3 py-1.5 font-semibold text-emerald-700 outline-none transition-all hover:bg-emerald-100/50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 cursor-pointer"
           >
             {[5, 10, 20, 50].map((size) => (
@@ -287,6 +302,7 @@ export function AdminDataTable<TData extends RowData>({
                 if (e.key === 'Enter') handleJumpPage(jumpPage);
               }}
               onBlur={() => handleJumpPage(jumpPage)}
+              aria-label="Nhập số trang muốn đến" // A11y
               className="w-14 rounded-lg border border-emerald-200 bg-white px-2 py-1.5 text-center font-semibold text-emerald-700 outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
             />
             <span className="text-slate-400">/ {totalPages}</span>
@@ -297,16 +313,18 @@ export function AdminDataTable<TData extends RowData>({
           <button
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page <= 1}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50 hover:border-emerald-300 disabled:border-slate-100 disabled:text-slate-300 disabled:bg-slate-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            aria-label="Trang trước" // A11y
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50 hover:border-emerald-300 disabled:border-slate-100 disabled:text-slate-300 disabled:bg-slate-50 disabled:cursor-not-allowed transition-all shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
           <button
             onClick={() => onPageChange(Math.min(totalPages, page + 1))}
             disabled={page >= totalPages}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50 hover:border-emerald-300 disabled:border-slate-100 disabled:text-slate-300 disabled:bg-slate-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            aria-label="Trang sau" // A11y
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50 hover:border-emerald-300 disabled:border-slate-100 disabled:text-slate-300 disabled:bg-slate-50 disabled:cursor-not-allowed transition-all shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>

@@ -111,7 +111,6 @@ export class AuthService {
         );
       }
 
-      // Ép kiểu string để tránh ESLint cảnh báo
       const isRefreshTokenMatches = await bcrypt.compare(
         refreshToken,
         user.refreshToken,

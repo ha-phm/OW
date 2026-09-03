@@ -8,7 +8,7 @@ export class ApiError extends Error {
   }
 }
 
-// 1. BIẾN RAM LƯU ACCESS TOKEN (In-memory Storage)
+
 let inMemoryAccessToken: string | null = null;
 
 export const setAccessToken = (token: string | null) => {
@@ -17,11 +17,10 @@ export const setAccessToken = (token: string | null) => {
 
 export const getAccessToken = () => inMemoryAccessToken;
 
-// 2. HÀM XỬ LÝ LOGOUT
 const forceLogout = () => {
   if (typeof window !== 'undefined') {
     setAccessToken(null); // Xoá token trên RAM
-    // Gửi event ra ngoài để component hoặc hook xử lý đẩy về trang login
+    
     window.dispatchEvent(new Event('auth:unauthorized'));
   }
 };
@@ -54,7 +53,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
-// 4. REQUEST INTERCEPTOR: Tự động đính kèm Access Token từ RAM vào header
+// REQUEST INTERCEPTOR: Tự động đính kèm Access Token từ RAM vào header
 apiClient.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
@@ -66,7 +65,7 @@ apiClient.interceptors.request.use(
   (error: unknown) => Promise.reject(error)
 );
 
-// 5. RESPONSE INTERCEPTOR: Bắt lỗi 401 và tự động refresh token
+// RESPONSE INTERCEPTOR: Bắt lỗi 401 và tự động refresh token
 apiClient.interceptors.response.use(
   (response) => response.data,
   async (error: AxiosError<{ message?: string | string[] }>) => {
@@ -75,11 +74,9 @@ apiClient.interceptors.response.use(
     if (error.response) {
       const status = error.response.status;
       const data = error.response.data;
-
-      // Nếu lỗi 401 (hết hạn Access Token) và chưa từng retry
       if (status === 401 && originalRequest && !originalRequest._retry) {
         if (isRefreshing) {
-          // Xếp hàng chờ nếu đang có request khác gọi refresh rồi
+          // Xếp hàng chờ 
           return new Promise<string | null>((resolve, reject) => {
             failedQueue.push({ resolve, reject });
           })
@@ -97,19 +94,18 @@ apiClient.interceptors.response.use(
 
         try {
           // Gọi API refresh token. 
-          // Cực kì quan trọng: Phải có withCredentials: true để trình duyệt gửi kèm HttpOnly Cookie
+          // Phải có withCredentials: true để trình duyệt gửi kèm HttpOnly Cookie
           const res = await axios.post(`${API_URL}/auth/refresh`, {}, {
             withCredentials: true 
           });
 
-          // Tuỳ vào backend của bạn trả về tên biến là gì (accessToken hay access_token)
+  
           const newAccessToken = res.data.accessToken || res.data.access_token;
 
           // Lưu token mới vào RAM
           setAccessToken(newAccessToken);
           processQueue(null, newAccessToken);
 
-          // Cập nhật token cho request gốc và gọi lại
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           }
@@ -118,7 +114,7 @@ apiClient.interceptors.response.use(
           return retryResponse.data;
           
         } catch (refreshError: unknown) {
-          // Nếu refresh cũng thất bại (VD: Cookie hết hạn) -> Buộc logout
+          
           processQueue(refreshError, null);
           forceLogout();
           return Promise.reject(refreshError);
@@ -127,7 +123,7 @@ apiClient.interceptors.response.use(
         }
       }
 
-      // Xử lý các lỗi HTTP khác
+      
       let message = 'Có lỗi xảy ra';
       if (data?.message) {
         message = Array.isArray(data.message) ? data.message.join(', ') : data.message;

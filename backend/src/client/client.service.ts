@@ -40,7 +40,20 @@ export interface IssClientDetailsV2APIRecord {
   FullName?: string;
   MobilePhone?: string;
   EMail?: string;
-  // thêm field khác nếu bạn có dùng ở nơi khác (vd IdentificationNumber...)
+  Gender?: string;
+  MaritalStatusCode?: string;
+  MaritalStatus?: string;
+  BirthDate?: string;
+  Citizenship?: string;
+  IdentityCardNumber?: string;
+  IdentityCardDetails?: string;
+  IndividualTaxpayerNumber?: string;
+  SocialSecurityNumber?: string;
+  AddressLine1?: string;
+  City?: string;
+  HomePhone?: string;
+  CompanyName?: string;
+  Profession?: string;
 }
 
 export interface GetClientResult {

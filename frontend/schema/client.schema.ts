@@ -8,7 +8,6 @@ export const loginSchema = z.object({
 export type LoginFormValues = z.infer<typeof loginSchema>;
 
 export const signupSchema = z.object({
-  
   email: z.string().email('Email không hợp lệ').max(100, 'Email quá dài'),
   
   password: z.string()
@@ -22,20 +21,30 @@ export const signupSchema = z.object({
   gender: z.enum(['M', 'F'], { message: 'Vui lòng chọn giới tính' }),
   maritalStatusCode: z.enum(['S', 'M', 'D', 'W'], { message: 'Vui lòng chọn tình trạng hôn nhân' }),
   salutationCode: z.enum(['MR', 'MRS', 'MS'], { message: 'Vui lòng chọn danh xưng' }),
-  mobilePhone: z.string()
+  
+  // SỬ DỤNG z.coerce.string() CHO CÁC TRƯỜNG CHỨA SỐ
+  mobilePhone: z.coerce.string()
     .regex(/^0\d{9}$/, 'Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0'),
-  identityCardNumber: z.string()
+    
+  identityCardNumber: z.coerce.string()
     .length(12, 'CCCD/CMND phải có đúng 12 chữ số')
     .regex(/^\d+$/, 'CCCD chỉ được chứa chữ số'),
+    
   identityCardDetails: z.string().optional(),
-  socialSecurityNumber: z.string().min(1, 'Vui lòng nhập số BHXH/CMND'),
-  individualTaxpayerNumber: z.string().optional(),
+  
+  socialSecurityNumber: z.coerce.string()
+    .min(1, 'Vui lòng nhập số BHXH/CMND'),
+    
+  individualTaxpayerNumber: z.coerce.string().optional(),
+  
   addressLine1: z.string()
     .min(1, 'Vui lòng nhập địa chỉ')
     .max(255, 'Địa chỉ quá dài (tối đa 255 ký tự)'),
     
   city: z.string().min(1, 'Vui lòng nhập thành phố').max(100, 'Tên thành phố quá dài'),
-  homePhone: z.string().optional(),
+  
+  homePhone: z.coerce.string().optional(),
+  
   companyName: z.string().optional(),
   profession: z.string().optional(),
   branch: z.string().optional(),
@@ -50,7 +59,7 @@ export const profileEditSchema = signupSchema
     branch: true,         
   })
   .extend({
-    citizenship: z.string().min(1, 'Vui lòng nhập quốc tịch'), // Thêm trường mới
+    citizenship: z.string().min(1, 'Vui lòng nhập quốc tịch'),
   });
   
 export type EditFormData = z.infer<typeof profileEditSchema>;
