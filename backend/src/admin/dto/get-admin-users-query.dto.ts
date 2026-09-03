@@ -37,7 +37,7 @@ export class GetAdminUsersQueryDto {
 
   @IsOptional()
   @IsString()
-  isActive?: string; // Nhận 'true' hoặc 'false' dạng chuỗi từ form truyền lên
+  isActive?: string;
 
   @IsOptional()
   @IsString()

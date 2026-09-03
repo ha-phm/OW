@@ -196,8 +196,6 @@ export class AdminService {
   // ---------------------------------------------------------------------
   // QUẢN LÝ THẺ (ADMIN)
   // ---------------------------------------------------------------------
-  // ... (các hàm ở trên giữ nguyên) ...
-
   async listAllCards(
     query: GetAdminCardsQueryDto,
   ): Promise<PaginatedResult<AdminCardItem>> {

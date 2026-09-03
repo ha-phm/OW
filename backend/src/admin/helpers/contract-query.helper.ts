@@ -2,12 +2,12 @@ import { Prisma, ContractType } from '@prisma/client';
 
 export interface ContractQueryFilters {
   search?: string;
-  type?: string; // nhận string từ query, cast sang ContractType nếu hợp lệ
+  type?: string;
   contractNumber?: string;
   contractName?: string;
   productCode?: string;
   userEmail?: string;
-  userIsActive?: string; // Bổ sung tham số nhận trạng thái
+  userIsActive?: string;
 }
 
 const VALID_CONTRACT_TYPES: readonly string[] = Object.values(ContractType);
@@ -18,7 +18,7 @@ export function buildContractWhere(
   const where: Prisma.ContractWhereInput = {};
 
   if (query.type && VALID_CONTRACT_TYPES.includes(query.type)) {
-    where.type = query.type as ContractType; // Ép kiểu an toàn, không dùng any
+    where.type = query.type as ContractType;
   }
 
   if (query.contractNumber) {
@@ -40,8 +40,6 @@ export function buildContractWhere(
     };
   }
 
-  // --- SỬ DỤNG TYPE CỦA PRISMA ĐỂ KHÔNG PHẢI DÙNG ANY ---
-  // Gom điều kiện liên quan đến bảng User vào chung một object
   const userConditions: Prisma.UserWhereInput = {};
   let hasUserConditions = false;
 
@@ -58,12 +56,10 @@ export function buildContractWhere(
     hasUserConditions = true;
   }
 
-  // Gán vào where.user một lần duy nhất nếu có điều kiện
   if (hasUserConditions) {
     where.user = userConditions;
   }
 
-  // Search tổng hợp: OR trên các cột chính + cột email của bảng liên kết
   if (query.search) {
     const q = query.search.trim();
     where.OR = [
@@ -77,7 +73,6 @@ export function buildContractWhere(
   return where;
 }
 
-// Danh sách field hợp lệ để sort — phải khớp với @IsIn(...) trong GetAdminContractsQueryDto
 export function buildContractOrderBy(
   sortBy: string | undefined,
   sortOrder: 'asc' | 'desc' = 'desc',
@@ -91,10 +86,8 @@ export function buildContractOrderBy(
     case 'createdAt':
       return { [sortBy]: sortOrder };
     case 'userEmail':
-      // sort theo cột thuộc bảng liên kết User
       return { user: { email: sortOrder } };
     case 'userIsActive':
-      // sort theo trạng thái thuộc bảng liên kết User
       return { user: { isActive: sortOrder } };
     default:
       return { createdAt: 'desc' };

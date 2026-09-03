@@ -276,7 +276,28 @@ export class CardService {
       };
     });
 
+    // 1. Lọc dữ liệu (Search/Filter)
     const filtered = this.filterCards(mapped, query);
+
+    // 2. SẮP XẾP DỮ LIỆU TẠI BACKEND (In-memory Sort)
+    if (query.sortBy) {
+      filtered.sort((a, b) => {
+        const valA = a[query.sortBy as keyof CardListItem];
+        const valB = b[query.sortBy as keyof CardListItem];
+
+        if (valA === valB) return 0;
+
+        // Đẩy giá trị null/undefined xuống cuối bảng
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+
+        const isDesc = query.sortOrder === 'desc';
+        if (valA < valB) return isDesc ? 1 : -1;
+        return isDesc ? -1 : 1;
+      });
+    }
+
+    // 3. Phân trang
     const { page, pageSize } = query;
     const total = filtered.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));

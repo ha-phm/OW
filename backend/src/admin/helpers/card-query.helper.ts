@@ -90,7 +90,6 @@ export function buildCardOrderBy(
     case 'userEmail':
       return { issuingContract: { user: { email: sortOrder } } };
 
-    // THÊM LOGIC SORT THEO TRẠNG THÁI Ở ĐÂY
     case 'userIsActive':
       return { issuingContract: { user: { isActive: sortOrder } } };
 

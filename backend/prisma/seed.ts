@@ -35,6 +35,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    // Đóng kết nối database sau khi chạy xong
     await prisma.$disconnect();
   });

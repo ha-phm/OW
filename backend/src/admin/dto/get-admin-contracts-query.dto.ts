@@ -22,7 +22,6 @@ export class GetAdminContractsQueryDto extends PaginationQueryDto {
   @IsString()
   type?: string;
 
-  // 1. THÊM BIẾN HỨNG TRẠNG THÁI
   @IsOptional()
   @IsString()
   userIsActive?: string;
