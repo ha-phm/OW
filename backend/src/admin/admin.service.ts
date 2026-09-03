@@ -199,12 +199,7 @@ export class AdminService {
   // ... (các hàm ở trên giữ nguyên) ...
 
   async listAllCards(
-    query: GetAdminCardsQueryDto & {
-      cardNumber?: string;
-      cardName?: string;
-      userEmail?: string;
-      userIsActive?: string;
-    },
+    query: GetAdminCardsQueryDto,
   ): Promise<PaginatedResult<AdminCardItem>> {
     const where = buildCardWhere(query);
     const orderBy = buildCardOrderBy(query.sortBy, query.sortOrder ?? 'desc');

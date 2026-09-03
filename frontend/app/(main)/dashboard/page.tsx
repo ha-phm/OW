@@ -193,7 +193,6 @@ export default function DashboardPage() {
   );
 }
 
-// Bỏ gradient, dùng màu Solid, làm Chip phẳng hơn
 function MockCard({ bgClass, cardType, className }: { bgClass: string; cardType: string; className: string }) {
   return (
     <div className={`flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 p-3 sm:p-4 shadow-xl aspect-[1.586/1] w-40 sm:w-56 text-white ${bgClass} ${className}`}>

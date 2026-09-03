@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useForm, useWatch } from 'react-hook-form';
-import { useState } from 'react';
 import { Landmark, Filter, Search, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthMe } from '../../../hooks/useAuthMe';
@@ -17,13 +16,22 @@ import { CustomSelect } from '../../../components/CustomSelect';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-type FilterField = 'search' | 'cardNumber' | 'cardName' | 'userEmail';
+// 1. Thêm 'userIsActive' vào kiểu FilterField
+type FilterField = 'search' | 'cardNumber' | 'cardName' | 'userEmail' | 'userIsActive';
 
+// 2. Định nghĩa các Options cho CustomSelect
 const FILTER_FIELD_OPTIONS = [
   { value: 'search', label: 'Tìm kiếm chung' },
   { value: 'cardNumber', label: 'Số thẻ' },
   { value: 'cardName', label: 'Tên thẻ' },
   { value: 'userEmail', label: 'Email chủ sở hữu' },
+  { value: 'userIsActive', label: 'Trạng thái' },
+];
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'Tất cả trạng thái' },
+  { value: 'true', label: 'Đang hoạt động' },
+  { value: 'false', label: 'Bị khóa' },
 ];
 
 function MaskedCardCell({ cardNumber, maskedCardNumber }: { cardNumber: string; maskedCardNumber?: string }) {
@@ -60,7 +68,7 @@ interface FilterFormValues {
   inputValue: string;
 }
 
-// chuyển SortingState (v9) -> { sortBy, sortOrder } cho API.
+// Chuyển SortingState (v9) -> { sortBy, sortOrder } cho API.
 const convertSortingToParams = (sorting: SortingState) => {
   const [first] = sorting;
   if (!first) return {};
@@ -75,7 +83,6 @@ export default function AdminCardsPage() {
   const { data: me, isLoading: meLoading } = useAuthMe();
   const { cardsParams, setCardsParams } = useAdminStore();
 
-  // 1. ÁP DỤNG REACT HOOK FORM CHO THANH TÌM KIẾM
   const { register, control, setValue } = useForm<FilterFormValues>({
     defaultValues: {
       filterField: 'search',
@@ -92,26 +99,31 @@ export default function AdminCardsPage() {
     return (filterObj?.value as string) || '';
   }, [cardsParams.search, cardsParams.columnFilters]);
 
+  // Bỏ qua cập nhật inputValue nếu đang chọn Dropdown (Trạng thái)
   useEffect(() => {
-    setValue('inputValue', getStoreValue(filterField));
+    if (filterField !== 'userIsActive') {
+      setValue('inputValue', getStoreValue(filterField));
+    }
   }, [filterField, getStoreValue, setValue]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const currentValueInStore = getStoreValue(filterField);
-      if (inputValue !== currentValueInStore) {
-        if (filterField === 'search') {
-          setCardsParams({ search: inputValue, page: 1 });
-        } else {
-          const currentFilters = cardsParams.columnFilters || [];
-          const otherFilters = currentFilters.filter(f => f.id !== filterField);
-          if (inputValue.trim() === '') {
-            setCardsParams({ columnFilters: otherFilters, page: 1 });
+      if (filterField !== 'userIsActive') {
+        const currentValueInStore = getStoreValue(filterField);
+        if (inputValue !== currentValueInStore) {
+          if (filterField === 'search') {
+            setCardsParams({ search: inputValue, page: 1 });
           } else {
-            setCardsParams({
-              columnFilters: [...otherFilters, { id: filterField, value: inputValue }],
-              page: 1
-            });
+            const currentFilters = cardsParams.columnFilters || [];
+            const otherFilters = currentFilters.filter(f => f.id !== filterField);
+            if (inputValue.trim() === '') {
+              setCardsParams({ columnFilters: otherFilters, page: 1 });
+            } else {
+              setCardsParams({
+                columnFilters: [...otherFilters, { id: filterField, value: inputValue }],
+                page: 1
+              });
+            }
           }
         }
       }
@@ -170,17 +182,29 @@ export default function AdminCardsPage() {
       enableSorting: true,
       cell: ({ row }) => {
         const email = row.getValue<string>('userEmail');
-        const isActive = row.original.userIsActive; 
         
         return (
-          <div className="flex items-center gap-2">
-            <span>{email}</span>
-            {isActive === false && (
-              <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] sm:text-xs text-red-600 font-bold whitespace-nowrap">
-                Bị khóa
-              </span>
-            )}
-          </div>
+          <span className="font-medium text-slate-700">
+            {email}
+          </span>
+        );
+      }
+    },
+    // BỔ SUNG CỘT TRẠNG THÁI GIỐNG TRANG HỢP ĐỒNG
+    {
+      accessorKey: 'userIsActive',
+      header: 'Trạng thái',
+      enableSorting: true,
+      cell: ({ getValue }) => {
+        const isActive = getValue<boolean>();
+        return isActive ? (
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200 whitespace-nowrap">
+            Hoạt động
+          </span>
+        ) : (
+          <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 border border-red-200 whitespace-nowrap">
+            Bị khóa
+          </span>
         );
       }
     },
@@ -235,22 +259,37 @@ export default function AdminCardsPage() {
             ariaLabel="Chọn trường cần lọc"
           />
 
-          {/* 2. Ô Input tìm kiếm */}
-          <div className="relative flex-1">
-            <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Search className="h-4 w-4 text-slate-400" />
-            </div>
-            <label htmlFor="searchInput" className="sr-only">Nhập thông tin tìm kiếm</label>
-            <input
-              id="searchInput"
-              {...register('inputValue')}
-              placeholder={
-                filterField === 'search' ? 'Nhập từ khóa...' :
-                filterField === 'userEmail' ? 'Nhập email...' : 'Nhập thông tin lọc...'
-              }
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-sm"
+          {/* 2. Ô Input tìm kiếm hoặc Dropdown Trạng thái */}
+          {filterField === 'userIsActive' ? (
+             <CustomSelect
+              value={cardsParams.columnFilters?.find(f => f.id === 'userIsActive')?.value as string || ''}
+              onChange={(val) => {
+                const otherFilters = (cardsParams.columnFilters || []).filter(f => f.id !== 'userIsActive');
+                setCardsParams({ 
+                  columnFilters: val === '' ? otherFilters : [...otherFilters, { id: 'userIsActive', value: val }], 
+                  page: 1 
+                });
+              }}
+              options={STATUS_OPTIONS}
+              ariaLabel="Lọc theo trạng thái"
             />
-          </div>
+          ) : (
+            <div className="relative flex-1">
+              <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <label htmlFor="searchInput" className="sr-only">Nhập thông tin tìm kiếm</label>
+              <input
+                id="searchInput"
+                {...register('inputValue')}
+                placeholder={
+                  filterField === 'search' ? 'Nhập từ khóa...' :
+                  filterField === 'userEmail' ? 'Nhập email...' : 'Nhập thông tin lọc...'
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-sm"
+              />
+            </div>
+          )}
         </form>
       </div>
 

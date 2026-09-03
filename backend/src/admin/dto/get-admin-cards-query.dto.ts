@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsBooleanString } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export class GetAdminCardsQueryDto extends PaginationQueryDto {
@@ -13,6 +13,10 @@ export class GetAdminCardsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   userEmail?: string;
+
+  @IsOptional()
+  @IsBooleanString()
+  userIsActive?: string;
 
   @IsOptional()
   @IsIn([
