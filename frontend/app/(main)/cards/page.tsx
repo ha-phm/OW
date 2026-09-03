@@ -1,6 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+
+import { useEffect, useState, useCallback } from 'react';
 import { ColumnDef, SortingState } from '@tanstack/react-table';
+import { useForm, useWatch } from 'react-hook-form';
 import { 
   Loader2, 
   AlertCircle, 
@@ -11,10 +13,13 @@ import {
   Copy, 
   Check, 
   LayoutGrid, 
-  TableProperties 
+  TableProperties,
+  Filter
 } from 'lucide-react';
 import { toast } from 'sonner';
+
 import { useCards } from '../../../hooks/useCards';
+import { CardQueryParams } from '../../../services/card.service';
 import { ApiError } from '../../../api/api';
 import { VirtualCardVisual } from '../../../components/Card/VirtualCardVisual';
 import { CardDetailModal } from '../../../modals/CardDetailModal';
@@ -23,8 +28,32 @@ import { AdminDataTable, type AppFeatures } from '../../../components/AdminDataT
 import { CardListItem } from '../../../types/card.types';
 import { maskCardNumber } from '../../../utils/format';
 import { formatCardProductLabel } from '../../../constants/cardCategories';
+import { CustomSelect } from '../../../components/CustomSelect';
 
 const SEARCH_DEBOUNCE_MS = 300;
+
+// ĐỊNH NGHĨA CÁC TRƯỜNG LỌC CHO KHÁCH HÀNG
+type FilterField = 'search' | 'cardNumber' | 'cardName' | 'productName';
+
+const FILTER_FIELD_OPTIONS = [
+  { value: 'search', label: 'Tìm kiếm chung' },
+  { value: 'cardNumber', label: 'Số thẻ' },
+  { value: 'cardName', label: 'Tên thẻ' },
+  { value: 'productName', label: 'Loại thẻ' },
+];
+
+const PRODUCT_OPTIONS = [
+  { value: '', label: 'Tất cả loại thẻ' },
+  { value: '001-Training Card Product 01', label: 'TRAVEL' },
+  { value: '001-Training Card Product 02', label: 'ECOMMERCE' },
+  { value: '001-Training Card Product 03', label: 'VISA' },
+  { value: '001-Training Card Product 04', label: 'CREDIT' },
+];
+
+interface FilterFormValues {
+  filterField: FilterField;
+  inputValue: string;
+}
 
 function MaskedCardCell({ cardNumber, maskedCardNumber }: { cardNumber: string; maskedCardNumber?: string }) {
   const [copied, setCopied] = useState(false);
@@ -54,7 +83,6 @@ function MaskedCardCell({ cardNumber, maskedCardNumber }: { cardNumber: string; 
   );
 }
 
-// Hàm chuyển đổi SortingState của bảng thành tham số API
 const convertSortingToParams = (sorting: SortingState) => {
   const [first] = sorting;
   if (!first) return {};
@@ -65,41 +93,71 @@ const convertSortingToParams = (sorting: SortingState) => {
 };
 
 export default function CardsPage() {
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [apiParams, setApiParams] = useState<CardQueryParams>({
+    page: 1,
+    pageSize: 10,
+  });
+
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [isQuickOpenModalVisible, setIsQuickOpenModalVisible] = useState(false);
-  
-  // STATE QUẢN LÝ SẮP XẾP CỦA BẢNG
   const [sorting, setSorting] = useState<SortingState>([]);
 
+  const { register, control, setValue } = useForm<FilterFormValues>({
+    defaultValues: { filterField: 'search', inputValue: '' }
+  });
+
+  const filterField = useWatch({ control, name: 'filterField' });
+  const inputValue = useWatch({ control, name: 'inputValue' });
+
+  const getStoreValue = useCallback((field: FilterField) => {
+    return (apiParams[field as keyof CardQueryParams] as string) || '';
+  }, [apiParams]);
+
+  // Bỏ qua update Input text nếu đang chọn Dropdown (productName)
+  useEffect(() => {
+    if (filterField !== 'productName') {
+      setValue('inputValue', getStoreValue(filterField));
+    }
+  }, [filterField, getStoreValue, setValue]);
+
+  // DEBOUNCE TÌM KIẾM CHO CÁC TRƯỜNG TEXT
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSearch(searchInput);
-      setPage(1);
+      if (filterField !== 'productName') {
+        const currentValueInStore = getStoreValue(filterField);
+        
+        if (inputValue !== currentValueInStore) {
+          setApiParams(prev => {
+            const next: CardQueryParams = { ...prev, page: 1 };
+            
+            // Xóa các trường lọc cũ để tránh đụng độ
+            delete next.search;
+            delete next.cardNumber;
+            delete next.cardName;
+            delete next.productName; // Reset luôn filter dropdown nếu có
+
+            // Gán trường text mới
+            if (inputValue.trim() !== '') {
+              if (filterField === 'search') next.search = inputValue;
+              if (filterField === 'cardNumber') next.cardNumber = inputValue;
+              if (filterField === 'cardName') next.cardName = inputValue;
+            }
+            return next;
+          });
+        }
+      }
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [inputValue, filterField, getStoreValue]);
 
-  // NỐI DỮ LIỆU SẮP XẾP VÀO HOOK GỌI API
-  const sortParams = convertSortingToParams(sorting);
-  const { data, isLoading, isFetching, isError, error, refetch } = useCards(
-    search, 
-    page, 
-    pageSize,
-    sortParams.sortBy,      // Truyền cột cần sort
-    sortParams.sortOrder    // Truyền chiều sort (asc/desc)
-  );
+  // GỌI API BẰNG OBJECT PARAMS
+  const { data, isLoading, isFetching, isError, error, refetch } = useCards(apiParams);
 
   const cards = data?.data ?? [];
   const meta = data?.meta;
   const isFirstLoad = isLoading && !data;
   const errorMessage = isError
-    ? error instanceof ApiError
-      ? error.message
-      : 'Không thể tải danh sách thẻ.'
+    ? error instanceof ApiError ? error.message : 'Không thể tải danh sách thẻ.'
     : null;
 
   const allCards = cards.map((c) => ({
@@ -137,20 +195,12 @@ export default function CardsPage() {
     },
     {
       accessorKey: 'productName',
-      header: 'Loại thẻ / Sản phẩm',
+      header: 'Loại thẻ',
       enableSorting: true,
       cell: ({ getValue }) => (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
           {formatCardProductLabel(getValue<string>())}
         </span>
-      ),
-    },
-    {
-      accessorKey: 'issuingContractNumber',
-      header: 'HĐ phát hành',
-      enableSorting: true,
-      cell: ({ getValue }) => (
-        <span className="font-mono text-xs text-slate-600">{getValue<string>() || '---'}</span>
       ),
     },
     {
@@ -215,24 +265,59 @@ export default function CardsPage() {
         </button>
       </header>
 
+      {/* FORM LỌC ĐÃ ĐƯỢC BỔ SUNG LOGIC HIỂN THỊ DROPDOWN TÙY BIẾN */}
       <form 
         role="search" 
-        aria-label="Tìm kiếm thẻ" 
+        aria-label="Tìm kiếm và lọc thẻ" 
         onSubmit={(e) => e.preventDefault()} 
-        className="relative"
+        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto bg-slate-50 p-1.5 rounded-2xl border border-slate-100"
       >
-        <Search aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <label htmlFor="searchInput" className="sr-only">Nhập từ khóa tìm kiếm thẻ</label>
-        <input
-          id="searchInput"
-          type="text"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Tìm theo số thẻ, tên thẻ hoặc tên chủ thẻ..."
-          className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition-all focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100/50 shadow-xs"
+        <CustomSelect
+          value={filterField}
+          onChange={(val) => setValue('filterField', val as FilterField)}
+          options={FILTER_FIELD_OPTIONS}
+          icon={<Filter className="h-4 w-4" />}
+          ariaLabel="Chọn trường cần lọc"
         />
-        {isFetching && !isFirstLoad && (
-          <Loader2 aria-hidden="true" className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
+
+        {/* NẾU CHỌN LỌC THEO LOẠI THẺ THÌ HIỂN THỊ DROPDOWN THỨ 2 */}
+        {filterField === 'productName' ? (
+          <CustomSelect
+            value={apiParams.productName || ''}
+            onChange={(val) => {
+              setApiParams(prev => {
+                const next: CardQueryParams = { ...prev, page: 1 };
+                delete next.search;
+                delete next.cardNumber;
+                delete next.cardName;
+                
+                if (val) next.productName = val;
+                else delete next.productName;
+                
+                return next;
+              });
+            }}
+            options={PRODUCT_OPTIONS}
+            ariaLabel="Lọc theo loại thẻ"
+          />
+        ) : (
+          /* NẾU KHÔNG THÌ HIỂN THỊ Ô INPUT NHẬP TEXT BÌNH THƯỜNG */
+          <div className="relative flex-1">
+            <Search aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <label htmlFor="searchInput" className="sr-only">Nhập thông tin tìm kiếm</label>
+            <input
+              id="searchInput"
+              {...register('inputValue')}
+              placeholder={
+                filterField === 'search' ? 'Nhập từ khóa chung...' :
+                filterField === 'cardNumber' ? 'Nhập số thẻ...' : 'Nhập tên thẻ...'
+              }
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-sm"
+            />
+            {isFetching && !isFirstLoad && (
+              <Loader2 aria-hidden="true" className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-emerald-500" />
+            )}
+          </div>
         )}
       </form>
 
@@ -252,19 +337,11 @@ export default function CardsPage() {
             <CreditCard aria-hidden="true" className="h-8 w-8" />
           </div>
           <p className="text-base font-semibold text-slate-700 mb-1">
-            {search ? `Không tìm thấy thẻ nào khớp với "${search}".` : 'Bạn chưa có thẻ nào.'}
+            Không tìm thấy dữ liệu phù hợp.
           </p>
           <p className="text-xs sm:text-sm text-slate-400 max-w-sm mx-auto mb-6">
-            {!search && 'Khám phá ngay các dòng thẻ thanh toán số với nhiều ưu đãi hoàn tiền và bảo mật cao cấp.'}
+            Hãy thử điều chỉnh lại bộ lọc hoặc mở một thẻ thanh toán mới.
           </p>
-          {!search && (
-            <button
-              onClick={() => setIsQuickOpenModalVisible(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-700/20 transition hover:bg-emerald-700 active:scale-95 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-            >
-              <Plus aria-hidden="true" className="h-4 w-4" /> Mở thẻ ngay
-            </button>
-          )}
         </div>
       ) : (
         <div className="space-y-10">
@@ -304,23 +381,23 @@ export default function CardsPage() {
               <AdminDataTable
                 columns={columns}
                 data={cards}
-                page={meta?.page ?? page}
+                page={meta?.page ?? apiParams.page}
                 totalPages={meta?.totalPages ?? 1}
                 total={meta?.total ?? cards.length}
-                pageSize={pageSize}
-                onPageChange={(p) => setPage(p)}
-                onPageSizeChange={(size) => {
-                  setPageSize(size);
-                  setPage(1);
-                }}
+                pageSize={apiParams.pageSize}
+                onPageChange={(p) => setApiParams(prev => ({ ...prev, page: p }))}
+                onPageSizeChange={(size) => setApiParams(prev => ({ ...prev, pageSize: size, page: 1 }))}
                 isLoading={isLoading}
                 isFetching={isFetching}
                 emptyMessage="Không tìm thấy thẻ nào."
                 showColumnFilters={false}
-                
-                // 2 DÒNG QUAN TRỌNG ĐỂ KÍCH HOẠT A11Y SORTING
                 sorting={sorting}
-                onSortingChange={setSorting}
+                
+                onSortingChange={(nextSorting: SortingState) => {
+                  setSorting(nextSorting);
+                  const sortConf = convertSortingToParams(nextSorting);
+                  setApiParams(prev => ({ ...prev, ...sortConf }));
+                }}
               />
             </div>
           </section>

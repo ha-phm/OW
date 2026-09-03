@@ -16,7 +16,10 @@ export class GetCardsQueryDto extends PaginationQueryDto {
   @IsString()
   userEmail?: string;
 
-  // THÊM 2 TRƯỜNG NÀY VÀO ĐỂ KHÔNG BỊ LỖI 400
+  @IsOptional()
+  @IsString()
+  productName?: string;
+
   @IsOptional()
   @IsString()
   sortBy?: string;

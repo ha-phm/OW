@@ -180,7 +180,7 @@ export default function UsersPage() {
         const user = row.original;
         return (
           // Thay <select> mặc định bằng CustomSelect
-          <div className="min-w-[120px]">
+          <div className="min-w-30">
              <CustomSelect
                 value={user.role}
                 onChange={(val) => handleRoleChange(user.id, user.email, val as Role)}

@@ -8,6 +8,7 @@ import { ModalField } from '../components/Card/ModalField';
 import { quickOpenCard, createSupplementaryCard } from '../api/contracts';
 import { ApiError } from '../api/api';
 import { CardCategory } from '../constants/cardCategories';
+import { CustomSelect } from '../components/CustomSelect'; // Bổ sung import CustomSelect
 
 const CATEGORY_TO_TAG_MAP: Record<string, string> = {
   [CardCategory.TRAVEL]: 'Thẻ Du Lịch',
@@ -65,11 +66,14 @@ const FormField = ({
           label={label}
           value={field.value as string}
           onChange={(val) => {
+            // Đảm bảo giá trị luôn là một chuỗi (string) để thỏa mãn TypeScript
+            const strVal = String(val ?? '');
+
             // Lọc: Nếu là Số tài khoản thì xóa hết ký tự không phải là số
             if (name === 'account') {
-              field.onChange(val.replace(/\D/g, ''));
+              field.onChange(strVal.replace(/\D/g, ''));
             } else {
-              field.onChange(name === 'cardName' || name === 'suppCardName' ? val : val.toUpperCase());
+              field.onChange(name === 'cardName' || name === 'suppCardName' ? strVal : strVal.toUpperCase());
             }
           }}
           placeholder={placeholder}
@@ -107,6 +111,15 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
     name: 'cardCategory',
   });
 
+  // TẠO MẢNG OPTIONS CHO CUSTOM SELECT TỪ EXISTING CARDS
+  const mainCardOptions = [
+    { value: '', label: '-- Bấm để chọn thẻ --' },
+    ...existingCards.map(c => ({
+      value: c.cardNumber,
+      label: `${c.productName || 'Thẻ'} - ${c.cardNumber.slice(-4)} ${c.cardName ? `(${c.cardName})` : ''}`
+    }))
+  ];
+
   const onSubmitForm = async (data: FormValues) => {
     setApiError(null);
     try {
@@ -125,7 +138,6 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
         });
         setCreatedCardPan(result.cardPan);
       } else {
-        // Tương tự với thẻ phụ
         const finalSuppCardName = data.suppCardName?.trim() ? data.suppCardName.trim() : 'Thẻ Phụ';
 
         const result = await createSupplementaryCard(data.selectedMainCard, {
@@ -162,7 +174,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
 
           <button
             onClick={() => onSuccess(createdCardPan!)}
-            className="mt-6 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700"
+            className="mt-6 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
           >
             Khám phá thẻ ngay
           </button>
@@ -182,7 +194,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
             setApiError(null); 
             reset(); 
           }}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
             tab === 'MAIN' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -196,7 +208,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
             setApiError(null); 
             reset(); 
           }}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
             tab === 'SUPPLEMENTARY' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -229,7 +241,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
                       key={cat.id} 
                       type="button"
                       onClick={() => setValue('cardCategory', cat.id)}
-                      className={`flex flex-col items-start gap-2 rounded-xl border p-4 transition-all ${
+                      className={`flex flex-col items-start gap-2 rounded-xl border p-4 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                         cardCategory === cat.id ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500 shadow-sm' : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'
                       }`}
                     >
@@ -241,7 +253,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
                 <button 
                   type="button" 
                   onClick={() => setStep(2)} 
-                  className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-slate-800 transition-colors"
+                  className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
                 >
                   Tiếp tục
                 </button>
@@ -287,14 +299,14 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
                     type="button" 
                     onClick={() => setStep(1)} 
                     disabled={isSubmitting}
-                    className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                    className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
                   >
                     Quay lại
                   </button>
                   <button 
                     type="submit" 
                     disabled={isSubmitting} 
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 disabled:opacity-60"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
                   >
                     {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Xác nhận
                   </button>
@@ -319,18 +331,18 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
                   rules={{ required: 'Vui lòng chọn thẻ chính' }}
                   render={({ field }) => (
                     <>
-                      <select 
-                        {...field} 
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-500"
-                      >
-                        <option value="">-- Bấm để chọn thẻ --</option>
-                        {existingCards.map(c => (
-                          <option key={c.cardNumber} value={c.cardNumber}>
-                            {c.productName || 'Thẻ'} - {c.cardNumber.slice(-4)} {c.cardName ? `(${c.cardName})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.selectedMainCard && <span className="text-xs text-red-500 mt-1">{errors.selectedMainCard.message}</span>}
+                      {/* ĐÃ THAY THẾ SELECT BẰNG CUSTOMSELECT */}
+                      <CustomSelect
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={mainCardOptions}
+                        ariaLabel="Chọn Thẻ chính để liên kết"
+                      />
+                      {errors.selectedMainCard && (
+                        <span className="mt-1 block text-xs text-red-500">
+                          {errors.selectedMainCard.message}
+                        </span>
+                      )}
                     </>
                   )}
                 />
@@ -352,7 +364,7 @@ export function QuickOpenCardModal({ existingCards = [], onClose, onSuccess }: Q
             <button 
               type="submit" 
               disabled={isSubmitting || existingCards.length === 0} 
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 disabled:opacity-60"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Phát hành thẻ phụ
             </button>

@@ -226,6 +226,13 @@ export class CardService {
       );
     }
 
+    if (query.productName) {
+      const q = query.productName.trim().toLowerCase();
+      filtered = filtered.filter((c: CardListItem) =>
+        (c.productName || '').toLowerCase().includes(q),
+      );
+    }
+
     return filtered;
   }
 

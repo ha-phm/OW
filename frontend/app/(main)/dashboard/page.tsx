@@ -28,7 +28,12 @@ export default function DashboardPage() {
   const { data: authData, isLoading: isAuthLoading } = useAuthMe();
   const { data: clientData, isLoading: isClientLoading } = useCurrentUser();
   
-  const { data: cardsData, isLoading: isCardsLoading, error: cardsError, refetch: refetchCards } = useCards('', 1);
+  // ĐÃ SỬA: Truyền vào 1 object thay vì 2 tham số rời rạc
+  const { data: cardsData, isLoading: isCardsLoading, error: cardsError, refetch: refetchCards } = useCards({
+    search: '',
+    page: 1,
+    pageSize: 5
+  });
   const cards = cardsData?.data ?? [];
 
   const [selectedCard, setSelectedCard] = useState<string | null>(null);

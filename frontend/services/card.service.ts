@@ -1,19 +1,26 @@
 import { apiGet, apiPatch } from '../api/api';
 import { CardListItem, CardDetail, EditCardPayload, PaginatedCards } from '../types/card.types';
 
+export interface CardQueryParams {
+  page: number;
+  pageSize: number;
+  search?: string;
+  cardNumber?: string;
+  cardName?: string;
+  productName?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
 export const cardService = {
-  listMine: (
-    search: string, 
-    page: number, 
-    pageSize: number,
-    sortBy?: string,
-    sortOrder?: 'asc' | 'desc'
-  ): Promise<PaginatedCards> => {
-    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  listMine: (paramsObj: CardQueryParams): Promise<PaginatedCards> => {
+    const params = new URLSearchParams();
     
-    if (search.trim()) params.set('search', search.trim());
-    if (sortBy) params.set('sortBy', sortBy);
-    if (sortOrder) params.set('sortOrder', sortOrder);
+    Object.entries(paramsObj).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.set(key, String(value).trim());
+      }
+    });
 
     return apiGet<PaginatedCards>(`/cards/me?${params.toString()}`);
   },

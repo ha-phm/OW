@@ -9,7 +9,7 @@ import {
   Res,
   Req,
 } from '@nestjs/common';
-import type { Response, Request } from 'express'; // Bổ sung import này
+import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { RegisterDto } from './dto/register.dto';
