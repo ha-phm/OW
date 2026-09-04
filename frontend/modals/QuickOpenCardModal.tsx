@@ -65,11 +65,11 @@ const FormField = ({
         <ModalField
           label={label}
           value={field.value as string}
-          onChange={(val) => {
-            // Đảm bảo giá trị luôn là một chuỗi (string) để thỏa mãn TypeScript
-            const strVal = String(val ?? '');
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            // Lấy trực tiếp value từ event target (vì ModalField là thẻ input chuẩn)
+            const strVal = e.target.value;
 
-            // Lọc: Nếu là Số tài khoản thì xóa hết ký tự không phải là số
+            // Xử lý logic format trước khi cập nhật vào form state
             if (name === 'account') {
               field.onChange(strVal.replace(/\D/g, ''));
             } else {
