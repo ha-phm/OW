@@ -22,9 +22,13 @@ export default async function RootLayout({
         <Providers>
           <AuthListener>
             {children}
-            <Toaster position="top-right" richColors />
+            
           </AuthListener>
         </Providers>
+        <Toaster 
+          position="top-right" 
+          richColors 
+        />
       </body>
     </html>
   );

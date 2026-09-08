@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { Toaster } from 'sonner';
 
 export function ModalShell({
   title,
@@ -65,6 +66,7 @@ export function ModalShell({
       <div className="p-4 sm:p-6">
         {children}
       </div>
+      <Toaster position="top-right" richColors />
     </dialog>
   );
 }
