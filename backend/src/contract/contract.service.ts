@@ -3,7 +3,6 @@ import {
   InternalServerErrorException,
   BadRequestException,
   NotFoundException,
-  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClientService } from '../client/client.service';
@@ -62,7 +61,6 @@ interface Way4ContractDetailRecord {
 }
 @Injectable()
 export class ContractService {
-  private readonly logger = new Logger(ContractService.name);
   private readonly treeCache = new Map<
     string,
     { data: ContractTreeLiability[]; expiresAt: number }
@@ -247,7 +245,7 @@ export class ContractService {
   }
 
   // ---------------------------------------------------------
-  // LUỒNG TẠO THẺ NHANH (Mảnh ghép chính)
+  // LUỒNG TẠO THẺ NHANH
   // ---------------------------------------------------------
   private async createLiabilityForUser(
     userId: number,

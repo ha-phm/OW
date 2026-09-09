@@ -1,4 +1,4 @@
-// dto/get-contract-detail.dto.ts  (FILE MỚI)
+// dto/get-contract-detail.dto.ts
 
 export interface GetContractDetailDto {
   contractNumber: string;

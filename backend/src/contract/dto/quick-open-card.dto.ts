@@ -17,14 +17,12 @@ export class QuickOpenCardDto {
 
   @IsOptional()
   @IsString()
-  embossedCompanyName?: string; // Tên công ty in nổi (nếu thẻ doanh nghiệp)
+  embossedCompanyName?: string;
 
   @IsString({ message: 'Tên thẻ phải là một chuỗi văn bản' })
-  @IsOptional() // Dùng @IsOptional() nếu form cho phép bỏ trống, hoặc đổi thành @IsNotEmpty() nếu bắt buộc phải điền
+  @IsOptional()
   cardName?: string;
 
-  // --- Thông tin ngân hàng — chỉ thực sự cần ở LẦN MỞ THẺ ĐẦU TIÊN
-  // (vì Issuing Contract chỉ tạo 1 lần, các lần mở thẻ sau bỏ qua các field này) ---
   @IsOptional()
   @IsString()
   bank?: string;

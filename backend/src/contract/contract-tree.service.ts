@@ -30,7 +30,7 @@ export interface ContractTreeLiability {
 
 @Injectable()
 export class ContractTreeService {
-  // 1. Thuật toán nhào nặn mảng phẳng thành Cây
+  // 1. Thuật toán mảng phẳng thành Cây
   buildContractTree(records: Way4ContractRecord[]): ContractTreeLiability[] {
     interface FlatNode {
       contractNumber: string;
@@ -90,7 +90,7 @@ export class ContractTreeService {
     }));
   }
 
-  // 2. Thuật toán tìm kiếm & lọc theo cột (Bản mới)
+  // 2. Thuật toán tìm kiếm & lọc theo cột
   filterContractTree(
     tree: ContractTreeLiability[],
     query: {
