@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ClientModule } from '../client/client.module';
+import { ConfigService } from '@nestjs/config/dist/config.service';
 
 if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
   throw new Error(
@@ -23,6 +24,7 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '15m' },
     }),
+    ConfigService,
   ], // import 3 cái này, AuthService dùng constructor(private prisma: PrismaService, private jwtService: JwtService) mà không bị lỗi thiếu provider.
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

@@ -10,8 +10,8 @@ import { JwtPayload } from './strategies/jwt.strategy';
 import { User } from '@prisma/client';
 import { ClientService } from '../client/client.service';
 import { RegisterDto } from './dto/register.dto';
+import { ConfigService } from '@nestjs/config/dist/config.service';
 
-// 👈 THIẾU DÒNG NÀY trong bản trước — gây lỗi "Cannot find name 'AuthUser'"
 type AuthUser = Pick<User, 'id' | 'email' | 'clientId' | 'clientNumber'>;
 
 @Injectable()
@@ -20,6 +20,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private clientService: ClientService,
+    private config: ConfigService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -41,8 +42,6 @@ export class AuthService {
     });
 
     // B2: tách phần hồ sơ (bỏ password) để gửi cho ClientService
-    // 👈 dùng "..." rest thay vì destructure biến password không dùng tới,
-    // tránh lỗi ESLint no-unused-vars
     const clientDto = { ...dto };
     delete (clientDto as { password?: string }).password;
 
@@ -90,7 +89,7 @@ export class AuthService {
       const decoded = await this.jwtService.verifyAsync<{ sub: string }>(
         refreshToken,
         {
-          secret: process.env.JWT_REFRESH_SECRET,
+          secret: this.config.get<string>('JWT_REFRESH_SECRET')!,
         },
       );
 
@@ -158,11 +157,11 @@ export class AuthService {
   private async generateTokens(payload: JwtPayload) {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_SECRET,
+        secret: this.config.get<string>('JWT_SECRET')!,
         expiresIn: '15m',
       }),
       this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_REFRESH_SECRET,
+        secret: this.config.get<string>('JWT_REFRESH_SECRET')!,
         expiresIn: '7d',
       }),
     ]);

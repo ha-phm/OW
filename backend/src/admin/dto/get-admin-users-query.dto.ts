@@ -1,24 +1,8 @@
-import { IsOptional, IsString, IsInt, Min, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
 import { Role } from '@prisma/client';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
-export class GetAdminUsersQueryDto {
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  pageSize?: number = 10;
-
-  @IsOptional()
-  @IsString()
-  search?: string;
-
+export class GetAdminUsersQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   sortBy?: string;

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable, BadGatewayException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
@@ -68,7 +68,7 @@ export class SoapService {
       parsed.Envelope?.Body?.[`${operation}Response`]?.[`${operation}Result`];
 
     if (!result || Number(result.RetCode) !== 0) {
-      throw new BadRequestException({
+      throw new BadGatewayException({
         retCode: result?.RetCode ?? null,
         message: result?.RetMsg ?? 'OpenWay không trả về kết quả hợp lệ',
       });

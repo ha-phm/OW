@@ -1,5 +1,6 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ContractType } from '@prisma/client';
 
 export class GetAdminContractsQueryDto extends PaginationQueryDto {
   @IsOptional()
@@ -19,8 +20,10 @@ export class GetAdminContractsQueryDto extends PaginationQueryDto {
   userEmail?: string;
 
   @IsOptional()
-  @IsString()
-  type?: string;
+  @IsEnum(ContractType, {
+    message: 'Type chỉ có thể là LIABILITY hoặc ISSUING',
+  })
+  type?: ContractType;
 
   @IsOptional()
   @IsString()
