@@ -4,11 +4,12 @@ import { CardController } from './card.controller';
 import { SoapModule } from '../soap/soap.module';
 import { ClientModule } from '../client/client.module';
 import { CardWay4Service } from './card-way4.service';
+import { CreateSupplementaryCardWorkflow } from './use-cases/create-supplementary-card.workflow';
 
 @Module({
   imports: [SoapModule, ClientModule],
   controllers: [CardController],
-  providers: [CardService, CardWay4Service],
+  providers: [CardService, CardWay4Service, CreateSupplementaryCardWorkflow],
   exports: [CardService], // ContractModule vẫn inject CardService.createCardContract
 })
 export class CardModule {}

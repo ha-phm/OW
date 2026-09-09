@@ -99,13 +99,13 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
         {currentStep === 1 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
             <div>
-              <label className={labelClass}>Email *</label>
+              <label className={labelClass}>Email <span className="text-red-500">*</span></label>
             
               <input type="email" {...register('email')} className={inputClass} placeholder="Nhập email" maxLength={100} />
               {errors.email && <p className={errorClass}>{errors.email.message}</p>}
             </div>
             <div>
-              <label className={labelClass}>Mật khẩu *</label>
+              <label className={labelClass}>Mật khẩu <span className="text-red-500">*</span></label>
               
               <input type="password" {...register('password')} className={inputClass} placeholder="Tạo mật khẩu" maxLength={50} />
               {errors.password && <p className={errorClass}>{errors.password.message}</p>}
@@ -117,12 +117,12 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
         {currentStep === 2 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-x-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div>
-              <label className={labelClass}>Họ *</label>
+              <label className={labelClass}>Họ <span className="text-red-500">*</span></label>
               <input {...register('lastName')} className={inputClass} placeholder="Họ" />
               {errors.lastName && <p className={errorClass}>{errors.lastName.message}</p>}
             </div>
             <div>
-              <label className={labelClass}>Tên đệm & Tên *</label>
+              <label className={labelClass}>Tên đệm & Tên <span className="text-red-500">*</span></label>
               <div className="flex gap-2">
                 <input {...register('middleName')} className={`${inputClass} w-1/2`} placeholder="Đệm" />
                 <input {...register('firstName')} className={`${inputClass} w-1/2`} placeholder="Tên" />
@@ -130,19 +130,19 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
               {errors.firstName && <p className={errorClass}>{errors.firstName.message}</p>}
             </div>
             <div>
-              <label className={labelClass}>Ngày sinh *</label>
+              <label className={labelClass}>Ngày sinh <span className="text-red-500">*</span></label>
               <input type="date" {...register('birthDate')} className={inputClass} style={{ colorScheme: 'dark' }} />
               {errors.birthDate && <p className={errorClass}>{errors.birthDate.message}</p>}
             </div>
             <div>
-              <label className={labelClass}>Giới tính *</label>
+              <label className={labelClass}>Giới tính <span className="text-red-500">*</span></label>
               <select {...register('gender')} className={selectClass}>
                 <option value="M">Nam (M)</option>
                 <option value="F">Nữ (F)</option>
               </select>
             </div>
             <div>
-              <label className={labelClass}>Hôn nhân *</label>
+              <label className={labelClass}>Hôn nhân <span className="text-red-500">*</span></label>
               <select {...register('maritalStatusCode')} className={selectClass}>
                 <option value="S">Độc thân</option>
                 <option value="M">Đã kết hôn</option>
@@ -151,7 +151,7 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
               </select>
             </div>
             <div>
-              <label className={labelClass}>Danh xưng *</label>
+              <label className={labelClass}>Danh xưng <span className="text-red-500">*</span></label>
               <select {...register('salutationCode')} className={selectClass}>
                 <option value="MR">Ông (MR)</option>
                 <option value="MRS">Bà (MRS)</option>
@@ -165,13 +165,13 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
         {currentStep === 3 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-x-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div>
-              <label className={labelClass}>Số CMND / CCCD *</label>
+              <label className={labelClass}>Số CMND / CCCD <span className="text-red-500">*</span></label>
               
               <input {...register('identityCardNumber')} className={inputClass} maxLength={12} />
               {errors.identityCardNumber && <p className={errorClass}>{errors.identityCardNumber.message}</p>}
             </div>
             <div>
-              <label className={labelClass}>Số BHXH *</label>
+              <label className={labelClass}>Số BHXH <span className="text-red-500">*</span></label>
               
               <input {...register('socialSecurityNumber')} className={inputClass} maxLength={15} />
               {errors.socialSecurityNumber && <p className={errorClass}>{errors.socialSecurityNumber.message}</p>}
@@ -193,18 +193,18 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
         {currentStep === 4 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-x-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div>
-              <label className={labelClass}>Điện thoại *</label>
+              <label className={labelClass}>Điện thoại <span className="text-red-500">*</span></label>
               
               <input type="tel" {...register('mobilePhone')} className={inputClass} maxLength={10} />
               {errors.mobilePhone && <p className={errorClass}>{errors.mobilePhone.message}</p>}
             </div>
             <div>
-              <label className={labelClass}>Thành phố *</label>
+              <label className={labelClass}>Thành phố <span className="text-red-500">*</span></label>
               <input {...register('city')} className={inputClass} maxLength={100} />
               {errors.city && <p className={errorClass}>{errors.city.message}</p>}
             </div>
             <div className="md:col-span-2">
-              <label className={labelClass}>Địa chỉ thường trú *</label>
+              <label className={labelClass}>Địa chỉ thường trú <span className="text-red-500">*</span></label>
               
               <input {...register('addressLine1')} className={inputClass} maxLength={255} />
               {errors.addressLine1 && <p className={errorClass}>{errors.addressLine1.message}</p>}

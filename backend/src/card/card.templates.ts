@@ -1,4 +1,5 @@
-import { escapeXml } from '../common/utils/xml.util';
+// card.template.ts
+import { escapeXml, buildSoapEnvelope } from '../common/utils/xml.util';
 import { EditCardDto } from './dto/edit-card.dto';
 import { toEmbossingSafeName } from '../common/utils/text.utils';
 
@@ -12,19 +13,21 @@ export interface BuildCreateCardXmlParams {
   cbsNumber?: string;
 }
 
+export interface BuildCreateSupplementaryCardXmlParams {
+  clientNumber: string;
+  mainContractNumber: string;
+  productCode: string;
+  cardName: string;
+  embossedFirstName: string;
+  embossedLastName: string;
+}
+
 export function buildEditCardXml(
   contractNumber: string,
   dto: EditCardDto,
   officer: string,
 ): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
-  <soapenv:Header>
-    <wsin:SessionContextStr>?</wsin:SessionContextStr>
-    <wsin:UserInfo>officer="${officer}"</wsin:UserInfo>
-    <wsin:CorrelationId>?</wsin:CorrelationId>
-  </soapenv:Header>
-  <soapenv:Body>
+  const bodyContent = `
     <wsin:EditCardV2>
       <wsin:ContractSearchMethod>CONTRACT_NUMBER</wsin:ContractSearchMethod>
       <wsin:ContractIdentifier>${escapeXml(contractNumber)}</wsin:ContractIdentifier>
@@ -47,8 +50,8 @@ export function buildEditCardXml(
         <wsin:AddInfo04/>
       </wsin:InObject>
     </wsin:EditCardV2>
-  </soapenv:Body>
-</soapenv:Envelope>`;
+  `;
+  return buildSoapEnvelope(bodyContent, officer);
 }
 
 export function buildCreateCardXml(
@@ -61,28 +64,42 @@ export function buildCreateCardXml(
     ? toEmbossingSafeName(params.embossedCompanyName)
     : '';
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
-<soapenv:Header>
-<wsin:SessionContextStr>?</wsin:SessionContextStr>
-<wsin:UserInfo>officer="${officer}"</wsin:UserInfo>
-<wsin:CorrelationId>?</wsin:CorrelationId>
-</soapenv:Header>
-<soapenv:Body>
-<wsin:CreateCardV3>
-<wsin:ContractSearchMethod>CONTRACT_NUMBER</wsin:ContractSearchMethod>
-<wsin:ContractIdentifier>${escapeXml(params.issuingContractNumber)}</wsin:ContractIdentifier>
-<wsin:ProductCode>${escapeXml(params.productCode)}</wsin:ProductCode>
-<wsin:ProductCode2/>
-<wsin:ProductCode3/>
-<wsin:InObject>
-<wsin:CardName>${escapeXml(params.cardName)}</wsin:CardName>
-<wsin:CBSNumber>${escapeXml(params.cbsNumber ?? '')}</wsin:CBSNumber>
-<wsin:EmbossedFirstName>${escapeXml(safeFirstName)}</wsin:EmbossedFirstName>
-<wsin:EmbossedLastName>${escapeXml(safeLastName)}</wsin:EmbossedLastName>
-<wsin:EmbossedCompanyName>${escapeXml(safeCompanyName)}</wsin:EmbossedCompanyName>
-</wsin:InObject>
-</wsin:CreateCardV3>
-</soapenv:Body>
-</soapenv:Envelope>`;
+  const bodyContent = `
+    <wsin:CreateCardV3>
+      <wsin:ContractSearchMethod>CONTRACT_NUMBER</wsin:ContractSearchMethod>
+      <wsin:ContractIdentifier>${escapeXml(params.issuingContractNumber)}</wsin:ContractIdentifier>
+      <wsin:ProductCode>${escapeXml(params.productCode)}</wsin:ProductCode>
+      <wsin:ProductCode2/>
+      <wsin:ProductCode3/>
+      <wsin:InObject>
+        <wsin:CardName>${escapeXml(params.cardName)}</wsin:CardName>
+        <wsin:CBSNumber>${escapeXml(params.cbsNumber ?? '')}</wsin:CBSNumber>
+        <wsin:EmbossedFirstName>${escapeXml(safeFirstName)}</wsin:EmbossedFirstName>
+        <wsin:EmbossedLastName>${escapeXml(safeLastName)}</wsin:EmbossedLastName>
+        <wsin:EmbossedCompanyName>${escapeXml(safeCompanyName)}</wsin:EmbossedCompanyName>
+      </wsin:InObject>
+    </wsin:CreateCardV3>
+  `;
+  return buildSoapEnvelope(bodyContent, officer);
+}
+
+export function buildCreateSupplementaryCardXml(
+  params: BuildCreateSupplementaryCardXmlParams,
+  officer: string,
+): string {
+  const bodyContent = `
+    <wsin:CreateSupplementaryCardV2>
+      <wsin:ClientSearchMethod>CLIENT_NUMBER</wsin:ClientSearchMethod>
+      <wsin:ClientIdentifier>${escapeXml(params.clientNumber)}</wsin:ClientIdentifier>
+      <wsin:ContractSearchMethod>CONTRACT_NUMBER</wsin:ContractSearchMethod>
+      <wsin:ContractIdentifier>${escapeXml(params.mainContractNumber)}</wsin:ContractIdentifier>
+      <wsin:ProductCode>${escapeXml(params.productCode)}</wsin:ProductCode>
+      <wsin:InObject>
+        <wsin:CardName>${escapeXml(params.cardName)}</wsin:CardName>
+        <wsin:EmbossedFirstName>${escapeXml(params.embossedFirstName)}</wsin:EmbossedFirstName>
+        <wsin:EmbossedLastName>${escapeXml(params.embossedLastName)}</wsin:EmbossedLastName>
+      </wsin:InObject>
+    </wsin:CreateSupplementaryCardV2>
+  `;
+  return buildSoapEnvelope(bodyContent, officer);
 }

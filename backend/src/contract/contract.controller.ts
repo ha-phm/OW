@@ -18,6 +18,8 @@ import { GetContractTreeQueryDto } from './dto/get-contract-tree-query.dto';
 import { QuickOpenCardDto } from './dto/quick-open-card.dto';
 import { ContractTreeLiability } from './contract-tree.service';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { QuickOpenCardWorkflow } from './use-cases/quick-open-card.workflow';
+
 interface RequestWithUser {
   user: {
     userId: number;
@@ -29,8 +31,10 @@ interface RequestWithUser {
 
 @Controller('contracts')
 export class ContractController {
-  constructor(private readonly contractService: ContractService) {}
-
+  constructor(
+    private readonly contractService: ContractService,
+    private readonly quickOpenCardWorkflow: QuickOpenCardWorkflow,
+  ) {}
   // Hỗ trợ tìm kiếm + phân trang: GET /contracts/me?search=&page=&pageSize=
   // Query params được validate/transform bởi GetContractTreeQueryDto (yêu cầu
   // main.ts đã bật ValidationPipe({ transform: true }) toàn cục).
@@ -65,7 +69,7 @@ export class ContractController {
     if (!req.user.clientId) {
       throw new BadRequestException('Bạn cần tạo hồ sơ khách hàng trước.');
     }
-    return this.contractService.quickOpenCard(
+    return this.quickOpenCardWorkflow.quickOpenCard(
       req.user.userId,
       req.user.clientId,
       dto,

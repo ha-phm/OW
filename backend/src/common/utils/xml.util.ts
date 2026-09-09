@@ -23,3 +23,24 @@ export function buildOptionalTag(tag: string, value?: string): string {
   if (!value) return '';
   return `<wsin:${tag}>${escapeXml(value)}</wsin:${tag}>`;
 }
+
+/**
+ * Wrapper chung cho mọi XML Request gửi lên WAY4.
+ * Giúp loại bỏ việc copy/paste phần Header và Envelope ở các template khác.
+ */
+export function buildSoapEnvelope(
+  bodyContent: string,
+  officer: string,
+): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
+  <soapenv:Header>
+    <wsin:SessionContextStr>?</wsin:SessionContextStr>
+    <wsin:UserInfo>officer="${escapeXml(officer)}"</wsin:UserInfo>
+    <wsin:CorrelationId>?</wsin:CorrelationId>
+  </soapenv:Header>
+  <soapenv:Body>
+    ${bodyContent}
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}

@@ -1,24 +1,6 @@
-export interface PaginationMeta {
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-}
-
-export interface PaginatedResult<T> {
-  data: T[];
-  meta: PaginationMeta;
-}
-
-export function buildMeta(
-  page: number,
-  pageSize: number,
-  total: number,
-): PaginationMeta {
-  return {
-    page,
-    pageSize,
-    total,
-    totalPages: Math.max(1, Math.ceil(total / pageSize)),
-  };
-}
+// Re-export từ nguồn canonical để tránh định nghĩa trùng
+export type {
+  PaginationMeta,
+  PaginatedResult,
+} from '../../common/interfaces/paginated-result.interface';
+export { buildMeta } from '../../common/interfaces/paginated-result.interface';

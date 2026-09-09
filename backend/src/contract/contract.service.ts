@@ -1,31 +1,33 @@
 import {
   Injectable,
   InternalServerErrorException,
-  BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClientService } from '../client/client.service';
-import { CardService, CardContractResponse } from '../card/card.service';
-import { ContractWay4Service, ContractResponse } from './contract-way4.service';
+import { CardService } from '../card/card.service';
+import { ContractWay4Service } from './contract-way4.service';
 import {
   ContractTreeService,
   ContractTreeLiability,
 } from './contract-tree.service';
-import { QuickOpenCardDto } from './dto/quick-open-card.dto';
 import { GetContractDetailDto } from './interfaces/contract-detail.interface';
 import { GetContractTreeQueryDto } from './dto/get-contract-tree-query.dto';
-import {
-  CARD_CATEGORY_PRODUCT_CODE,
-  CARD_CATEGORY_LABEL,
-  splitWay4Field,
-} from './contract.constants';
+import { splitWay4Field } from './contract.constants';
 import {
   asRecord,
   toNumberOrUndefined,
-  toStringOrNull,
 } from '../common/utils/way4-response.util';
-import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import {
+  buildMeta,
+  PaginatedResult,
+} from '../common/interfaces/paginated-result.interface';
+import { ContractType } from '@prisma/client/wasm';
+import { GetAdminContractsQueryDto } from '../admin/dto/get-admin-contracts-query.dto';
+import {
+  buildContractOrderBy,
+  buildContractWhere,
+} from './helpers/contract-query.helper';
 
 // Interface trả về cho Frontend
 export interface CardApplicationResponse {
@@ -59,6 +61,19 @@ interface Way4ContractDetailRecord {
   ParentContract?: string;
   TopContract?: string;
 }
+
+export interface AdminContractItem {
+  id: number;
+  contractNumber: string;
+  contractName: string;
+  type: ContractType;
+  productCode: string;
+  clientNumber: string;
+  userEmail: string;
+  userIsActive: boolean;
+  createdAt: Date;
+}
+
 @Injectable()
 export class ContractService {
   private readonly treeCache = new Map<
@@ -78,7 +93,7 @@ export class ContractService {
   // ---------------------------------------------------------
   // CACHE & CÂY HỢP ĐỒNG (Gọi qua TreeService)
   // ---------------------------------------------------------
-  private invalidateTreeCache(clientNumber: string): void {
+  public invalidateTreeCache(clientNumber: string): void {
     this.treeCache.delete(clientNumber);
   }
 
@@ -99,6 +114,48 @@ export class ContractService {
       expiresAt: Date.now() + this.TREE_CACHE_TTL_MS,
     });
     return tree;
+  }
+
+  async listAllContracts(
+    query: GetAdminContractsQueryDto & {
+      contractNumber?: string;
+      contractName?: string;
+      productCode?: string;
+      userEmail?: string;
+      userIsActive?: string; // Khai báo thêm ở đây
+    },
+  ): Promise<PaginatedResult<AdminContractItem>> {
+    const where = buildContractWhere(query);
+    const orderBy = buildContractOrderBy(
+      query.sortBy,
+      query.sortOrder ?? 'desc',
+    );
+    const skip = (query.page - 1) * query.pageSize;
+
+    const [contracts, total] = await Promise.all([
+      this.prisma.contract.findMany({
+        where,
+        orderBy,
+        skip,
+        take: query.pageSize,
+        include: { user: { select: { email: true, isActive: true } } },
+      }),
+      this.prisma.contract.count({ where }),
+    ]);
+
+    const data: AdminContractItem[] = contracts.map((c) => ({
+      id: c.id,
+      contractNumber: c.contractNumber,
+      contractName: c.contractName ?? '',
+      type: c.type,
+      productCode: c.productCode ?? '',
+      clientNumber: c.clientNumber,
+      userEmail: c.user?.email ?? '',
+      userIsActive: c.user?.isActive ?? false,
+      createdAt: c.createdAt,
+    }));
+
+    return { data, meta: buildMeta(query.page, query.pageSize, total) };
   }
 
   async getContractTreeByClientNumber(
@@ -242,195 +299,5 @@ export class ContractService {
         ? splitWay4Field(record.TopContract).label
         : undefined,
     };
-  }
-
-  // ---------------------------------------------------------
-  // LUỒNG TẠO THẺ NHANH
-  // ---------------------------------------------------------
-  private async createLiabilityForUser(
-    userId: number,
-    clientNumber: string,
-    dto: QuickOpenCardDto,
-  ): Promise<ContractResponse> {
-    const result = await this.way4Service.callCreateContract({
-      clientNumber,
-      productCode: 'LIAB_TRAINING01',
-      contractName: 'Liability Contract',
-      cbsNumber: dto.cbsNumber,
-      institutionCode: dto.institutionCode,
-      branch: dto.branch,
-      reason: 'Mo ho so han muc',
-    });
-
-    await this.prisma.contract.create({
-      data: {
-        userId,
-        clientNumber,
-        contractNumber: result.contractNumber!,
-        applicationNumber: toStringOrNull(result.applicationNumber),
-        type: 'LIABILITY',
-        productCode: 'LIAB_TRAINING01',
-        contractName: 'Liability Contract',
-      },
-    });
-
-    this.invalidateTreeCache(clientNumber);
-    return result;
-  }
-
-  private async addIssuingUnderLiability(
-    userId: number,
-    liabilityContractNumber: string,
-    dto: QuickOpenCardDto,
-  ): Promise<ContractResponse> {
-    const liability = await this.prisma.contract.findFirst({
-      where: {
-        userId,
-        type: 'LIABILITY',
-        contractNumber: liabilityContractNumber,
-      },
-    });
-    if (!liability) {
-      throw new NotFoundException('Không tìm thấy hợp đồng hạn mức này.');
-    }
-
-    const existingIssuing = await this.prisma.contract.findFirst({
-      where: { parentContractId: liability.id, type: 'ISSUING' },
-    });
-    if (existingIssuing) {
-      throw new BadRequestException('Đã có hợp đồng phát hành.');
-    }
-
-    const result = await this.way4Service.callCreateIssuingContract({
-      liabContractNumber: liability.contractNumber,
-      clientNumber: liability.clientNumber,
-      productCode: 'ISSUING_TRAINING01',
-      contractName: 'Issuing Contract',
-      cbsNumber: dto.cbsNumber,
-      institutionCode: dto.institutionCode,
-      branch: dto.branch,
-      paymentOption: dto.paymentOption,
-      bank: dto.bank,
-      account: dto.account,
-      bankCode: dto.bankCode,
-      accName: dto.accName,
-    });
-
-    await this.prisma.contract.create({
-      data: {
-        userId,
-        clientNumber: liability.clientNumber,
-        contractNumber: result.contractNumber!,
-        applicationNumber: toStringOrNull(result.applicationNumber),
-        type: 'ISSUING',
-        productCode: 'ISSUING_TRAINING01',
-        contractName: 'Issuing Contract',
-        parentContractId: liability.id,
-      },
-    });
-
-    this.invalidateTreeCache(liability.clientNumber);
-    return result;
-  }
-
-  private async addCardUnderIssuing(
-    userId: number,
-    issuingContractNumber: string,
-    dto: QuickOpenCardDto,
-  ): Promise<CardApplicationResponse> {
-    const issuing = await this.prisma.contract.findFirst({
-      where: {
-        userId,
-        type: 'ISSUING',
-        contractNumber: issuingContractNumber,
-      },
-      include: { cards: true, parentContract: true },
-    });
-    if (!issuing) {
-      throw new NotFoundException('Không tìm thấy hợp đồng phát hành này.');
-    }
-
-    const productCode = CARD_CATEGORY_PRODUCT_CODE[dto.cardCategory];
-    //if (issuing.cards.some((c) => c.productCode === productCode)) {
-    // throw new BadRequestException(`Bạn đã mở loại thẻ này rồi.`);
-    //}
-    //if (issuing.cards.length >= MAX_CARDS_PER_ISSUING) {
-    //  throw new BadRequestException(`Đã đạt giới hạn tối đa thẻ.`);
-    //}
-
-    const cardResult: CardContractResponse =
-      await this.cardService.createCardContract({
-        issuingContractNumber: issuing.contractNumber,
-        productCode,
-        embossedFirstName: dto.embossedFirstName,
-        embossedLastName: dto.embossedLastName,
-        embossedCompanyName: dto.embossedCompanyName,
-      });
-
-    await this.prisma.card.create({
-      data: {
-        issuingContractId: issuing.id,
-        cardNumber: String(cardResult.cardNumber),
-        expiryDate: toStringOrNull(cardResult.expiryDate),
-        sequenceNumber: toStringOrNull(cardResult.sequenceNumber),
-        embossedFirstName: dto.embossedFirstName,
-        embossedLastName: dto.embossedLastName,
-        productCode,
-        cardName: dto.cardName,
-      },
-    });
-
-    this.invalidateTreeCache(issuing.clientNumber);
-
-    return {
-      success: true,
-      message: `Mở thẻ "${CARD_CATEGORY_LABEL[dto.cardCategory]}" thành công`,
-      liabContract: issuing.parentContract?.contractNumber,
-      issuingContract: issuing.contractNumber,
-      cardPan: cardResult.cardNumber,
-      expiryDate: cardResult.expiryDate,
-    };
-  }
-
-  async quickOpenCard(
-    userId: number,
-    clientId: string,
-    dto: QuickOpenCardDto,
-  ): Promise<CardApplicationResponse> {
-    const clientResult = await this.clientService.getByParams(clientId);
-    const profile = clientResult.IssClientDetailsV2APIRecord;
-    if (!profile?.ClientNumber) {
-      throw new InternalServerErrorException(
-        'Không lấy được hồ sơ khách hàng.',
-      );
-    }
-
-    const clientNumber = String(profile.ClientNumber);
-
-    let liability = await this.prisma.contract.findFirst({
-      where: { userId, type: 'LIABILITY' },
-    });
-    if (!liability) {
-      await this.createLiabilityForUser(userId, clientNumber, dto);
-      liability = await this.prisma.contract.findFirst({
-        where: { userId, type: 'LIABILITY' },
-      });
-    }
-
-    let issuing = await this.prisma.contract.findFirst({
-      where: { parentContractId: liability!.id, type: 'ISSUING' },
-    });
-    if (!issuing) {
-      await this.addIssuingUnderLiability(
-        userId,
-        liability!.contractNumber,
-        dto,
-      );
-      issuing = await this.prisma.contract.findFirst({
-        where: { parentContractId: liability!.id, type: 'ISSUING' },
-      });
-    }
-
-    return this.addCardUnderIssuing(userId, issuing!.contractNumber, dto);
   }
 }

@@ -1,11 +1,11 @@
-import { escapeXml } from '../common/utils/xml.util';
+// contract.template.ts
+import { escapeXml, buildSoapEnvelope } from '../common/utils/xml.util';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { CreateIssuingContractDto } from './dto/create-issuing-contract.dto';
 
 function buildAddInfoTags(dto: CreateIssuingContractDto): string {
   const info01: string[] = [];
   const info02: string[] = [];
-
   if (dto.paymentOption)
     info01.push(`PAYMENT_OPTION=${escapeXml(dto.paymentOption)}`);
   if (dto.bank) info01.push(`BANK=${escapeXml(dto.bank)}`);
@@ -27,14 +27,7 @@ export function buildCreateContractXml(
   dto: CreateContractDto,
   officer: string,
 ): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
-  <soapenv:Header>
-    <wsin:SessionContextStr>?</wsin:SessionContextStr>
-    <wsin:UserInfo>officer="${officer}"</wsin:UserInfo>
-    <wsin:CorrelationId>?</wsin:CorrelationId>
-  </soapenv:Header>
-  <soapenv:Body>
+  const bodyContent = `
     <wsin:CreateContractV4>
       <wsin:ClientSearchMethod>CLIENT_NUMBER</wsin:ClientSearchMethod>
       <wsin:ClientIdentifier>${escapeXml(dto.clientNumber)}</wsin:ClientIdentifier>
@@ -50,8 +43,9 @@ export function buildCreateContractXml(
       </wsin:CreateContract_InObject>
       <wsin:SetCustomData_InObject></wsin:SetCustomData_InObject>
     </wsin:CreateContractV4>
-  </soapenv:Body>
-</soapenv:Envelope>`;
+  `;
+
+  return buildSoapEnvelope(bodyContent, officer);
 }
 
 export function buildCreateIssuingContractXml(
@@ -60,14 +54,7 @@ export function buildCreateIssuingContractXml(
 ): string {
   const addInfoTags = buildAddInfoTags(dto);
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
-  <soapenv:Header>
-    <wsin:SessionContextStr>?</wsin:SessionContextStr>
-    <wsin:UserInfo>officer="${officer}"</wsin:UserInfo>
-    <wsin:CorrelationId>?</wsin:CorrelationId>
-  </soapenv:Header>
-  <soapenv:Body>
+  const bodyContent = `
     <wsin:CreateIssuingContractWithLiabilityV2>
       <wsin:LiabCategory>${escapeXml(dto.liabCategory ?? 'Y')}</wsin:LiabCategory>
       <wsin:LiabContractSearchMethod>CONTRACT_NUMBER</wsin:LiabContractSearchMethod>
@@ -84,6 +71,7 @@ export function buildCreateIssuingContractXml(
         <wsin:CBSNumber>${escapeXml(dto.cbsNumber ?? '')}</wsin:CBSNumber>${addInfoTags}
       </wsin:InObject>
     </wsin:CreateIssuingContractWithLiabilityV2>
-  </soapenv:Body>
-</soapenv:Envelope>`;
+  `;
+
+  return buildSoapEnvelope(bodyContent, officer);
 }

@@ -5,9 +5,11 @@ import { AdminService } from './admin.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AdminStatsController } from './admin-stats.controller';
 import { AdminStatsService } from './admin-stats.service';
+import { ContractModule } from '../contract/contract.module';
+import { CardModule } from '../card/card.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, CardModule, ContractModule],
   controllers: [
     AdminController,
     AdminResourcesController,

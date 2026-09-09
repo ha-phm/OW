@@ -1,4 +1,8 @@
-import { buildOptionalTag, escapeXml } from '../common/utils/xml.util';
+import {
+  buildOptionalTag,
+  escapeXml,
+  buildSoapEnvelope,
+} from '../common/utils/xml.util';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 
@@ -6,18 +10,13 @@ export function buildCreateClientXml(
   dto: CreateClientDto,
   officer: string,
 ): string {
+  // Logic xử lý tên và mã chi nhánh giữ nguyên
   const shortName =
     `${dto.lastName} ${dto.middleName ?? ''} ${dto.firstName}`.trim();
   const branchCode = dto.branch ?? '0101';
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
-  <soapenv:Header>
-    <wsin:SessionContextStr>?</wsin:SessionContextStr>
-    <wsin:UserInfo>officer="${officer}"</wsin:UserInfo>
-    <wsin:CorrelationId>?</wsin:CorrelationId>
-  </soapenv:Header>
-  <soapenv:Body>
+  // Chỉ chứa nội dung của CreateClientV4
+  const bodyContent = `
     <wsin:CreateClientV4>
       <wsin:Reason>Create client</wsin:Reason>
       <wsin:CreateClient_InObject>
@@ -77,8 +76,8 @@ export function buildCreateClientXml(
         <wsin:TagValue>A2</wsin:TagValue>
       </wsin:SetCustomData_InObject>
     </wsin:CreateClientV4>
-  </soapenv:Body>
-</soapenv:Envelope>`;
+  `;
+  return buildSoapEnvelope(bodyContent, officer);
 }
 
 export function buildGetClientXml(
@@ -86,20 +85,13 @@ export function buildGetClientXml(
   identifier: string,
   officer: string,
 ): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
-  <soapenv:Header>
-    <wsin:SessionContextStr>?</wsin:SessionContextStr>
-    <wsin:UserInfo>officer="${officer}"</wsin:UserInfo>
-    <wsin:CorrelationId>?</wsin:CorrelationId>
-  </soapenv:Header>
-  <soapenv:Body>
+  const bodyContent = `
     <wsin:GetClientByParmsV2>
       <wsin:ClientSearchMethod>${searchMethod}</wsin:ClientSearchMethod>
       <wsin:ClientIdentifier>${escapeXml(identifier)}</wsin:ClientIdentifier>
     </wsin:GetClientByParmsV2>
-  </soapenv:Body>
-</soapenv:Envelope>`;
+  `;
+  return buildSoapEnvelope(bodyContent, officer);
 }
 
 export function buildEditClientXml(
@@ -108,6 +100,7 @@ export function buildEditClientXml(
   dto: UpdateClientDto,
   officer: string,
 ): string {
+  // Logic xử lý tag tên giữ nguyên
   let shortNameTag = '';
   if (dto.firstName && dto.lastName) {
     const shortName =
@@ -115,14 +108,8 @@ export function buildEditClientXml(
     shortNameTag = `<wsin:ShortName>${escapeXml(shortName)}</wsin:ShortName>`;
   }
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsin="http://www.openwaygroup.com/wsint">
-  <soapenv:Header>
-    <wsin:SessionContextStr>?</wsin:SessionContextStr>
-    <wsin:UserInfo>officer="${officer}"</wsin:UserInfo>
-    <wsin:CorrelationId>?</wsin:CorrelationId>
-  </soapenv:Header>
-  <soapenv:Body>
+  // Chỉ chứa nội dung của EditClientV6
+  const bodyContent = `
     <wsin:EditClientV6>
       <wsin:ClientSearchMethod>${searchMethod}</wsin:ClientSearchMethod>
       <wsin:ClientIdentifier>${escapeXml(clientIdentifier)}</wsin:ClientIdentifier>
@@ -150,6 +137,8 @@ export function buildEditClientXml(
       </wsin:EditClient_InObject>
       <wsin:SetCustomData_InObject></wsin:SetCustomData_InObject>
     </wsin:EditClientV6>
-  </soapenv:Body>
-</soapenv:Envelope>`;
+  `;
+
+  // Bọc vào Envelope
+  return buildSoapEnvelope(bodyContent, officer);
 }

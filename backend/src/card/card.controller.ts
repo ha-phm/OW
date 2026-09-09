@@ -19,6 +19,9 @@ import { GetCardsQueryDto } from './dto/get-cards-query.dto';
 import { ClientService } from '../client/client.service';
 import { CreateSupplementaryCardDto } from './dto/create-supplymentary-card.dto';
 
+// 1. IMPORT WORKFLOW VÀO ĐÂY
+import { CreateSupplementaryCardWorkflow } from './use-cases/create-supplementary-card.workflow';
+
 interface RequestWithUser {
   user: {
     userId: number;
@@ -31,6 +34,7 @@ export class CardController {
   constructor(
     private readonly cardService: CardService,
     private readonly clientService: ClientService,
+    private readonly createSupplementaryCardWorkflow: CreateSupplementaryCardWorkflow,
   ) {}
 
   // Route tĩnh 'me' PHẢI đứng trước route động ':cardNumber' bên dưới.
@@ -82,11 +86,12 @@ export class CardController {
   }
 
   @Post(':cardNumber/supplementary')
-  async createSupplementary(
+  createSupplementary(
     @Param('cardNumber') cardNumber: string,
     @Body() dto: CreateSupplementaryCardDto,
   ) {
-    return this.cardService.createSupplementaryCard(cardNumber, dto);
+    // 3. GỌI HÀM EXECUTE TỪ WORKFLOW THAY VÌ CARD SERVICE
+    return this.createSupplementaryCardWorkflow.execute(cardNumber, dto);
   }
 
   @Patch(':cardNumber')
