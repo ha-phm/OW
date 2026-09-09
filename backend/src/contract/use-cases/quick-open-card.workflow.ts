@@ -118,8 +118,18 @@ export class QuickOpenCardWorkflow {
   ): Promise<CardApplicationResponse> {
     const issuing = await this.prisma.contract.findFirst({
       where: { userId, type: 'ISSUING', contractNumber: issuingContractNumber },
-      include: { cards: true, parentContract: true },
+      select: {
+        id: true,
+        contractNumber: true,
+        clientNumber: true,
+        parentContract: {
+          select: {
+            contractNumber: true, // Chỉ lấy mã hợp đồng cha để trả về Message
+          },
+        },
+      },
     });
+
     if (!issuing)
       throw new NotFoundException('Không tìm thấy hợp đồng phát hành này.');
 
@@ -146,6 +156,7 @@ export class QuickOpenCardWorkflow {
         cardName: dto.cardName,
       },
     });
+
     this.contractService.invalidateTreeCache(issuing.clientNumber);
 
     return {

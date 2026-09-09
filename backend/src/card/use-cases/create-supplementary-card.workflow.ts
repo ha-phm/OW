@@ -23,9 +23,19 @@ export class CreateSupplementaryCardWorkflow {
 
   async execute(mainCardNumber: string, dto: CreateSupplementaryCardDto) {
     // 1. Kiểm tra thẻ chính trong DB
+    // ĐÃ TỐI ƯU BẰNG SELECT: Chỉ trích xuất đúng 4 cột cần thiết
     const mainCard = await this.prisma.card.findUnique({
       where: { cardNumber: mainCardNumber },
-      include: { issuingContract: true },
+      select: {
+        productCode: true,
+        issuingContractId: true,
+        issuingContract: {
+          select: {
+            clientNumber: true,
+            contractNumber: true,
+          },
+        },
+      },
     });
 
     if (!mainCard) {
@@ -90,7 +100,7 @@ export class CreateSupplementaryCardWorkflow {
         productCode: safeProductCode,
         embossedFirstName: dto.embossedFirstName,
         embossedLastName: dto.embossedLastName,
-        issuingContractId: mainCard.issuingContractId,
+        issuingContractId: mainCard.issuingContractId, // Vẫn lấy được bình thường nhờ select
       },
     });
 

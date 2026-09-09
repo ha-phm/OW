@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +12,8 @@ import { User } from '@prisma/client';
 import { ClientService } from '../client/client.service';
 import { RegisterDto } from './dto/register.dto';
 import { ConfigService } from '@nestjs/config/dist/config.service';
+import * as crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 
 type AuthUser = Pick<User, 'id' | 'email' | 'clientId' | 'clientNumber'>;
 
@@ -24,6 +27,7 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    // 1. Kiểm tra sớm Email (Fail-fast)
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -33,35 +37,59 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    // B1: tạo User trước, CHƯA có clientId
-    const newUser = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        password: hashedPassword,
-      },
-    });
-
-    // B2: tách phần hồ sơ (bỏ password) để gửi cho ClientService
+    // Tách phần hồ sơ (bỏ password) để chuẩn bị gửi cho WAY4
     const clientDto = { ...dto };
     delete (clientDto as { password?: string }).password;
 
-    try {
-      // B3: tạo hồ sơ bên OpenWay — hàm này tự update clientId/clientNumber vào User
-      const clientResult = await this.clientService.createClient(
-        newUser.id,
-        clientDto,
-      );
+    const MAX_RETRIES = 3;
+    let attempts = 0;
 
-      return {
-        message: 'Tạo tài khoản và hồ sơ thành công!',
-        email: newUser.email,
-        clientId: clientResult.clientId,
-      };
-    } catch (error) {
-      // Nếu OpenWay lỗi, xoá User vừa tạo để tránh "tài khoản mồ côi" không có hồ sơ
-      await this.prisma.user.delete({ where: { id: newUser.id } });
-      throw error;
+    // VÒNG LẶP THỬ LẠI (RETRY MECHANISM)
+    while (attempts < MAX_RETRIES) {
+      try {
+        // B1: Sinh mã khách hàng nội bộ
+        const timestamp = Date.now().toString();
+        const random = crypto.randomInt(100, 1000).toString();
+        const clientNumber = `${timestamp}${random}`;
+
+        // B2: GỌI HỆ THỐNG WAY4 TRƯỚC (Rủi ro cao nhất)
+        // Lưu ý: Lát nữa ta sẽ sửa lại hàm này bên ClientService để nó KHÔNG động vào DB nữa
+        const way4Payload = { ...clientDto, clientNumber };
+        const clientResult =
+          await this.clientService.createClientWay4Only(way4Payload);
+
+        // B3: LƯU DATABASE NỘI BỘ (Khi WAY4 đã xác nhận thành công)
+        const newUser = await this.prisma.user.create({
+          data: {
+            email: dto.email,
+            password: hashedPassword,
+            clientNumber: clientNumber,
+            clientId: clientResult.clientId, // Lưu ID thực tế WAY4 trả về
+          },
+        });
+
+        return {
+          message: 'Tạo tài khoản và hồ sơ thành công!',
+          email: newUser.email,
+          clientId: newUser.clientId,
+        };
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+          if (
+            error.code === 'P2002' &&
+            String(error.meta?.target).includes('clientNumber')
+          ) {
+            attempts++;
+            continue;
+          }
+        }
+        throw error;
+      }
     }
+
+    throw new InternalServerErrorException(
+      'Hệ thống đang bận, không thể tạo mã khách hàng lúc này.',
+    );
   }
 
   async login(email: string, pass: string) {

@@ -1,7 +1,7 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
-  BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SoapService } from '../soap/soap.service';
@@ -14,6 +14,7 @@ import {
   buildGetClientXml,
 } from './client.templates';
 import { assertWay4Success } from '../common/utils/way4-response.util';
+import * as crypto from 'crypto';
 
 interface CreateClientResult {
   NewClient: string;
@@ -91,34 +92,18 @@ export class ClientService {
     return this.soap.sendRaw<GetClientResult>('GetClientByParmsV2', xml);
   }
 
-  async createClient(
-    userId: number,
-    dto: CreateClientDto,
-  ): Promise<{
-    success: boolean;
-    clientId: string;
-    clientNumber: string;
-  }> {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { clientId: true },
-    });
-    if (existingUser?.clientId) {
-      throw new BadRequestException(
-        'Bạn đã có hồ sơ khách hàng, không thể tạo thêm.',
-      );
-    }
-
+  async createClientWay4Only(
+    dto: CreateClientDto & { clientNumber: string },
+  ): Promise<{ clientId: string; clientNumber: string }> {
     const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
-    const clientNumber =
-      dto.clientNumber ?? (await this.generateUniqueClientNumber());
-    const dtoWithClientNumber = { ...dto, clientNumber };
-    const xml = buildCreateClientXml(dtoWithClientNumber, officer);
+    const xml = buildCreateClientXml(dto, officer);
 
+    // Gửi SOAP Request
     const way4Response = await this.soap.sendRaw<CreateClientResult>(
       'CreateClientV4',
       xml,
     );
+
     this.assertWay4Ok(
       way4Response as unknown as Record<string, unknown>,
       'Không thể tạo hồ sơ khách hàng trên WAY4.',
@@ -131,29 +116,60 @@ export class ClientService {
       );
     }
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { clientId: newClientId, clientNumber },
-    });
-
-    return { success: true, clientId: newClientId, clientNumber };
+    // TRẢ VỀ LUÔN - KHÔNG GỌI THIS.PRISMA.USER.UPDATE Ở ĐÂY NỮA
+    return { clientId: newClientId, clientNumber: dto.clientNumber };
   }
 
-  private async generateUniqueClientNumber(): Promise<string> {
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const timestamp = Date.now().toString();
-      const random = Math.floor(100 + Math.random() * 900);
-      const candidate = `${timestamp}${random}`;
+  // ... (giữ nguyên hàm createClientWay4Only vừa viết ở bước trước)
 
-      const existing = await this.prisma.user.findFirst({
-        where: { clientNumber: candidate },
-        select: { id: true },
-      });
-      if (!existing) return candidate;
+  /**
+   * Hàm này dành riêng cho API POST /clients
+   * Dùng khi User ĐÃ CÓ TÀI KHOẢN nhưng chưa tạo hồ sơ khách hàng.
+   */
+  async createClientForUser(userId: number, dto: CreateClientDto) {
+    // 1. Kiểm tra xem User này đã có hồ sơ chưa
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { clientId: true },
+    });
+
+    if (existingUser?.clientId) {
+      throw new BadRequestException(
+        'Bạn đã có hồ sơ khách hàng, không thể tạo thêm.',
+      );
     }
-    throw new InternalServerErrorException(
-      'Không thể sinh mã khách hàng duy nhất, vui lòng thử lại.',
-    );
+
+    // 2. Sinh mã khách hàng (TÁI SỬ DỤNG HÀM CÓ SẴN, XÓA require('crypto'))
+    const clientNumber = dto.clientNumber ?? this.generateUniqueClientNumber();
+
+    // 3. Gọi hàm giao tiếp WAY4
+    const way4Result = await this.createClientWay4Only({
+      ...dto,
+      clientNumber, // Truyền mã vừa sinh vào đây
+    });
+
+    // 4. Lưu vào Database
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        clientId: way4Result.clientId,
+        clientNumber: way4Result.clientNumber,
+      },
+    });
+
+    return {
+      success: true,
+      clientId: way4Result.clientId,
+      clientNumber: way4Result.clientNumber,
+    };
+  }
+
+  private generateUniqueClientNumber(): string {
+    const timestamp = Date.now().toString(); // ~13 chữ số
+    // randomInt an toàn hơn, tạo số từ 100 đến 999 (3 chữ số)
+    const random = crypto.randomInt(100, 1000).toString();
+
+    return `${timestamp}${random}`;
   }
 
   async updateClient(

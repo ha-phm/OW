@@ -62,11 +62,19 @@ export class CardService {
   async assertCardAccessible(cardNumber: string, userId: number) {
     const card = await this.prisma.card.findFirst({
       where: { cardNumber, issuingContract: { userId } },
-      include: { issuingContract: true },
+      include: {
+        issuingContract: {
+          select: {
+            contractNumber: true,
+          },
+        },
+      },
     });
+
     if (!card) {
       throw new NotFoundException('Không tìm thấy thẻ này thuộc về bạn.');
     }
+
     return card;
   }
 
@@ -75,10 +83,23 @@ export class CardService {
     clientNumber: string,
     query: GetCardsQueryDto,
   ): Promise<PaginatedResult<CardListItem>> {
+    // BƯỚC 1: TRUY VẤN TỐI ƯU VỚI SELECT
     const ownedCards = await this.prisma.card.findMany({
       where: { issuingContract: { userId } },
       orderBy: { createdAt: 'desc' },
-      include: { issuingContract: true },
+      select: {
+        cardNumber: true,
+        cardName: true,
+        embossedFirstName: true,
+        embossedLastName: true,
+        status: true,
+        expiryDate: true,
+        issuingContract: {
+          select: {
+            contractNumber: true,
+          },
+        },
+      },
     });
 
     if (ownedCards.length === 0) {
@@ -93,9 +114,11 @@ export class CardService {
       };
     }
 
+    // BƯỚC 2: GỌI HỆ THỐNG WAY4
     const way4ByNumber =
       await this.way4Service.fetchWay4CardsSafely(clientNumber);
 
+    // BƯỚC 3: MAP DỮ LIỆU
     const mapped: CardListItem[] = ownedCards.map((card) => {
       const way4 = way4ByNumber.get(card.cardNumber);
       return {
@@ -113,11 +136,13 @@ export class CardService {
           : undefined,
         creditLimit: toNumberOrUndefined(way4?.CreditLimit),
         available: toNumberOrUndefined(way4?.Available),
+
+        // Dữ liệu contractNumber đã được truy vấn lồng một cách an toàn
         issuingContractNumber: card.issuingContract.contractNumber,
       };
     });
 
-    // Gọi Helper để Lọc và Sắp xếp trong RAM
+    // BƯỚC 4: LỌC & SẮP XẾP IN-MEMORY
     let filtered = filterCardsInMemory(mapped, query);
     filtered = sortCardsInMemory(filtered, query.sortBy, query.sortOrder);
 
@@ -174,7 +199,20 @@ export class CardService {
         embossedFirstName: dto.embossedFirstName ?? card.embossedFirstName,
         embossedLastName: dto.embossedLastName ?? card.embossedLastName,
       },
-      include: { issuingContract: true },
+
+      select: {
+        cardNumber: true,
+        cardName: true,
+        embossedFirstName: true,
+        embossedLastName: true,
+        status: true,
+        expiryDate: true,
+        issuingContract: {
+          select: {
+            contractNumber: true,
+          },
+        },
+      },
     });
 
     return {
@@ -207,9 +245,23 @@ export class CardService {
         orderBy,
         skip,
         take: query.pageSize,
-        include: {
+        // THAY THẾ INCLUDE BẰNG SELECT
+        select: {
+          id: true,
+          cardNumber: true,
+          cardName: true,
+          embossedFirstName: true,
+          embossedLastName: true,
+          expiryDate: true,
+          createdAt: true,
           issuingContract: {
-            include: { user: { select: { email: true, isActive: true } } },
+            select: {
+              contractNumber: true,
+              clientNumber: true,
+              user: {
+                select: { email: true, isActive: true },
+              },
+            },
           },
         },
       }),

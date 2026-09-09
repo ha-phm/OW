@@ -59,7 +59,9 @@ export class ClientController {
   @Post()
   create(@Request() req: RequestWithUser, @Body() dto: CreateClientDto) {
     const userId = req.user.userId;
-    return this.clientService.createClient(userId, dto);
+    // SỬA LẠI TÊN HÀM GỌI XUỐNG SERVICE:
+    // API này dùng để tạo hồ sơ cho user đã tồn tại, nên ta sẽ gọi một hàm dành riêng cho nó
+    return this.clientService.createClientForUser(userId, dto);
   }
 
   @Patch('me')

@@ -122,7 +122,7 @@ export class ContractService {
       contractName?: string;
       productCode?: string;
       userEmail?: string;
-      userIsActive?: string; // Khai báo thêm ở đây
+      userIsActive?: string;
     },
   ): Promise<PaginatedResult<AdminContractItem>> {
     const where = buildContractWhere(query);
@@ -138,7 +138,22 @@ export class ContractService {
         orderBy,
         skip,
         take: query.pageSize,
-        include: { user: { select: { email: true, isActive: true } } },
+        select: {
+          id: true,
+          contractNumber: true,
+          contractName: true,
+          type: true,
+          productCode: true,
+          clientNumber: true,
+          createdAt: true,
+          // Truy vấn lồng để lấy thông tin user
+          user: {
+            select: {
+              email: true,
+              isActive: true,
+            },
+          },
+        },
       }),
       this.prisma.contract.count({ where }),
     ]);
@@ -192,7 +207,7 @@ export class ContractService {
       this.prisma.card.findMany({
         where: { issuingContract: { userId } },
         orderBy: { createdAt: 'desc' },
-        include: { issuingContract: true },
+        select: { cardNumber: true },
       }),
     ]);
 
