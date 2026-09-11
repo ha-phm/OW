@@ -1,5 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 import { SoapService } from '../soap/soap.service';
 import {
   buildCreateContractXml,
@@ -32,12 +31,7 @@ export interface ContractResponse {
 
 @Injectable()
 export class ContractWay4Service {
-  private readonly logger = new Logger(ContractWay4Service.name);
-
-  constructor(
-    private readonly soap: SoapService,
-    private readonly config: ConfigService,
-  ) {}
+  constructor(private readonly soap: SoapService) {}
 
   async getContractsByClientNumber(
     clientNumber: string,

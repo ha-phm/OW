@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import XMLBuilder from 'fast-xml-builder';
-// THÊM MỚI: Import hàm buildSoapEnvelope từ thư mục common
 import { buildSoapEnvelope } from '../common/utils/xml.util';
 
 interface SoapEnvelopeResponse {

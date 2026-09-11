@@ -68,9 +68,7 @@ export class ContractController {
     );
   }
 
-  // LƯU Ý: route ':contractNumber' phải luôn đứng SAU mọi route tĩnh 1-segment
-  // khác trong controller này (như 'me' ở trên) — nếu không route tĩnh sẽ bị
-  // route động này "nuốt" mất tuỳ theo thứ tự khai báo.
+  // LƯU Ý: route ':contractNumber' phải luôn đứng sau mọi route tĩnh
   @Get(':contractNumber')
   getContract(
     @Req() req: RequestWithUser,
@@ -92,46 +90,4 @@ export class ContractController {
   ): Promise<ContractTreeLiability[]> {
     return this.contractService.getContractTreeByClientNumber(clientNumber);
   }
-  /*
-  @Post()
-  createLiability(
-    @Req() req: RequestWithUser,
-    @Body() dto: CreateLiabilityDto,
-  ): Promise<ContractResponse> {
-    if (!req.user.clientId) {
-      throw new BadRequestException('Bạn cần tạo hồ sơ khách hàng trước.');
-    }
-    return this.contractService.createLiabilityForUserByClientId(
-      req.user.userId,
-      req.user.clientId,
-      dto,
-    );
-  }
-
-  @Post(':liabilityContractNumber/issuing')
-  addIssuing(
-    @Req() req: RequestWithUser,
-    @Param('liabilityContractNumber') liabilityContractNumber: string,
-    @Body() dto: AddIssuingDto,
-  ): Promise<ContractResponse> {
-    return this.contractService.addIssuingUnderLiability(
-      req.user.userId,
-      liabilityContractNumber,
-      dto,
-    );
-  }
-
-  @Post(':issuingContractNumber/cards')
-  addCard(
-    @Req() req: RequestWithUser,
-    @Param('issuingContractNumber') issuingContractNumber: string,
-    @Body() dto: CreateCardApplicationDto,
-  ): Promise<CardApplicationResponse> {
-    return this.contractService.addCardUnderIssuing(
-      req.user.userId,
-      issuingContractNumber,
-      dto,
-    );
-  }
-    */
 }

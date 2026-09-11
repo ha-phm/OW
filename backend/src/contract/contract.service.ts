@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClientService } from '../client/client.service';
-import { CardService } from '../card/card.service';
 import { ContractWay4Service } from './contract-way4.service';
 import {
   ContractTreeService,
@@ -85,7 +84,6 @@ export class ContractService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clientService: ClientService,
-    private readonly cardService: CardService,
     private readonly way4Service: ContractWay4Service,
     private readonly treeService: ContractTreeService,
   ) {}

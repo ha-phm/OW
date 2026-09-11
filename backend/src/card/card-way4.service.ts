@@ -3,7 +3,6 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { SoapService } from '../soap/soap.service';
 import { EditCardDto } from './dto/edit-card.dto';
 import {
@@ -11,14 +10,10 @@ import {
   buildEditCardXml,
   buildCreateSupplementaryCardXml,
 } from './card.templates';
-
-// ĐÃ SỬA: Import extractWay4Result và xóa asRecord
 import {
   extractWay4Result,
   toComparableString,
 } from '../common/utils/way4-response.util';
-
-// ĐÃ SỬA: Import toàn bộ interfaces từ file mới tạo
 import {
   CreateCardParams,
   CardContractResponse,
@@ -30,19 +25,14 @@ import {
 export class CardWay4Service {
   private readonly logger = new Logger(CardWay4Service.name);
 
-  constructor(
-    private readonly soap: SoapService,
-    private readonly config: ConfigService,
-  ) {}
+  constructor(private readonly soap: SoapService) {}
 
   async createCardContract(
     params: CreateCardParams,
   ): Promise<CardContractResponse> {
-    // Truyền thẳng params vì cấu trúc object đã khớp hoàn toàn
     const xml = buildCreateCardXml(params);
     const rawResult = await this.soap.sendRaw('CreateCardV3', xml);
 
-    // ĐÃ SỬA: Bóc tách và check lỗi tự động bằng 1 dòng
     const data = extractWay4Result(rawResult, 'CreateCardV3');
 
     const cardNumber = toComparableString(data.CardNumber);
@@ -96,11 +86,9 @@ export class CardWay4Service {
     const xml = buildEditCardXml(cardNumber, dto);
     const rawResult = await this.soap.sendRaw('EditCardV2', xml);
 
-    // ĐÃ SỬA: Chỉ cần 1 dòng này để bóc tách và văng lỗi (nếu có)
     extractWay4Result(rawResult, 'EditCardV2');
   }
 
-  // ĐÃ SỬA: Thay 6 tham số rời rạc bằng 1 object dùng interface chung
   async callCreateSupplementaryCard(
     params: CreateSupplementaryCardParams,
   ): Promise<any> {

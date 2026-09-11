@@ -146,7 +146,6 @@ export class AuthService {
 
       return this.issueTokens(user);
     } catch (error) {
-      // Tốt nhất là throw lại đúng lỗi (hoặc ghi log) để dễ debug thay vì nuốt lỗi
       if (error instanceof UnauthorizedException) {
         throw error;
       }

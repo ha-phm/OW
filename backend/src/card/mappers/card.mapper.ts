@@ -32,7 +32,6 @@ export function mapWay4CardDetail(raw: unknown, fallback: Card): CardDetail {
     status: record.Status
       ? splitWay4Field(record.Status).label
       : fallback.status,
-    // Đã xóa chữ "this." ở dòng bên dưới:
     expiryDate: formatExpiry(record.ExpirationDate ?? fallback.expiryDate),
     productName: record.Product
       ? splitWay4Field(record.Product).label

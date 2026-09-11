@@ -29,7 +29,6 @@ export class CardController {
     private readonly createSupplementaryCardWorkflow: CreateSupplementaryCardWorkflow,
   ) {}
 
-  // Route tĩnh 'me' PHẢI đứng trước route động ':cardNumber' bên dưới.
   @Get('me')
   async listMyCards(
     @Req() req: RequestWithUser,
@@ -82,7 +81,6 @@ export class CardController {
     @Param('cardNumber') cardNumber: string,
     @Body() dto: CreateSupplementaryCardDto,
   ) {
-    // 3. GỌI HÀM EXECUTE TỪ WORKFLOW THAY VÌ CARD SERVICE
     return this.createSupplementaryCardWorkflow.execute(cardNumber, dto);
   }
 

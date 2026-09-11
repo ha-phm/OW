@@ -154,7 +154,7 @@ export class ContractTreeService {
     return filtered;
   }
 
-  // 3. Thuật toán tính toán độ ưu tiên (Recency) - Đã được phục hồi
+  // 3. Thuật toán tính toán độ ưu tiên (Recency)
   buildRecencyRank(rows: { key: string }[]): Map<string, number> {
     const rank = new Map<string, number>();
     rows.forEach((row, idx) => rank.set(row.key, idx));

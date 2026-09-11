@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
-  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CardWay4Service } from '../card-way4.service';
@@ -14,8 +13,6 @@ import {
 
 @Injectable()
 export class CreateSupplementaryCardWorkflow {
-  private readonly logger = new Logger(CreateSupplementaryCardWorkflow.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly way4Service: CardWay4Service,
@@ -55,11 +52,10 @@ export class CreateSupplementaryCardWorkflow {
     const safeCardName = dto.cardName || 'Supplementary Card';
 
     // 2. Gọi WAY4
-    // ĐÃ SỬA: Bọc các tham số vào trong một Object {} và map đúng tên key
     const rawResult: unknown =
       await this.way4Service.callCreateSupplementaryCard({
         clientNumber: clientNumber,
-        mainContractNumber: issuingContractNumber, // Key trong interface là mainContractNumber
+        mainContractNumber: issuingContractNumber,
         productCode: safeProductCode,
         cardName: safeCardName,
         embossedFirstName: dto.embossedFirstName,
