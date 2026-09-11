@@ -14,7 +14,7 @@ import {
   buildGetClientXml,
 } from './client.templates';
 import { assertWay4Success } from '../common/utils/way4-response.util';
-import * as crypto from 'crypto';
+import { generateClientNumber } from '../common/utils/text.utils';
 
 interface CreateClientResult {
   NewClient: string;
@@ -87,16 +87,14 @@ export class ClientService {
   }
 
   async getByParams(clientId: string): Promise<GetClientResult> {
-    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
-    const xml = buildGetClientXml('CLIENT_ID', clientId, officer);
+    const xml = buildGetClientXml('CLIENT_ID', clientId);
     return this.soap.sendRaw<GetClientResult>('GetClientByParmsV2', xml);
   }
 
   async createClientWay4Only(
     dto: CreateClientDto & { clientNumber: string },
   ): Promise<{ clientId: string; clientNumber: string }> {
-    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
-    const xml = buildCreateClientXml(dto, officer);
+    const xml = buildCreateClientXml(dto);
 
     // Gửi SOAP Request
     const way4Response = await this.soap.sendRaw<CreateClientResult>(
@@ -140,7 +138,7 @@ export class ClientService {
     }
 
     // 2. Sinh mã khách hàng (TÁI SỬ DỤNG HÀM CÓ SẴN, XÓA require('crypto'))
-    const clientNumber = dto.clientNumber ?? this.generateUniqueClientNumber();
+    const clientNumber = dto.clientNumber ?? generateClientNumber();
 
     // 3. Gọi hàm giao tiếp WAY4
     const way4Result = await this.createClientWay4Only({
@@ -164,20 +162,11 @@ export class ClientService {
     };
   }
 
-  private generateUniqueClientNumber(): string {
-    const timestamp = Date.now().toString(); // ~13 chữ số
-    // randomInt an toàn hơn, tạo số từ 100 đến 999 (3 chữ số)
-    const random = crypto.randomInt(100, 1000).toString();
-
-    return `${timestamp}${random}`;
-  }
-
   async updateClient(
     clientId: string,
     dto: UpdateClientDto,
   ): Promise<{ success: boolean; message: string }> {
-    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
-    const xml = buildEditClientXml('CLIENT_ID', clientId, dto, officer);
+    const xml = buildEditClientXml('CLIENT_ID', clientId, dto);
     const response = await this.soap.sendRaw<EditClientResult>(
       'EditClientV6',
       xml,

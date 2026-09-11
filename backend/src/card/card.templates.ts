@@ -1,33 +1,19 @@
-// card.template.ts
-import { escapeXml, buildSoapEnvelope } from '../common/utils/xml.util';
+// card.templates.ts
+import { escapeXml } from '../common/utils/xml.util';
 import { EditCardDto } from './dto/edit-card.dto';
 import { toEmbossingSafeName } from '../common/utils/text.utils';
 
-export interface BuildCreateCardXmlParams {
-  issuingContractNumber: string;
-  productCode: string;
-  cardName: string;
-  embossedFirstName: string;
-  embossedLastName: string;
-  embossedCompanyName?: string;
-  cbsNumber?: string;
-}
-
-export interface BuildCreateSupplementaryCardXmlParams {
-  clientNumber: string;
-  mainContractNumber: string;
-  productCode: string;
-  cardName: string;
-  embossedFirstName: string;
-  embossedLastName: string;
-}
+// ĐÃ SỬA: Trỏ đường dẫn import tới file interface dùng chung mới tạo
+import {
+  CreateCardParams,
+  CreateSupplementaryCardParams,
+} from './interfaces/card-way4.interface';
 
 export function buildEditCardXml(
   contractNumber: string,
   dto: EditCardDto,
-  officer: string,
 ): string {
-  const bodyContent = `
+  return `
     <wsin:EditCardV2>
       <wsin:ContractSearchMethod>CONTRACT_NUMBER</wsin:ContractSearchMethod>
       <wsin:ContractIdentifier>${escapeXml(contractNumber)}</wsin:ContractIdentifier>
@@ -51,20 +37,16 @@ export function buildEditCardXml(
       </wsin:InObject>
     </wsin:EditCardV2>
   `;
-  return buildSoapEnvelope(bodyContent, officer);
 }
 
-export function buildCreateCardXml(
-  params: BuildCreateCardXmlParams,
-  officer: string,
-): string {
+export function buildCreateCardXml(params: CreateCardParams): string {
   const safeFirstName = toEmbossingSafeName(params.embossedFirstName);
   const safeLastName = toEmbossingSafeName(params.embossedLastName);
   const safeCompanyName = params.embossedCompanyName
     ? toEmbossingSafeName(params.embossedCompanyName)
     : '';
 
-  const bodyContent = `
+  return `
     <wsin:CreateCardV3>
       <wsin:ContractSearchMethod>CONTRACT_NUMBER</wsin:ContractSearchMethod>
       <wsin:ContractIdentifier>${escapeXml(params.issuingContractNumber)}</wsin:ContractIdentifier>
@@ -80,14 +62,12 @@ export function buildCreateCardXml(
       </wsin:InObject>
     </wsin:CreateCardV3>
   `;
-  return buildSoapEnvelope(bodyContent, officer);
 }
 
 export function buildCreateSupplementaryCardXml(
-  params: BuildCreateSupplementaryCardXmlParams,
-  officer: string,
+  params: CreateSupplementaryCardParams,
 ): string {
-  const bodyContent = `
+  return `
     <wsin:CreateSupplementaryCardV2>
       <wsin:ClientSearchMethod>CLIENT_NUMBER</wsin:ClientSearchMethod>
       <wsin:ClientIdentifier>${escapeXml(params.clientNumber)}</wsin:ClientIdentifier>
@@ -101,5 +81,4 @@ export function buildCreateSupplementaryCardXml(
       </wsin:InObject>
     </wsin:CreateSupplementaryCardV2>
   `;
-  return buildSoapEnvelope(bodyContent, officer);
 }

@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import XMLBuilder from 'fast-xml-builder';
+// THÊM MỚI: Import hàm buildSoapEnvelope từ thư mục common
+import { buildSoapEnvelope } from '../common/utils/xml.util';
 
 interface SoapEnvelopeResponse {
   Envelope?: {
@@ -32,7 +34,7 @@ export class SoapService {
     operation: string,
     params: Record<string, string | number>,
   ): Promise<T> {
-    const officer = this.config.get<string>('OPENWAY_OFFICER');
+    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
 
     const envelope = this.builder.build({
       'soapenv:Envelope': {
@@ -52,7 +54,9 @@ export class SoapService {
     return this.postAndParse<T>(operation, envelope);
   }
 
-  async sendRaw<T>(operation: string, xml: string): Promise<T> {
+  async sendRaw<T>(operation: string, bodyContent: string): Promise<T> {
+    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
+    const xml = buildSoapEnvelope(bodyContent, officer);
     return this.postAndParse<T>(operation, xml);
   }
 

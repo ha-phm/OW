@@ -1,4 +1,5 @@
 import { Prisma, ContractType } from '@prisma/client';
+import { buildUserRelationWhere } from '../../common/helpers/prisma-query.helper';
 
 export interface ContractQueryFilters {
   search?: string;
@@ -27,12 +28,14 @@ export function buildContractWhere(
       mode: 'insensitive',
     };
   }
+
   if (query.contractName) {
     where.contractName = {
       contains: query.contractName.trim(),
       mode: 'insensitive',
     };
   }
+
   if (query.productCode) {
     where.productCode = {
       contains: query.productCode.trim(),
@@ -40,23 +43,14 @@ export function buildContractWhere(
     };
   }
 
-  const userConditions: Prisma.UserWhereInput = {};
-  let hasUserConditions = false;
+  // --- XỬ LÝ LỌC QUAN HỆ BẮC CẦU (USER) BẰNG HELPER CHUNG ---
+  const userConditions = buildUserRelationWhere({
+    userEmail: query.userEmail,
+    userIsActive: query.userIsActive,
+  });
 
-  if (query.userEmail) {
-    userConditions.email = {
-      contains: query.userEmail.trim(),
-      mode: 'insensitive',
-    };
-    hasUserConditions = true;
-  }
-
-  if (query.userIsActive === 'true' || query.userIsActive === 'false') {
-    userConditions.isActive = query.userIsActive === 'true';
-    hasUserConditions = true;
-  }
-
-  if (hasUserConditions) {
+  // Nếu helper trả về object, gán trực tiếp vào where.user
+  if (userConditions) {
     where.user = userConditions;
   }
 

@@ -19,7 +19,7 @@ import {
   CARD_CATEGORY_LABEL,
 } from '../contract.constants';
 import { toStringOrNull } from '../../common/utils/way4-response.util';
-import { CardContractResponse } from '../../card/card-way4.service';
+import { CardContractResponse } from '../../card/interfaces/card-way4.interface';
 
 @Injectable()
 export class QuickOpenCardWorkflow {

@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { buildUserRelationWhere } from '../../common/helpers/prisma-query.helper';
 
 export interface CardQueryFilters {
   cardNumber?: string;
@@ -27,23 +28,13 @@ export function buildCardWhere(query: CardQueryFilters): Prisma.CardWhereInput {
 
   // --- XỬ LÝ LỌC QUAN HỆ BẮC CẦU (USER) AN TOÀN ---
   // Gom chung các điều kiện của user vào 1 object để không bị ghi đè lẫn nhau
-  const userConditions: Prisma.UserWhereInput = {};
-  let hasUserConditions = false;
+  const userConditions = buildUserRelationWhere({
+    userEmail: query.userEmail,
+    userIsActive: query.userIsActive,
+  });
 
-  if (query.userEmail) {
-    userConditions.email = {
-      contains: query.userEmail.trim(),
-      mode: 'insensitive',
-    };
-    hasUserConditions = true;
-  }
-
-  if (query.userIsActive === 'true' || query.userIsActive === 'false') {
-    userConditions.isActive = query.userIsActive === 'true';
-    hasUserConditions = true;
-  }
-
-  if (hasUserConditions) {
+  // Nếu helper trả về object (tức là có điều kiện lọc), thì mới gán vào where
+  if (userConditions) {
     where.issuingContract = {
       user: userConditions,
     };

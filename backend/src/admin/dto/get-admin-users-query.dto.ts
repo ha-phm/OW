@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsBooleanString } from 'class-validator';
 import { Role } from '@prisma/client';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
@@ -20,7 +20,7 @@ export class GetAdminUsersQueryDto extends PaginationQueryDto {
   role?: Role;
 
   @IsOptional()
-  @IsString()
+  @IsBooleanString({ message: 'isActive phải là chuỗi true hoặc false' })
   isActive?: string;
 
   @IsOptional()

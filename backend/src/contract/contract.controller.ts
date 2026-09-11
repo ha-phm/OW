@@ -5,7 +5,7 @@ import {
   Body,
   Param,
   Query,
-  Request,
+  Req,
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
@@ -19,15 +19,7 @@ import { QuickOpenCardDto } from './dto/quick-open-card.dto';
 import { ContractTreeLiability } from './contract-tree.service';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { QuickOpenCardWorkflow } from './use-cases/quick-open-card.workflow';
-
-interface RequestWithUser {
-  user: {
-    userId: number;
-    email: string;
-    clientId?: string | null;
-    clientNumber?: string | null;
-  };
-}
+import { type RequestWithUser } from '../common/interfaces/request-with-user.interface';
 
 @Controller('contracts')
 export class ContractController {
@@ -40,7 +32,7 @@ export class ContractController {
   // main.ts đã bật ValidationPipe({ transform: true }) toàn cục).
   @Get('me')
   getMyContractTree(
-    @Request() req: RequestWithUser,
+    @Req() req: RequestWithUser,
     @Query() query: GetContractTreeQueryDto,
   ): Promise<PaginatedResult<ContractTreeLiability>> {
     if (!req.user.clientId) {
@@ -63,7 +55,7 @@ export class ContractController {
 
   @Post('quick-open')
   quickOpenCard(
-    @Request() req: RequestWithUser,
+    @Req() req: RequestWithUser,
     @Body() dto: QuickOpenCardDto,
   ): Promise<CardApplicationResponse> {
     if (!req.user.clientId) {
@@ -81,7 +73,7 @@ export class ContractController {
   // route động này "nuốt" mất tuỳ theo thứ tự khai báo.
   @Get(':contractNumber')
   getContract(
-    @Request() req: RequestWithUser,
+    @Req() req: RequestWithUser,
     @Param('contractNumber') contractNumber: string,
   ): Promise<GetContractDetailDto> {
     // Trước đây endpoint này gọi thẳng WAY4 theo contractNumber trên URL mà
@@ -103,7 +95,7 @@ export class ContractController {
   /*
   @Post()
   createLiability(
-    @Request() req: RequestWithUser,
+    @Req() req: RequestWithUser,
     @Body() dto: CreateLiabilityDto,
   ): Promise<ContractResponse> {
     if (!req.user.clientId) {
@@ -118,7 +110,7 @@ export class ContractController {
 
   @Post(':liabilityContractNumber/issuing')
   addIssuing(
-    @Request() req: RequestWithUser,
+    @Req() req: RequestWithUser,
     @Param('liabilityContractNumber') liabilityContractNumber: string,
     @Body() dto: AddIssuingDto,
   ): Promise<ContractResponse> {
@@ -131,7 +123,7 @@ export class ContractController {
 
   @Post(':issuingContractNumber/cards')
   addCard(
-    @Request() req: RequestWithUser,
+    @Req() req: RequestWithUser,
     @Param('issuingContractNumber') issuingContractNumber: string,
     @Body() dto: CreateCardApplicationDto,
   ): Promise<CardApplicationResponse> {

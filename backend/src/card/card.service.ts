@@ -1,14 +1,14 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  CardWay4Service,
-  CreateCardParams,
-  CardContractResponse,
-} from './card-way4.service';
+import { CardWay4Service } from './card-way4.service';
 import { EditCardDto } from './dto/edit-card.dto';
 import { GetCardsQueryDto } from './dto/get-cards-query.dto';
 import { GetAdminCardsQueryDto } from '../admin/dto/get-admin-cards-query.dto'; // Import DTO của Admin
-import { CardListItem, CardDetail } from './interfaces/card.interface';
+import {
+  CardListItem,
+  CardDetail,
+  AdminCardItem,
+} from './interfaces/card.interface';
 import { formatExpiry, mapWay4CardDetail } from './mappers/card.mapper';
 import {
   filterCardsInMemory,
@@ -22,23 +22,10 @@ import {
   PaginatedResult,
   buildMeta,
 } from '../common/interfaces/paginated-result.interface';
-
-// Interface dành riêng cho Admin được giữ lại tại đây hoặc đưa vào card.interface.ts
-export interface AdminCardItem {
-  id: number;
-  cardNumber: string;
-  maskedCardNumber?: string;
-  cardName: string;
-  embossedFirstName: string;
-  embossedLastName: string;
-  expiryDate: string | null;
-  issuingContractNumber: string;
-  userEmail: string;
-  clientNumber: string;
-  userIsActive: boolean;
-  createdAt: Date;
-  productName?: string;
-}
+import {
+  CreateCardParams,
+  CardContractResponse,
+} from './interfaces/card-way4.interface';
 
 @Injectable()
 export class CardService {

@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 export function toEmbossingSafeName(value?: string | null): string {
   if (!value) return '';
 
@@ -41,4 +43,10 @@ export function maskCardNumber(
   const masked = first6 + '*'.repeat(maskedLength) + last4;
 
   return masked.replace(/(.{4})/g, '$1 ').trim();
+}
+
+export function generateClientNumber(): string {
+  const timestamp = Date.now().toString();
+  const random = crypto.randomInt(100, 1000).toString();
+  return `${timestamp}${random}`;
 }

@@ -1,22 +1,15 @@
-import {
-  buildOptionalTag,
-  escapeXml,
-  buildSoapEnvelope,
-} from '../common/utils/xml.util';
+import { buildOptionalTag, escapeXml } from '../common/utils/xml.util';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 
-export function buildCreateClientXml(
-  dto: CreateClientDto,
-  officer: string,
-): string {
+export function buildCreateClientXml(dto: CreateClientDto): string {
   // Logic xử lý tên và mã chi nhánh giữ nguyên
   const shortName =
     `${dto.lastName} ${dto.middleName ?? ''} ${dto.firstName}`.trim();
   const branchCode = dto.branch ?? '0101';
 
-  // Chỉ chứa nội dung của CreateClientV4
-  const bodyContent = `
+  // Chỉ trả về nội dung của Body
+  return `
     <wsin:CreateClientV4>
       <wsin:Reason>Create client</wsin:Reason>
       <wsin:CreateClient_InObject>
@@ -77,30 +70,29 @@ export function buildCreateClientXml(
       </wsin:SetCustomData_InObject>
     </wsin:CreateClientV4>
   `;
-  return buildSoapEnvelope(bodyContent, officer);
 }
 
 export function buildGetClientXml(
   searchMethod: string,
   identifier: string,
-  officer: string,
+  // XÓA: Bỏ tham số officer
 ): string {
-  const bodyContent = `
+  // Chỉ trả về nội dung của Body
+  return `
     <wsin:GetClientByParmsV2>
       <wsin:ClientSearchMethod>${searchMethod}</wsin:ClientSearchMethod>
       <wsin:ClientIdentifier>${escapeXml(identifier)}</wsin:ClientIdentifier>
     </wsin:GetClientByParmsV2>
   `;
-  return buildSoapEnvelope(bodyContent, officer);
 }
 
 export function buildEditClientXml(
   searchMethod: string,
   clientIdentifier: string,
   dto: UpdateClientDto,
-  officer: string,
+  // XÓA: Bỏ tham số officer
 ): string {
-  // Logic xử lý tag tên giữ nguyên
+  // Logic xử lý tag
   let shortNameTag = '';
   if (dto.firstName && dto.lastName) {
     const shortName =
@@ -108,8 +100,8 @@ export function buildEditClientXml(
     shortNameTag = `<wsin:ShortName>${escapeXml(shortName)}</wsin:ShortName>`;
   }
 
-  // Chỉ chứa nội dung của EditClientV6
-  const bodyContent = `
+  // Chỉ trả về nội dung của Body
+  return `
     <wsin:EditClientV6>
       <wsin:ClientSearchMethod>${searchMethod}</wsin:ClientSearchMethod>
       <wsin:ClientIdentifier>${escapeXml(clientIdentifier)}</wsin:ClientIdentifier>
@@ -138,7 +130,4 @@ export function buildEditClientXml(
       <wsin:SetCustomData_InObject></wsin:SetCustomData_InObject>
     </wsin:EditClientV6>
   `;
-
-  // Bọc vào Envelope
-  return buildSoapEnvelope(bodyContent, officer);
 }

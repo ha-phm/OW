@@ -5,7 +5,7 @@ import {
   Body,
   Param,
   Query,
-  Request,
+  Req,
   Post,
 } from '@nestjs/common';
 import {
@@ -18,16 +18,8 @@ import { EditCardDto } from './dto/edit-card.dto';
 import { GetCardsQueryDto } from './dto/get-cards-query.dto';
 import { ClientService } from '../client/client.service';
 import { CreateSupplementaryCardDto } from './dto/create-supplymentary-card.dto';
-
-// 1. IMPORT WORKFLOW VÀO ĐÂY
 import { CreateSupplementaryCardWorkflow } from './use-cases/create-supplementary-card.workflow';
-
-interface RequestWithUser {
-  user: {
-    userId: number;
-    clientId?: string | null;
-  };
-}
+import { type RequestWithUser } from '../common/interfaces/request-with-user.interface';
 
 @Controller('cards')
 export class CardController {
@@ -40,7 +32,7 @@ export class CardController {
   // Route tĩnh 'me' PHẢI đứng trước route động ':cardNumber' bên dưới.
   @Get('me')
   async listMyCards(
-    @Request() req: RequestWithUser,
+    @Req() req: RequestWithUser,
     @Query() query: GetCardsQueryDto,
   ): Promise<PaginatedResult<CardListItem>> {
     if (!req.user.clientId) {
@@ -79,7 +71,7 @@ export class CardController {
 
   @Get(':cardNumber')
   getCardDetail(
-    @Request() req: RequestWithUser,
+    @Req() req: RequestWithUser,
     @Param('cardNumber') cardNumber: string,
   ): Promise<CardDetail> {
     return this.cardService.getCardDetailForUser(req.user.userId, cardNumber);
@@ -96,7 +88,7 @@ export class CardController {
 
   @Patch(':cardNumber')
   editCard(
-    @Request() req: RequestWithUser,
+    @Req() req: RequestWithUser,
     @Param('cardNumber') cardNumber: string,
     @Body() dto: EditCardDto,
   ): Promise<CardDetail> {

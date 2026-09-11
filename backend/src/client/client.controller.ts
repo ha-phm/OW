@@ -1,6 +1,6 @@
 import {
   Controller,
-  Request,
+  Req,
   Get,
   Post,
   Body,
@@ -10,15 +10,7 @@ import {
 import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
-
-interface RequestWithUser {
-  user: {
-    userId: number;
-    email: string;
-    clientId?: string;
-    clientNumber?: string | null;
-  };
-}
+import { type RequestWithUser } from '../common/interfaces/request-with-user.interface';
 
 interface Way4SoapResponse {
   OutObject?: {
@@ -33,7 +25,7 @@ export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 
   @Get('me')
-  async getProfile(@Request() req: RequestWithUser) {
+  async getProfile(@Req() req: RequestWithUser) {
     const user = req.user;
 
     if (!user || !user.clientId) {
@@ -57,15 +49,14 @@ export class ClientController {
   }
 
   @Post()
-  create(@Request() req: RequestWithUser, @Body() dto: CreateClientDto) {
+  create(@Req() req: RequestWithUser, @Body() dto: CreateClientDto) {
     const userId = req.user.userId;
-    // SỬA LẠI TÊN HÀM GỌI XUỐNG SERVICE:
-    // API này dùng để tạo hồ sơ cho user đã tồn tại, nên ta sẽ gọi một hàm dành riêng cho nó
+    // API này dùng để tạo hồ sơ cho user đã tồn tại, nên sẽ gọi một hàm dành riêng cho nó
     return this.clientService.createClientForUser(userId, dto);
   }
 
   @Patch('me')
-  update(@Request() req: RequestWithUser, @Body() dto: UpdateClientDto) {
+  update(@Req() req: RequestWithUser, @Body() dto: UpdateClientDto) {
     const clientId = req.user.clientId;
     if (!clientId) {
       throw new BadRequestException('Bạn chưa có hồ sơ khách hàng');

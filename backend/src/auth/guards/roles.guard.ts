@@ -7,16 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-
-interface RequestWithUser {
-  user?: {
-    userId: number;
-    email: string;
-    clientId: string | null;
-    clientNumber: string | null;
-    role: Role;
-  };
-}
+import { RequestWithUser } from '../../common/interfaces/request-with-user.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -29,7 +20,9 @@ export class RolesGuard implements CanActivate {
     ]);
     if (!requiredRoles?.length) return true;
 
-    const { user } = context.switchToHttp().getRequest<RequestWithUser>();
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
+    const user = request.user;
+
     if (!user || !requiredRoles.includes(user.role)) {
       throw new ForbiddenException('Bạn không có quyền truy cập chức năng này');
     }

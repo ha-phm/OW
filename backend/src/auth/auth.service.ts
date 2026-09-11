@@ -12,8 +12,8 @@ import { User } from '@prisma/client';
 import { ClientService } from '../client/client.service';
 import { RegisterDto } from './dto/register.dto';
 import { ConfigService } from '@nestjs/config/dist/config.service';
-import * as crypto from 'crypto';
 import { Prisma } from '@prisma/client';
+import { generateClientNumber } from '../common/utils/text.utils';
 
 type AuthUser = Pick<User, 'id' | 'email' | 'clientId' | 'clientNumber'>;
 
@@ -44,16 +44,12 @@ export class AuthService {
     const MAX_RETRIES = 3;
     let attempts = 0;
 
-    // VÒNG LẶP THỬ LẠI (RETRY MECHANISM)
     while (attempts < MAX_RETRIES) {
       try {
         // B1: Sinh mã khách hàng nội bộ
-        const timestamp = Date.now().toString();
-        const random = crypto.randomInt(100, 1000).toString();
-        const clientNumber = `${timestamp}${random}`;
+        const clientNumber = generateClientNumber();
 
         // B2: GỌI HỆ THỐNG WAY4 TRƯỚC (Rủi ro cao nhất)
-        // Lưu ý: Lát nữa ta sẽ sửa lại hàm này bên ClientService để nó KHÔNG động vào DB nữa
         const way4Payload = { ...clientDto, clientNumber };
         const clientResult =
           await this.clientService.createClientWay4Only(way4Payload);
@@ -64,7 +60,7 @@ export class AuthService {
             email: dto.email,
             password: hashedPassword,
             clientNumber: clientNumber,
-            clientId: clientResult.clientId, // Lưu ID thực tế WAY4 trả về
+            clientId: clientResult.clientId,
           },
         });
 
@@ -74,6 +70,7 @@ export class AuthService {
           clientId: newUser.clientId,
         };
       } catch (error) {
+        // ĐÃ SỬA: Đã bỏ dấu mở ngoặc thừa `{` ở đây
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
           if (
             error.code === 'P2002' &&

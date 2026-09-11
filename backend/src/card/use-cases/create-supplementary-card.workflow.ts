@@ -8,7 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CardWay4Service } from '../card-way4.service';
 import { CreateSupplementaryCardDto } from '../dto/create-supplymentary-card.dto';
 import {
-  asRecord,
+  extractWay4Result,
   toComparableString,
 } from '../../common/utils/way4-response.util';
 
@@ -23,7 +23,6 @@ export class CreateSupplementaryCardWorkflow {
 
   async execute(mainCardNumber: string, dto: CreateSupplementaryCardDto) {
     // 1. Kiểm tra thẻ chính trong DB
-    // ĐÃ TỐI ƯU BẰNG SELECT: Chỉ trích xuất đúng 4 cột cần thiết
     const mainCard = await this.prisma.card.findUnique({
       where: { cardNumber: mainCardNumber },
       select: {
@@ -56,29 +55,19 @@ export class CreateSupplementaryCardWorkflow {
     const safeCardName = dto.cardName || 'Supplementary Card';
 
     // 2. Gọi WAY4
+    // ĐÃ SỬA: Bọc các tham số vào trong một Object {} và map đúng tên key
     const rawResult: unknown =
-      await this.way4Service.callCreateSupplementaryCard(
-        clientNumber,
-        issuingContractNumber,
-        safeProductCode,
-        safeCardName,
-        dto.embossedFirstName,
-        dto.embossedLastName,
-      );
+      await this.way4Service.callCreateSupplementaryCard({
+        clientNumber: clientNumber,
+        mainContractNumber: issuingContractNumber, // Key trong interface là mainContractNumber
+        productCode: safeProductCode,
+        cardName: safeCardName,
+        embossedFirstName: dto.embossedFirstName,
+        embossedLastName: dto.embossedLastName,
+      });
 
     // 3. Bóc tách dữ liệu WAY4
-    const envelope = asRecord(rawResult) ?? {};
-    const data = asRecord(envelope.CreateSupplementaryCardV2Result) ?? envelope;
-
-    const retCode = toComparableString(data.RetCode);
-    if (retCode !== '0') {
-      this.logger.error('Lỗi tạo thẻ phụ:', data);
-      throw new InternalServerErrorException(
-        typeof data.RetMsg === 'string'
-          ? data.RetMsg
-          : 'WAY4 từ chối phát hành thẻ phụ.',
-      );
-    }
+    const data = extractWay4Result(rawResult, 'CreateSupplementaryCardV2');
 
     const newCardPan = toComparableString(data.CardNumber);
     if (!newCardPan) {
@@ -100,7 +89,7 @@ export class CreateSupplementaryCardWorkflow {
         productCode: safeProductCode,
         embossedFirstName: dto.embossedFirstName,
         embossedLastName: dto.embossedLastName,
-        issuingContractId: mainCard.issuingContractId, // Vẫn lấy được bình thường nhờ select
+        issuingContractId: mainCard.issuingContractId,
       },
     });
 

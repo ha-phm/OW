@@ -1,5 +1,5 @@
 // contract.template.ts
-import { escapeXml, buildSoapEnvelope } from '../common/utils/xml.util';
+import { escapeXml } from '../common/utils/xml.util';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { CreateIssuingContractDto } from './dto/create-issuing-contract.dto';
 
@@ -23,11 +23,8 @@ function buildAddInfoTags(dto: CreateIssuingContractDto): string {
   return tags;
 }
 
-export function buildCreateContractXml(
-  dto: CreateContractDto,
-  officer: string,
-): string {
-  const bodyContent = `
+export function buildCreateContractXml(dto: CreateContractDto): string {
+  return `
     <wsin:CreateContractV4>
       <wsin:ClientSearchMethod>CLIENT_NUMBER</wsin:ClientSearchMethod>
       <wsin:ClientIdentifier>${escapeXml(dto.clientNumber)}</wsin:ClientIdentifier>
@@ -44,17 +41,14 @@ export function buildCreateContractXml(
       <wsin:SetCustomData_InObject></wsin:SetCustomData_InObject>
     </wsin:CreateContractV4>
   `;
-
-  return buildSoapEnvelope(bodyContent, officer);
 }
 
 export function buildCreateIssuingContractXml(
   dto: CreateIssuingContractDto,
-  officer: string,
 ): string {
   const addInfoTags = buildAddInfoTags(dto);
 
-  const bodyContent = `
+  return `
     <wsin:CreateIssuingContractWithLiabilityV2>
       <wsin:LiabCategory>${escapeXml(dto.liabCategory ?? 'Y')}</wsin:LiabCategory>
       <wsin:LiabContractSearchMethod>CONTRACT_NUMBER</wsin:LiabContractSearchMethod>
@@ -72,6 +66,4 @@ export function buildCreateIssuingContractXml(
       </wsin:InObject>
     </wsin:CreateIssuingContractWithLiabilityV2>
   `;
-
-  return buildSoapEnvelope(bodyContent, officer);
 }

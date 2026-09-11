@@ -11,39 +11,20 @@ import {
   buildEditCardXml,
   buildCreateSupplementaryCardXml,
 } from './card.templates';
+
+// ĐÃ SỬA: Import extractWay4Result và xóa asRecord
 import {
-  asRecord,
+  extractWay4Result,
   toComparableString,
 } from '../common/utils/way4-response.util';
 
-export interface CreateCardParams {
-  issuingContractNumber: string;
-  productCode: string;
-  embossedFirstName: string;
-  embossedLastName: string;
-  embossedCompanyName?: string;
-  cardName?: string;
-  cbsNumber?: string;
-}
-
-export interface CardContractResponse {
-  cardNumber: string;
-  expiryDate: string;
-  sequenceNumber: string;
-}
-
-export interface Way4CardRecord {
-  CardNumber?: string;
-  CardName?: string;
-  EmbossedFirstName?: string;
-  EmbossedLastName?: string;
-  EmbossedCompanyName?: string;
-  Status?: string;
-  ExpirationDate?: string | number;
-  Product?: string;
-  CreditLimit?: string | number;
-  Available?: string | number;
-}
+// ĐÃ SỬA: Import toàn bộ interfaces từ file mới tạo
+import {
+  CreateCardParams,
+  CardContractResponse,
+  Way4CardRecord,
+  CreateSupplementaryCardParams,
+} from './interfaces/card-way4.interface';
 
 @Injectable()
 export class CardWay4Service {
@@ -57,33 +38,12 @@ export class CardWay4Service {
   async createCardContract(
     params: CreateCardParams,
   ): Promise<CardContractResponse> {
-    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
-    const xml = buildCreateCardXml(
-      {
-        issuingContractNumber: params.issuingContractNumber,
-        productCode: params.productCode,
-        cardName: params.cardName ?? 'Card Contract',
-        embossedFirstName: params.embossedFirstName,
-        embossedLastName: params.embossedLastName,
-        embossedCompanyName: params.embossedCompanyName,
-        cbsNumber: params.cbsNumber,
-      },
-      officer,
-    );
+    // Truyền thẳng params vì cấu trúc object đã khớp hoàn toàn
+    const xml = buildCreateCardXml(params);
     const rawResult = await this.soap.sendRaw('CreateCardV3', xml);
 
-    const envelope = asRecord(rawResult) ?? {};
-    const data = asRecord(envelope.CreateCardV3Result) ?? envelope;
-    const retCode = toComparableString(data.RetCode);
-
-    if (retCode === undefined || retCode !== '0') {
-      this.logger.error('CreateCardV3 thất bại', data);
-      throw new InternalServerErrorException(
-        typeof data.RetMsg === 'string'
-          ? data.RetMsg
-          : 'Không thể tạo thẻ trên WAY4.',
-      );
-    }
+    // ĐÃ SỬA: Bóc tách và check lỗi tự động bằng 1 dòng
+    const data = extractWay4Result(rawResult, 'CreateCardV3');
 
     const cardNumber = toComparableString(data.CardNumber);
     if (cardNumber === undefined) {
@@ -133,47 +93,18 @@ export class CardWay4Service {
   }
 
   async editCardV2(cardNumber: string, dto: EditCardDto): Promise<void> {
-    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
-    const xml = buildEditCardXml(cardNumber, dto, officer);
+    const xml = buildEditCardXml(cardNumber, dto);
     const rawResult = await this.soap.sendRaw('EditCardV2', xml);
 
-    const envelope = asRecord(rawResult) ?? {};
-    const data = asRecord(envelope.EditCardV2Result) ?? envelope;
-    const retCode = toComparableString(data.RetCode);
-
-    if (retCode === undefined || retCode !== '0') {
-      this.logger.error('EditCardV2 thất bại', data);
-      throw new InternalServerErrorException(
-        typeof data.RetMsg === 'string'
-          ? data.RetMsg
-          : 'Không thể cập nhật thẻ trên WAY4.',
-      );
-    }
+    // ĐÃ SỬA: Chỉ cần 1 dòng này để bóc tách và văng lỗi (nếu có)
+    extractWay4Result(rawResult, 'EditCardV2');
   }
 
+  // ĐÃ SỬA: Thay 6 tham số rời rạc bằng 1 object dùng interface chung
   async callCreateSupplementaryCard(
-    clientNumber: string,
-    mainContractNumber: string,
-    productCode: string,
-    cardName: string,
-    embossedFirstName: string,
-    embossedLastName: string,
+    params: CreateSupplementaryCardParams,
   ): Promise<any> {
-    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
-
-    // Sử dụng template để build XML tự động
-    const xmlPayload = buildCreateSupplementaryCardXml(
-      {
-        clientNumber,
-        mainContractNumber,
-        productCode,
-        cardName,
-        embossedFirstName,
-        embossedLastName,
-      },
-      officer,
-    );
-
+    const xmlPayload = buildCreateSupplementaryCardXml(params);
     return this.soap.sendRaw('CreateSupplementaryCardV2', xmlPayload);
   }
 }

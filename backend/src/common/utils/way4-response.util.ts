@@ -77,6 +77,12 @@ export function toStringOrNull(value: unknown): string | null {
 /** Parse an toàn sang number; trả `undefined` nếu rỗng hoặc không hợp lệ (NaN). */
 export function toNumberOrUndefined(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '') return undefined;
+  // nếu WAY4 trả về một thẻ XML rỗng như <CreditLimit>   </CreditLimit>, hệ thống sẽ nhận diện đó là chuỗi trống và trả về undefined thay vì biến đổi nó thành số 0, giúp bảo toàn tính chính xác của dữ liệu thẻ/hợp đồng.
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed === '') return undefined;
+  }
+
   const n = Number(value);
   return Number.isNaN(n) ? undefined : n;
 }
@@ -101,4 +107,14 @@ export function assertWay4Success(
       typeof data.RetMsg === 'string' ? data.RetMsg : fallbackMessage;
     throw new Error(message);
   }
+}
+
+export function extractWay4Result(
+  rawResult: unknown,
+  methodName: string,
+): Record<string, unknown> {
+  const envelope = asRecord(rawResult) ?? {};
+  const data = asRecord(envelope[`${methodName}Result`]) ?? envelope;
+  assertWay4Success(data, `Lỗi từ hệ thống WAY4 cho method ${methodName}`);
+  return data;
 }

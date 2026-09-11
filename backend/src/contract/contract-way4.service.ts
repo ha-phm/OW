@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SoapService } from '../soap/soap.service';
 import {
@@ -10,37 +6,11 @@ import {
   buildCreateIssuingContractXml,
 } from './contract.templates';
 import {
-  asRecord,
-  toComparableString,
+  extractWay4Result,
   toStringOrUndefined,
 } from '../common/utils/way4-response.util';
-
-// Di chuyển các DTO/Interface giao tiếp với WAY4 sang đây
-export interface CreateContractDto {
-  clientNumber: string;
-  productCode: string;
-  contractName: string;
-  cbsNumber?: string;
-  institutionCode?: string;
-  branch?: string;
-  reason?: string;
-}
-
-export interface CreateIssuingContractDto {
-  liabContractNumber: string;
-  liabCategory?: string;
-  clientNumber: string;
-  productCode: string;
-  contractName: string;
-  cbsNumber?: string;
-  institutionCode?: string;
-  branch?: string;
-  paymentOption?: string;
-  bank?: string;
-  account?: string;
-  bankCode?: string;
-  accName?: string;
-}
+import { CreateContractDto } from './dto/create-contract.dto';
+import { CreateIssuingContractDto } from './dto/create-issuing-contract.dto';
 
 export interface Way4ContractRecord {
   ContractNumber?: string;
@@ -69,24 +39,6 @@ export class ContractWay4Service {
     private readonly config: ConfigService,
   ) {}
 
-  private extractWay4Data(result: unknown, methodName: string) {
-    const envelope = asRecord(result) ?? {};
-    const data = asRecord(envelope[`${methodName}Result`]) ?? envelope;
-
-    const contractNumber = toComparableString(data.ContractNumber);
-    if (contractNumber === undefined) {
-      this.logger.error(`Lỗi parse kết quả WAY4 cho ${methodName}`, data);
-      throw new InternalServerErrorException(
-        `Không lấy được số hợp đồng từ WAY4 cho method ${methodName}`,
-      );
-    }
-
-    return {
-      ContractNumber: contractNumber,
-      ApplicationNumber: toComparableString(data.ApplicationNumber),
-    };
-  }
-
   async getContractsByClientNumber(
     clientNumber: string,
   ): Promise<Way4ContractRecord[]> {
@@ -100,7 +52,6 @@ export class ContractWay4Service {
 
     const records = result?.IssContractDetailsAPIOutputV2Record;
     if (!records) return [];
-
     return Array.isArray(records) ? records : [records];
   }
 
@@ -112,36 +63,36 @@ export class ContractWay4Service {
   }
 
   async callCreateContract(dto: CreateContractDto): Promise<ContractResponse> {
-    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
-    const xml = buildCreateContractXml(dto, officer);
+    const xml = buildCreateContractXml(dto);
     const rawResult = await this.soap.sendRaw('CreateContractV4', xml);
-    const result = this.extractWay4Data(rawResult, 'CreateContractV4');
+
+    const data = extractWay4Result(rawResult, 'CreateContractV4');
 
     return {
       success: true,
-      contractNumber: toStringOrUndefined(result.ContractNumber),
-      applicationNumber: toStringOrUndefined(result.ApplicationNumber),
+      contractNumber: toStringOrUndefined(data.ContractNumber),
+      applicationNumber: toStringOrUndefined(data.ApplicationNumber),
     };
   }
 
   async callCreateIssuingContract(
     dto: CreateIssuingContractDto,
   ): Promise<ContractResponse> {
-    const officer = this.config.get<string>('OPENWAY_OFFICER') ?? '';
-    const xml = buildCreateIssuingContractXml(dto, officer);
+    const xml = buildCreateIssuingContractXml(dto);
     const rawResult = await this.soap.sendRaw(
       'CreateIssuingContractWithLiabilityV2',
       xml,
     );
-    const result = this.extractWay4Data(
+
+    const data = extractWay4Result(
       rawResult,
       'CreateIssuingContractWithLiabilityV2',
     );
 
     return {
       success: true,
-      contractNumber: toStringOrUndefined(result.ContractNumber),
-      applicationNumber: toStringOrUndefined(result.ApplicationNumber),
+      contractNumber: toStringOrUndefined(data.ContractNumber),
+      applicationNumber: toStringOrUndefined(data.ApplicationNumber),
     };
   }
 }

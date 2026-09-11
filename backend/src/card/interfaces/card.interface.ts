@@ -43,3 +43,19 @@ export interface Way4CardDetailRecord {
   EmbossedCompanyName?: string;
   ExpirationDate?: string | number;
 }
+
+export interface AdminCardItem {
+  id: number;
+  cardNumber: string;
+  maskedCardNumber?: string;
+  cardName: string;
+  embossedFirstName: string;
+  embossedLastName: string;
+  expiryDate: string | null;
+  issuingContractNumber: string;
+  userEmail: string;
+  clientNumber: string;
+  userIsActive: boolean;
+  createdAt: Date;
+  productName?: string;
+}

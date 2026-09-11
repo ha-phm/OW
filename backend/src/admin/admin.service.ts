@@ -53,8 +53,7 @@ export class AdminService {
       where.role = query.role;
     }
 
-    // SỬA LẠI CHỖ NÀY: Phải đảm bảo giá trị truyền lên chính xác là chữ 'true' hoặc 'false'
-    if (query.isActive === 'true' || query.isActive === 'false') {
+    if (query.isActive !== undefined) {
       where.isActive = query.isActive === 'true';
     }
 
